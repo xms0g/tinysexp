@@ -4,6 +4,14 @@
 #include "parser.h"
 #include "exceptions.hpp"
 
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 2
+#define VERSION_PATCH 0
+
+#define STRINGIFY0(s) # s
+#define STRINGIFY(s) STRINGIFY0(s)
+#define VERSION STRINGIFY(VERSION_MAJOR) "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_PATCH)
+
 void compile(const char* fn, std::string& program) {
     std::vector<Token> tokens;
 
@@ -49,7 +57,7 @@ int main(int argc, char** argv) {
             if (program == "q")
                 break;
 
-            compile("stdin", program);
+            compile("<stdin>", program);
         }
     }
 
