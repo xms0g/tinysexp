@@ -12,6 +12,22 @@
 #define STRINGIFY(s) STRINGIFY0(s)
 #define VERSION STRINGIFY(VERSION_MAJOR) "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_PATCH)
 
+void printAST(NodePtr& ast) {
+    NodePtr left = std::move(dynamic_cast<BinOpNode*>(ast.get())->leftNode);
+    NodePtr right = std::move(dynamic_cast<BinOpNode*>(ast.get())->rightNode);
+
+    if (dynamic_cast<NumberNode*>(left.get())) {
+        std::cout << "LeftNode: " << dynamic_cast<NumberNode*>(left.get())->n << std::endl;
+    } else
+        printAST(left);
+
+    if (dynamic_cast<NumberNode*>(right.get())) {
+        std::cout << "RightNode: " << dynamic_cast<NumberNode*>(right.get())->n << std::endl;
+    } else
+        printAST(right);
+
+}
+
 void compile(const char* fn, std::string& program) {
     std::vector<Token> tokens;
 
@@ -22,12 +38,9 @@ void compile(const char* fn, std::string& program) {
         tokens = lexer.makeTokens();
         parser.setTokens(tokens);
 
-        auto ast = parser.parse();
+        NodePtr ast = parser.parse();
 
-        std::cout << std::format("LeftNode: {}\n"
-                                 "RightNode: {}\n",
-                                 dynamic_cast<NumberNode*>(dynamic_cast<BinOpNode*>(ast.get())->leftNode.get())->n,
-                                 dynamic_cast<NumberNode*>(dynamic_cast<BinOpNode*>(ast.get())->rightNode.get())->n);
+        printAST(ast);
 
     } catch (IllegalCharError& e) {
         std::cerr << e.what();

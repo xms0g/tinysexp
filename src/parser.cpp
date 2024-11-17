@@ -7,7 +7,7 @@ void Parser::setTokens(std::vector<Token>& tokens) {
     advance();
 }
 
-std::unique_ptr<INode> Parser::parse() {
+NodePtr Parser::parse() {
     return expr();
 }
 
@@ -21,7 +21,7 @@ Token Parser::advance() {
     return mCurrentToken;
 }
 
-std::unique_ptr<INode> Parser::factor() {
+NodePtr Parser::factor() {
     if (mCurrentToken.type == TokenType::INT) {
         Token token = mCurrentToken;
         advance();
@@ -31,32 +31,31 @@ std::unique_ptr<INode> Parser::factor() {
     return nullptr;
 }
 
-std::unique_ptr<INode> Parser::term() {
-
-    std::unique_ptr<INode> left = factor();
+NodePtr Parser::term() {
+    NodePtr left = factor();
 
     while (mCurrentToken.type == TokenType::MUL || mCurrentToken.type == TokenType::DIV) {
         Token token = mCurrentToken;
         advance();
 
-        std::unique_ptr<INode> right = factor();
+        NodePtr right = factor();
         left = std::make_unique<BinOpNode>(left, right, token);
     }
 
     return left;
 }
 
-std::unique_ptr<INode> Parser::expr() {
+NodePtr Parser::expr() {
     if (mCurrentToken.type == TokenType::LBRACKET || mCurrentToken.type == TokenType::RBRACKET)
         advance();
 
-    std::unique_ptr<INode> left = term();
+    NodePtr left = term();
 
     while (mCurrentToken.type == TokenType::PLUS || mCurrentToken.type == TokenType::MINUS) {
         Token token = mCurrentToken;
         advance();
 
-        std::unique_ptr<INode> right = term();
+        NodePtr right = term();
         left = std::make_unique<BinOpNode>(left, right, token);
     }
 
