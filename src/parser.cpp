@@ -7,7 +7,7 @@ void Parser::setTokens(std::vector<Token>& tokens) {
     advance();
 }
 
-std::unique_ptr<INode> Parser::parse() {
+NodePtr Parser::parse() {
     return expr();
 }
 
@@ -21,7 +21,7 @@ Token Parser::advance() {
     return mCurrentToken;
 }
 
-std::unique_ptr<INode> Parser::factor() {
+NodePtr Parser::factor() {
     if (mCurrentToken.type == TokenType::INT) {
         Token token = mCurrentToken;
         advance();
@@ -31,8 +31,7 @@ std::unique_ptr<INode> Parser::factor() {
     return nullptr;
 }
 
-std::unique_ptr<INode> Parser::term() {
-
+NodePtr Parser::term() {
     std::unique_ptr<INode> left = factor();
 
     while (mCurrentToken.type == TokenType::MUL || mCurrentToken.type == TokenType::DIV) {
@@ -46,7 +45,7 @@ std::unique_ptr<INode> Parser::term() {
     return left;
 }
 
-std::unique_ptr<INode> Parser::expr() {
+NodePtr Parser::expr() {
     if (mCurrentToken.type == TokenType::LBRACKET || mCurrentToken.type == TokenType::RBRACKET)
         advance();
 

@@ -9,6 +9,8 @@ struct INode {
     virtual ~INode() = default;
 };
 
+using NodePtr = std::unique_ptr<INode>;
+
 struct NumberNode : public INode {
     int n;
 
@@ -21,11 +23,11 @@ struct NumberNode : public INode {
 };
 
 struct BinOpNode : public INode {
-    std::unique_ptr<INode> leftNode;
-    std::unique_ptr<INode> rightNode;
+    NodePtr leftNode;
+    NodePtr rightNode;
     Token opToken;
 
-    BinOpNode(std::unique_ptr<INode>& ln, std::unique_ptr<INode>& rn, Token opTok) :
+    BinOpNode(NodePtr& ln, NodePtr& rn, Token opTok) :
         leftNode(std::move(ln)),
         rightNode(std::move(rn)),
         opToken(std::move(opTok)) {}
@@ -42,16 +44,16 @@ public:
 
     void setTokens(std::vector<Token>& tokens);
 
-    std::unique_ptr<INode> parse();
+    NodePtr parse();
 
 private:
     Token advance();
 
-    std::unique_ptr<INode> factor();
+    NodePtr factor();
 
-    std::unique_ptr<INode> term();
+    NodePtr term();
 
-    std::unique_ptr<INode> expr();
+    NodePtr expr();
 
     std::vector<Token> mTokens;
     Token mCurrentToken{};
