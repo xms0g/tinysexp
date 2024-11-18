@@ -38,6 +38,8 @@ struct BinOpNode : public INode {
 //    }
 };
 
+
+
 class Parser {
 public:
     Parser();
@@ -55,7 +57,10 @@ private:
 
     NodePtr expr();
 
+    inline void checkParen();
+
     std::vector<Token> mTokens;
     Token mCurrentToken{};
     int mTokenIndex;
+    int openParanCount;
 };
