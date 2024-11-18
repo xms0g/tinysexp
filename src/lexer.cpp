@@ -38,10 +38,10 @@ std::vector<Token> Lexer::makeTokens() {
             tokens.emplace_back(TokenType::DIV);
             advance();
         } else if (mCurrentChar == '(') {
-            tokens.emplace_back(TokenType::LBRACKET);
+            tokens.emplace_back(TokenType::LPAREN);
             advance();
         } else if (mCurrentChar == ')') {
-            tokens.emplace_back(TokenType::RBRACKET);
+            tokens.emplace_back(TokenType::RPAREN);
             advance();
         } else {
             throw IllegalCharError(mFileName, mCurrentChar, mPos.lineNumber);

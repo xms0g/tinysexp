@@ -5,7 +5,7 @@
 
 enum class TokenType {
     INT, PLUS, MINUS,
-    DIV, MUL, LBRACKET, RBRACKET,
+    DIV, MUL, LPAREN, RPAREN,
     PRINT
 };
 
