@@ -48,5 +48,7 @@ std::vector<Token> Lexer::makeTokens() {
         }
     }
 
+    tokens.emplace_back(TokenType::_EOF);
+
     return tokens;
 }
