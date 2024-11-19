@@ -46,7 +46,7 @@ NodePtr Parser::parseNumber() {
         return std::make_unique<NumberNode>(std::stoi(token.value) - 48);
     }
 
-    throw InvalidSyntaxError("", "expected INT", 0);
+    throw InvalidSyntaxError("", "Expected INT", 0);
 }
 
 void Parser::parseParen(TokenType expected) {
