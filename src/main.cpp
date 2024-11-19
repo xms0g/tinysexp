@@ -44,6 +44,8 @@ void compile(const char* fn, std::string& program) {
 
     } catch (IllegalCharError& e) {
         std::cerr << e.what();
+    } catch (InvalidSyntaxError& e) {
+        std::cerr << e.what();
     }
 }
 
