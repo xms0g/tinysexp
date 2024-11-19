@@ -45,68 +45,9 @@ struct BinOpExpr : public IExpr {
             rhs(std::move(rn)),
             opToken(std::move(opTok)) {}
 
-    int codegen1(ExprPtr& expr) {
-        int lhsi, rhsi;
+    std::string codegen() override;
 
-        if (dynamic_cast<NumberExpr*>(expr.get())) {
-            lhsi = dynamic_cast<NumberExpr*>(expr.get())->n;
-            return lhsi;
-        } else {
-            auto binop = dynamic_cast<BinOpExpr*>(expr.get());
-            lhsi = codegen1(binop->lhs);
-            rhsi = codegen1(binop->rhs);
-
-            switch (binop->opToken.type) {
-                case TokenType::PLUS:
-                    return lhsi + rhsi;
-                case TokenType::MINUS:
-                    return lhsi - rhsi;
-                case TokenType::DIV:
-                    return lhsi / rhsi;
-                case TokenType::MUL:
-                    return lhsi * rhsi;
-            }
-        }
-    }
-
-    std::string codegen() override {
-        std::string code;
-
-        int lhsi = codegen1(lhs);
-        int rhsi = codegen1(rhs);
-
-        switch (opToken.type) {
-            case TokenType::PLUS:
-                for (int i = 0; i < lhsi + rhsi; ++i) {
-                    code += "+";
-                }
-                break;
-            case TokenType::MINUS:
-                for (int i = 0; i < lhsi - rhsi; ++i) {
-                    code += "+";
-                }
-                break;
-            case TokenType::DIV:
-                for (int i = 0; i < lhsi / rhsi; ++i) {
-                    code += "+";
-                }
-                break;
-            case TokenType::MUL:
-                for (int i = 0; i < lhsi * rhsi; ++i) {
-                    code += "+";
-                }
-                break;
-            case TokenType::PRINT:
-                code += ".";
-                break;
-        }
-        return code;
-    }
-
-//    friend std::ostream& operator<<(std::ostream& os, const BinOpExpr& bn) {
-//        os << std::format("{} {} {}", lhs, opToken, rhs);
-//        return os;
-//    }
+    int codegen1(ExprPtr& expr);
 };
 
 
