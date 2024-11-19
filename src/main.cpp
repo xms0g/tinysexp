@@ -12,17 +12,17 @@
 #define STRINGIFY(s) STRINGIFY0(s)
 #define VERSION STRINGIFY(VERSION_MAJOR) "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_PATCH)
 
-void printAST(NodePtr& ast) {
-    NodePtr left = std::move(dynamic_cast<BinOpNode*>(ast.get())->leftNode);
-    NodePtr right = std::move(dynamic_cast<BinOpNode*>(ast.get())->rightNode);
+void printAST(ExprPtr& ast) {
+    ExprPtr left = std::move(dynamic_cast<BinOpExpr*>(ast.get())->leftNode);
+    ExprPtr right = std::move(dynamic_cast<BinOpExpr*>(ast.get())->rightNode);
 
-    if (dynamic_cast<NumberNode*>(left.get())) {
-        std::cout << "LeftNode: " << dynamic_cast<NumberNode*>(left.get())->n << std::endl;
+    if (dynamic_cast<NumberExpr*>(left.get())) {
+        std::cout << "LeftNode: " << dynamic_cast<NumberExpr*>(left.get())->n << std::endl;
     } else
         printAST(left);
 
-    if (dynamic_cast<NumberNode*>(right.get())) {
-        std::cout << "RightNode: " << dynamic_cast<NumberNode*>(right.get())->n << std::endl;
+    if (dynamic_cast<NumberExpr*>(right.get())) {
+        std::cout << "RightNode: " << dynamic_cast<NumberExpr*>(right.get())->n << std::endl;
     } else
         printAST(right);
 
@@ -38,7 +38,7 @@ void compile(const char* fn, std::string& program) {
         tokens = lexer.makeTokens();
         parser.setTokens(tokens);
 
-        NodePtr ast = parser.parse();
+        ExprPtr ast = parser.parse();
 
         printAST(ast);
 

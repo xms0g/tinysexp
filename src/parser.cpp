@@ -8,12 +8,12 @@ void Parser::setTokens(std::vector<Token>& tokens) {
     advance();
 }
 
-NodePtr Parser::parse() {
+ExprPtr Parser::parse() {
     return parseExpr();
 }
 
-NodePtr Parser::parseExpr() {
-    NodePtr left, right;
+ExprPtr Parser::parseExpr() {
+    ExprPtr left, right;
 
     parseParen(TokenType::LPAREN);
 
@@ -29,7 +29,7 @@ NodePtr Parser::parseExpr() {
             right = parseNumber();
         }
 
-        left = std::make_unique<BinOpNode>(left, right, token);
+        left = std::make_unique<BinOpExpr>(left, right, token);
     } else {
         throw InvalidSyntaxError(mFileName, "Missing Operator: must be +,-,*,/", 0);
     }
@@ -39,11 +39,11 @@ NodePtr Parser::parseExpr() {
     return left;
 }
 
-NodePtr Parser::parseNumber() {
+ExprPtr Parser::parseNumber() {
     if (mCurrentToken.type == TokenType::INT) {
         Token token = mCurrentToken;
         advance();
-        return std::make_unique<NumberNode>(std::stoi(token.value) - 48);
+        return std::make_unique<NumberExpr>(std::stoi(token.value) - 48);
     }
 
     throw InvalidSyntaxError(mFileName, "Expected INT", 0);

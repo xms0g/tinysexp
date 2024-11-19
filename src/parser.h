@@ -5,34 +5,34 @@
 #include <memory>
 #include "lexer.h"
 
-struct INode {
-    virtual ~INode() = default;
+struct IExpr {
+    virtual ~IExpr() = default;
 };
 
-using NodePtr = std::unique_ptr<INode>;
+using ExprPtr = std::unique_ptr<IExpr>;
 
-struct NumberNode : public INode {
+struct NumberExpr : public IExpr {
     int n;
 
-    explicit NumberNode(int n) : n(n) {}
+    explicit NumberExpr(int n) : n(n) {}
 
-    friend std::ostream& operator<<(std::ostream& os, const NumberNode& nn) {
+    friend std::ostream& operator<<(std::ostream& os, const NumberExpr& nn) {
         os << std::format("{}", nn.n);
         return os;
     }
 };
 
-struct BinOpNode : public INode {
-    NodePtr leftNode;
-    NodePtr rightNode;
+struct BinOpExpr : public IExpr {
+    ExprPtr leftNode;
+    ExprPtr rightNode;
     Token opToken;
 
-    BinOpNode(NodePtr& ln, NodePtr& rn, Token opTok) :
+    BinOpExpr(ExprPtr& ln, ExprPtr& rn, Token opTok) :
         leftNode(std::move(ln)),
         rightNode(std::move(rn)),
         opToken(std::move(opTok)) {}
 
-//    friend std::ostream& operator<<(std::ostream& os, const BinOpNode& bn) {
+//    friend std::ostream& operator<<(std::ostream& os, const BinOpExpr& bn) {
 //        os << std::format("{} {} {}", leftNode, opToken, rightNode);
 //        return os;
 //    }
@@ -46,12 +46,12 @@ public:
 
     void setTokens(std::vector<Token>& tokens);
 
-    NodePtr parse();
+    ExprPtr parse();
 
 private:
-    NodePtr parseExpr();
+    ExprPtr parseExpr();
 
-    NodePtr parseNumber();
+    ExprPtr parseNumber();
 
     void parseParen(TokenType expected);
 
