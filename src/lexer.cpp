@@ -14,8 +14,13 @@ std::vector<Token> Lexer::makeTokens() {
         if (sv.starts_with('\t') || sv.starts_with('\n') || sv.starts_with(' '))
             advance();
         else if (isdigit(sv[0])) {
-            tokens.emplace_back(TokenType::INT, std::to_string(sv[0]));
-            advance();
+            std::string digit;
+
+            while (mCurrentChar && isdigit(mCurrentChar[0])) {
+                digit += mCurrentChar[0];
+                advance();
+            }
+            tokens.emplace_back(TokenType::INT, digit);
         } else if (sv.starts_with("print")) {
             tokens.emplace_back(TokenType::PRINT);
 

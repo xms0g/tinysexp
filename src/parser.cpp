@@ -59,7 +59,7 @@ ExprPtr Parser::parseNumber() {
     if (mCurrentToken.type == TokenType::INT) {
         Token token = mCurrentToken;
         advance();
-        return std::make_unique<NumberExpr>(std::stoi(token.value) - 48);
+        return std::make_unique<NumberExpr>(std::stoi(token.value));
     }
 
     throw InvalidSyntaxError(mFileName, "Expected INT", 0);
