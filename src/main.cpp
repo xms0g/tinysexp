@@ -2,11 +2,12 @@
 #include <fstream>
 #include "lexer.h"
 #include "parser.h"
+#include "codegen.h"
 #include "exceptions.hpp"
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 3
-#define VERSION_PATCH 0
+#define VERSION_PATCH 1
 
 #define STRINGIFY0(s) # s
 #define STRINGIFY(s) STRINGIFY0(s)
@@ -33,13 +34,15 @@ void compile(const char* fn, std::string& program) {
 
     Lexer lexer{fn, program};
     Parser parser{fn};
+    CodeGen codegen;
 
     try {
         tokens = lexer.makeTokens();
         parser.setTokens(tokens);
 
         ExprPtr ast = parser.parse();
-        bfCode = ast->codegen();
+
+        bfCode = codegen.emit(ast);
 
         std::cout << bfCode << '\n';
 

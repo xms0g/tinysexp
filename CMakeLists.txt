@@ -9,6 +9,7 @@ endif ()
 
 set(SOURCES
         src/lexer.cpp src/lexer.h
-        src/parser.cpp src/parser.h)
+        src/parser.cpp src/parser.h
+        src/codegen.cpp src/codegen.h)
 
 add_executable(lbf src/main.cpp ${SOURCES})
