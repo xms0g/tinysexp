@@ -13,8 +13,8 @@
 #define VERSION STRINGIFY(VERSION_MAJOR) "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_PATCH)
 
 void printAST(ExprPtr& ast) {
-    ExprPtr left = std::move(dynamic_cast<BinOpExpr*>(ast.get())->leftNode);
-    ExprPtr right = std::move(dynamic_cast<BinOpExpr*>(ast.get())->rightNode);
+    ExprPtr left = std::move(dynamic_cast<BinOpExpr*>(ast.get())->lhs);
+    ExprPtr right = std::move(dynamic_cast<BinOpExpr*>(ast.get())->rhs);
 
     if (dynamic_cast<NumberExpr*>(left.get())) {
         std::cout << "LeftNode: " << dynamic_cast<NumberExpr*>(left.get())->n << std::endl;
@@ -25,11 +25,11 @@ void printAST(ExprPtr& ast) {
         std::cout << "RightNode: " << dynamic_cast<NumberExpr*>(right.get())->n << std::endl;
     } else
         printAST(right);
-
 }
 
 void compile(const char* fn, std::string& program) {
     std::vector<Token> tokens;
+    std::string bfCode;
 
     Lexer lexer{fn, program};
     Parser parser{fn};
@@ -39,8 +39,9 @@ void compile(const char* fn, std::string& program) {
         parser.setTokens(tokens);
 
         ExprPtr ast = parser.parse();
+        bfCode = ast->codegen();
 
-        printAST(ast);
+        std::cout << bfCode << '\n';
 
     } catch (IllegalCharError& e) {
         std::cerr << e.what();

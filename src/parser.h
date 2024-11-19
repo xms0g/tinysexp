@@ -7,6 +7,8 @@
 
 struct IExpr {
     virtual ~IExpr() = default;
+
+    virtual std::string codegen() = 0;
 };
 
 using ExprPtr = std::unique_ptr<IExpr>;
@@ -16,6 +18,17 @@ struct NumberExpr : public IExpr {
 
     explicit NumberExpr(int n) : n(n) {}
 
+    std::string codegen() override {
+        std::string code;
+
+        for (int i = 0; i < n; ++i) {
+            code += "+";
+
+        }
+
+        return code;
+    }
+
     friend std::ostream& operator<<(std::ostream& os, const NumberExpr& nn) {
         os << std::format("{}", nn.n);
         return os;
@@ -23,26 +36,83 @@ struct NumberExpr : public IExpr {
 };
 
 struct BinOpExpr : public IExpr {
-    ExprPtr leftNode;
-    ExprPtr rightNode;
+    ExprPtr lhs;
+    ExprPtr rhs;
     Token opToken;
 
     BinOpExpr(ExprPtr& ln, ExprPtr& rn, Token opTok) :
-        leftNode(std::move(ln)),
-        rightNode(std::move(rn)),
-        opToken(std::move(opTok)) {}
+            lhs(std::move(ln)),
+            rhs(std::move(rn)),
+            opToken(std::move(opTok)) {}
+
+    int codegen1(ExprPtr& expr) {
+        int lhsi, rhsi;
+
+        if (dynamic_cast<NumberExpr*>(expr.get())) {
+            lhsi = dynamic_cast<NumberExpr*>(expr.get())->n;
+            return lhsi;
+        } else {
+            auto binop = dynamic_cast<BinOpExpr*>(expr.get());
+            lhsi = codegen1(binop->lhs);
+            rhsi = codegen1(binop->rhs);
+
+            switch (binop->opToken.type) {
+                case TokenType::PLUS:
+                    return lhsi + rhsi;
+                case TokenType::MINUS:
+                    return lhsi - rhsi;
+                case TokenType::DIV:
+                    return lhsi / rhsi;
+                case TokenType::MUL:
+                    return lhsi * rhsi;
+            }
+        }
+    }
+
+    std::string codegen() override {
+        std::string code;
+
+        int lhsi = codegen1(lhs);
+        int rhsi = codegen1(rhs);
+
+        switch (opToken.type) {
+            case TokenType::PLUS:
+                for (int i = 0; i < lhsi + rhsi; ++i) {
+                    code += "+";
+                }
+                break;
+            case TokenType::MINUS:
+                for (int i = 0; i < lhsi - rhsi; ++i) {
+                    code += "+";
+                }
+                break;
+            case TokenType::DIV:
+                for (int i = 0; i < lhsi / rhsi; ++i) {
+                    code += "+";
+                }
+                break;
+            case TokenType::MUL:
+                for (int i = 0; i < lhsi * rhsi; ++i) {
+                    code += "+";
+                }
+                break;
+            case TokenType::PRINT:
+                code += ".";
+                break;
+        }
+        return code;
+    }
 
 //    friend std::ostream& operator<<(std::ostream& os, const BinOpExpr& bn) {
-//        os << std::format("{} {} {}", leftNode, opToken, rightNode);
+//        os << std::format("{} {} {}", lhs, opToken, rhs);
 //        return os;
 //    }
 };
 
 
-
 class Parser {
 public:
-    Parser(const char* mFileName);
+    explicit Parser(const char* mFileName);
 
     void setTokens(std::vector<Token>& tokens);
 
