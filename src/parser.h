@@ -7,8 +7,6 @@
 
 struct IExpr {
     virtual ~IExpr() = default;
-
-    virtual std::string codegen() = 0;
 };
 
 using ExprPtr = std::unique_ptr<IExpr>;
@@ -17,17 +15,6 @@ struct NumberExpr : public IExpr {
     int n;
 
     explicit NumberExpr(int n) : n(n) {}
-
-    std::string codegen() override {
-        std::string code;
-
-        for (int i = 0; i < n; ++i) {
-            code += "+";
-
-        }
-
-        return code;
-    }
 
     friend std::ostream& operator<<(std::ostream& os, const NumberExpr& nn) {
         os << std::format("{}", nn.n);
@@ -44,10 +31,6 @@ struct BinOpExpr : public IExpr {
             lhs(std::move(ln)),
             rhs(std::move(rn)),
             opToken(std::move(opTok)) {}
-
-    std::string codegen() override;
-
-    int codegen1(ExprPtr& expr);
 };
 
 

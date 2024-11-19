@@ -23,7 +23,7 @@ ExprPtr Parser::parseExpr() {
         advance();
         left = parseNumber();
 
-        if (mCurrentToken.type != TokenType::INT) {
+        if (mCurrentToken.type == TokenType::LPAREN) {
             right = parseExpr();
         } else {
             right = parseNumber();
@@ -64,66 +64,3 @@ Token Parser::advance() {
 
     return mCurrentToken;
 }
-
-std::string BinOpExpr::codegen() {
-    std::string code;
-
-    int lhsi = codegen1(lhs);
-    int rhsi = codegen1(rhs);
-
-    switch (opToken.type) {
-        case TokenType::PLUS:
-            for (int i = 0; i < lhsi + rhsi; ++i) {
-                code += "+";
-            }
-            break;
-        case TokenType::MINUS:
-            for (int i = 0; i < lhsi - rhsi; ++i) {
-                code += "+";
-            }
-            break;
-        case TokenType::DIV:
-            for (int i = 0; i < lhsi / rhsi; ++i) {
-                code += "+";
-            }
-            break;
-        case TokenType::MUL:
-            for (int i = 0; i < lhsi * rhsi; ++i) {
-                code += "+";
-            }
-            break;
-        case TokenType::PRINT:
-            code += ".";
-            break;
-    }
-    return code;
-}
-
-int BinOpExpr::codegen1(ExprPtr& expr) {
-    int lhsi, rhsi;
-
-    if (dynamic_cast<NumberExpr*>(expr.get())) {
-        lhsi = dynamic_cast<NumberExpr*>(expr.get())->n;
-
-        return lhsi;
-    } else {
-        auto* binop = dynamic_cast<BinOpExpr*>(expr.get());
-
-        lhsi = codegen1(binop->lhs);
-        rhsi = codegen1(binop->rhs);
-
-        switch (binop->opToken.type) {
-            case TokenType::PLUS:
-                return lhsi + rhsi;
-            case TokenType::MINUS:
-                return lhsi - rhsi;
-            case TokenType::DIV:
-                return lhsi / rhsi;
-            case TokenType::MUL:
-                return lhsi * rhsi;
-        }
-    }
-    return 0;
-}
-
-
