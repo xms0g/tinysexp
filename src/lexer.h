@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <format>
 
 enum class TokenType {
@@ -29,11 +30,11 @@ struct Position {
 
     Position(int idx, int ln, int coln): index(idx), lineNumber(ln), columnNumber(coln) {}
 
-    void advance(char token) {
+    void advance(const char* token) {
         ++index;
         ++columnNumber;
 
-        if (token == '\n') {
+        if (token && std::string_view(token).starts_with('\n')) {
             ++lineNumber;
             columnNumber = 0;
         }
@@ -51,6 +52,6 @@ private:
 
     std::string mText;
     Position mPos;
-    char mCurrentChar{};
+    char* mCurrentChar{};
     const char* mFileName;
 };

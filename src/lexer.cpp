@@ -1,54 +1,61 @@
 #include "lexer.h"
-#include <cctype>
 #include "exceptions.hpp"
 
 Lexer::Lexer(const char* fn, std::string text) : mFileName(fn), mText(std::move(text)), mPos(-1, 0, -1) {
     advance();
 }
 
-void Lexer::advance() {
-    mPos.advance(mCurrentChar);
-
-    if (mPos.index < mText.size()) {
-        mCurrentChar = mText[mPos.index];
-    } else {
-        mCurrentChar = 0;
-    }
-}
-
 std::vector<Token> Lexer::makeTokens() {
     std::vector<Token> tokens;
 
     while (mCurrentChar) {
-        if (mCurrentChar == '\t' || mCurrentChar == '\n' || mCurrentChar == ' ')
+        auto sv = std::string_view(mCurrentChar);
+
+        if (sv.starts_with('\t') || sv.starts_with('\n') || sv.starts_with(' '))
             advance();
-        else if (isdigit(mCurrentChar)) {
-            tokens.emplace_back(TokenType::INT, std::to_string(mCurrentChar));
+        else if (isdigit(sv[0])) {
+            tokens.emplace_back(TokenType::INT, std::to_string(sv[0]));
             advance();
-        } else if (mCurrentChar == '+') {
+        } else if (sv.starts_with("print")) {
+            tokens.emplace_back(TokenType::PRINT);
+
+            for (int i = 0; i < 5; ++i) {
+                advance();
+            }
+        } else if (sv.starts_with('+')) {
             tokens.emplace_back(TokenType::PLUS);
             advance();
-        } else if (mCurrentChar == '-') {
+        } else if (sv.starts_with('-')) {
             tokens.emplace_back(TokenType::MINUS);
             advance();
-        } else if (mCurrentChar == '*') {
+        } else if (sv.starts_with('*')) {
             tokens.emplace_back(TokenType::MUL);
             advance();
-        } else if (mCurrentChar == '/') {
+        } else if (sv.starts_with('/')) {
             tokens.emplace_back(TokenType::DIV);
             advance();
-        } else if (mCurrentChar == '(') {
+        } else if (sv.starts_with('(')) {
             tokens.emplace_back(TokenType::LPAREN);
             advance();
-        } else if (mCurrentChar == ')') {
+        } else if (sv.starts_with(')')) {
             tokens.emplace_back(TokenType::RPAREN);
             advance();
         } else {
-            throw IllegalCharError(mFileName, &mCurrentChar, mPos.lineNumber);
+            throw IllegalCharError(mFileName, sv.data(), mPos.lineNumber);
         }
     }
 
     tokens.emplace_back(TokenType::_EOF);
 
     return tokens;
+}
+
+void Lexer::advance() {
+    mPos.advance(mCurrentChar);
+
+    if (mPos.index < mText.size()) {
+        mCurrentChar = &mText[mPos.index];
+    } else {
+        mCurrentChar = nullptr;
+    }
 }

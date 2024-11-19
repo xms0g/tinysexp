@@ -33,6 +33,7 @@ struct BinOpExpr : public IExpr {
             opToken(std::move(opTok)) {}
 };
 
+struct PrintExpr: public IExpr {};
 
 class Parser {
 public:
@@ -43,13 +44,13 @@ public:
     ExprPtr parse();
 
 private:
+    Token advance();
+
     ExprPtr parseExpr();
 
     ExprPtr parseNumber();
 
     void parseParen(TokenType expected);
-
-    Token advance();
 
     std::vector<Token> mTokens;
     Token mCurrentToken{};

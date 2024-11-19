@@ -12,6 +12,16 @@ ExprPtr Parser::parse() {
     return parseExpr();
 }
 
+Token Parser::advance() {
+    ++mTokenIndex;
+
+    if (mTokenIndex < mTokens.size()) {
+        mCurrentToken = mTokens[mTokenIndex];
+    }
+
+    return mCurrentToken;
+}
+
 ExprPtr Parser::parseExpr() {
     ExprPtr left, right;
 
@@ -29,6 +39,12 @@ ExprPtr Parser::parseExpr() {
             right = parseNumber();
         }
 
+        left = std::make_unique<BinOpExpr>(left, right, token);
+    } else if (mCurrentToken.type == TokenType::PRINT) {
+        Token token = mCurrentToken;
+        advance();
+        left = std::make_unique<PrintExpr>();
+        right = parseExpr();
         left = std::make_unique<BinOpExpr>(left, right, token);
     } else {
         throw InvalidSyntaxError(mFileName, "Missing Operator: must be +,-,*,/", 0);
@@ -53,14 +69,4 @@ void Parser::parseParen(TokenType expected) {
     if (mCurrentToken.type != expected) {
         throw InvalidSyntaxError(mFileName, "Missing Parenthesis", 0);
     } else advance();
-}
-
-Token Parser::advance() {
-    ++mTokenIndex;
-
-    if (mTokenIndex < mTokens.size()) {
-        mCurrentToken = mTokens[mTokenIndex];
-    }
-
-    return mCurrentToken;
 }
