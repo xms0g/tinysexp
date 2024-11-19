@@ -49,15 +49,13 @@ public:
     NodePtr parse();
 
 private:
+    NodePtr parseExpr();
+
+    NodePtr parseNumber();
+
+    void parseParen(TokenType expected);
+
     Token advance();
-
-    NodePtr factor();
-
-    NodePtr term();
-
-    NodePtr expr();
-
-    inline void checkParen();
 
     std::vector<Token> mTokens;
     Token mCurrentToken{};
