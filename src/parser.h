@@ -42,7 +42,7 @@ struct BinOpNode : public INode {
 
 class Parser {
 public:
-    Parser();
+    Parser(const char* mFileName);
 
     void setTokens(std::vector<Token>& tokens);
 
@@ -60,5 +60,5 @@ private:
     std::vector<Token> mTokens;
     Token mCurrentToken{};
     int mTokenIndex;
-    int openParanCount;
+    const char* mFileName;
 };

@@ -32,7 +32,7 @@ void compile(const char* fn, std::string& program) {
     std::vector<Token> tokens;
 
     Lexer lexer{fn, program};
-    Parser parser;
+    Parser parser{fn};
 
     try {
         tokens = lexer.makeTokens();

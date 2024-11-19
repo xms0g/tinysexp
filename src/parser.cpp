@@ -1,7 +1,7 @@
 #include "parser.h"
 #include "exceptions.hpp"
 
-Parser::Parser() : mTokenIndex(-1), openParanCount(0) {}
+Parser::Parser(const char* fn) : mFileName(fn), mTokenIndex(-1) {}
 
 void Parser::setTokens(std::vector<Token>& tokens) {
     mTokens = std::move(tokens);
@@ -31,7 +31,7 @@ NodePtr Parser::parseExpr() {
 
         left = std::make_unique<BinOpNode>(left, right, token);
     } else {
-        throw InvalidSyntaxError("", "Missing Operator: must be +,-,*,/", 0);
+        throw InvalidSyntaxError(mFileName, "Missing Operator: must be +,-,*,/", 0);
     }
 
     parseParen(TokenType::RPAREN);
@@ -46,12 +46,12 @@ NodePtr Parser::parseNumber() {
         return std::make_unique<NumberNode>(std::stoi(token.value) - 48);
     }
 
-    throw InvalidSyntaxError("", "Expected INT", 0);
+    throw InvalidSyntaxError(mFileName, "Expected INT", 0);
 }
 
 void Parser::parseParen(TokenType expected) {
     if (mCurrentToken.type != expected) {
-        throw InvalidSyntaxError("", "Missing Parenthesis", 0);
+        throw InvalidSyntaxError(mFileName, "Missing Parenthesis", 0);
     } else advance();
 }
 
