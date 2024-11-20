@@ -56,13 +56,20 @@ private:
 
     ExprPtr parseExpr();
 
+    ExprPtr parseSExpr();
+
+    ExprPtr parsePrint();
+
+    ExprPtr parseDotimes();
+
+    ExprPtr parseAtom();
+
     ExprPtr parseNumber();
 
-    void parseParen(TokenType expected);
+    void consume(TokenType expected);
 
     std::vector<Token> mTokens;
     Token mCurrentToken{};
-    TokenType prevTokenType;
     int mTokenIndex;
     const char* mFileName;
 };
