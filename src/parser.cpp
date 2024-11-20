@@ -23,24 +23,24 @@ Token Parser::advance() {
 }
 
 ExprPtr Parser::parseExpr() {
-    ExprPtr left, right;
+    ExprPtr expr;
 
     consume(TokenType::LPAREN);
 
     if (mCurrentToken.type == TokenType::MUL || mCurrentToken.type == TokenType::DIV ||
         mCurrentToken.type == TokenType::PLUS || mCurrentToken.type == TokenType::MINUS) {
-        left = parseSExpr();
+        expr = parseSExpr();
     } else if (mCurrentToken.type == TokenType::PRINT) {
-        left = parsePrint();
+        expr = parsePrint();
     } else if (mCurrentToken.type == TokenType::DOTIMES) {
-        left = parseDotimes();
+        expr = parseDotimes();
     } else {
         throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
 
     consume(TokenType::RPAREN);
 
-    return left;
+    return expr;
 }
 
 ExprPtr Parser::parseSExpr() {
@@ -48,7 +48,7 @@ ExprPtr Parser::parseSExpr() {
 
     Token token = mCurrentToken;
     advance();
-    left = parseNumber();
+    left = parseAtom();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         consume(TokenType::LPAREN);
