@@ -62,25 +62,23 @@ ExprPtr Parser::parseSExpr() {
 }
 
 ExprPtr Parser::parsePrint() {
-    ExprPtr left, right;
+    ExprPtr statement;
 
-    Token token = mCurrentToken;
     advance();
-    left = std::make_unique<PrintExpr>();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         consume(TokenType::LPAREN);
-        right = parseSExpr();
+        statement = parseSExpr();
         consume(TokenType::RPAREN);
     } else {
-        right = parseAtom();
+        statement = parseAtom();
     }
 
-    return std::make_unique<BinOpExpr>(left, right, token);
+    return std::make_unique<PrintExpr>(statement);
 }
 
 ExprPtr Parser::parseDotimes() {
-    ExprPtr left, statement, iterationCount;
+    ExprPtr statement, iterationCount;
     Token token = mCurrentToken;
     advance();
 
@@ -92,8 +90,7 @@ ExprPtr Parser::parseDotimes() {
     if (mCurrentToken.type != TokenType::RPAREN)
         statement = parseExpr();
 
-    left = std::make_unique<DotimesExpr>(iterationCount);
-    return std::make_unique<BinOpExpr>(left, statement, token);
+    return std::make_unique<DotimesExpr>(iterationCount, statement);
 }
 
 ExprPtr Parser::parseAtom() {

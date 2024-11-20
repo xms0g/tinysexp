@@ -7,6 +7,13 @@ public:
     std::string emit(ExprPtr& ast);
 
 private:
-    int emit1(ExprPtr& expr);
+    int emitSExpr(ExprPtr& expr);
+
+    void emitBinOp(ExprPtr& expr, std::string& code);
+
+    void emitDotimes(ExprPtr& expr, std::string& code);
+
+    void emitPrint(ExprPtr& expr, std::string& code);
+
 };
 
