@@ -79,7 +79,6 @@ ExprPtr Parser::parsePrint() {
 
 ExprPtr Parser::parseDotimes() {
     ExprPtr statement, iterationCount;
-    Token token = mCurrentToken;
     advance();
 
     consume(TokenType::LPAREN);
@@ -98,8 +97,7 @@ ExprPtr Parser::parseAtom() {
         advance();
         return std::make_unique<VarExpr>();
     } else if (mCurrentToken.type == TokenType::INT) {
-        ExprPtr num = parseNumber();
-        return num;
+        return parseNumber();
     }
 }
 
