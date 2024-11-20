@@ -98,8 +98,7 @@ ExprPtr Parser::parseAtom() {
         advance();
         return std::make_unique<VarExpr>();
     } else if (mCurrentToken.type == TokenType::INT) {
-        ExprPtr num = parseNumber();
-        return num;
+        return parseNumber();
     }
 }
 
