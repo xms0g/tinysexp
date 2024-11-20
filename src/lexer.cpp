@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include <cstring>
 #include "exceptions.hpp"
 
 Lexer::Lexer(const char* fn, std::string text) : mFileName(fn), mText(std::move(text)), mPos(-1, 0, -1) {
@@ -19,19 +20,19 @@ std::vector<Token> Lexer::makeTokens() {
                 advance();
             }
             tokens.emplace_back(TokenType::INT, digit);
-        } else if (!strncmp("print", mCurrentChar, 5)) {
+        } else if (!std::strncmp("print", mCurrentChar, 5)) {
             tokens.emplace_back(TokenType::PRINT);
 
             for (int i = 0; i < 5; ++i) {
                 advance();
             }
-        } else if (!strncmp("dotimes", mCurrentChar, 7)) {
+        } else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
             tokens.emplace_back(TokenType::DOTIMES);
 
             for (int i = 0; i < 7; ++i) {
                 advance();
             }
-        } else if (!strncmp("let", mCurrentChar, 3)) {
+        } else if (!std::strncmp("let", mCurrentChar, 3)) {
             tokens.emplace_back(TokenType::LET);
 
             for (int i = 0; i < 3; ++i) {

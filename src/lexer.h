@@ -1,8 +1,7 @@
 #pragma once
 
 #include <string>
-#include <string_view>
-#include <format>
+#include <vector>
 
 enum class TokenType {
     INT, PLUS, MINUS,
@@ -18,11 +17,6 @@ struct Token {
     Token() = default;
 
     explicit Token(TokenType type, std::string value = "") : type(type), value(std::move(value)) {}
-
-    friend std::ostream& operator<<(std::ostream& os, const Token& t) {
-        os << std::format("{}: {}", std::to_string(static_cast<int>(t.type)), t.value);
-        return os;
-    }
 };
 
 struct Position {
