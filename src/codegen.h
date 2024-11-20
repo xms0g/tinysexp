@@ -15,5 +15,7 @@ private:
 
     void emitPrint(ExprPtr& expr, std::string& code);
 
+    void emitLet(ExprPtr& expr, std::string& code);
+
 };
 
