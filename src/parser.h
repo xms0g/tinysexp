@@ -48,7 +48,20 @@ struct PrintExpr : public IExpr {
     PrintExpr(ExprPtr& expr) : sexpr(std::move(expr)) {}
 };
 
+struct LetExpr : public IExpr {
+    ExprPtr sexpr;
+    std::vector<ExprPtr> variables;
+
+    LetExpr(ExprPtr& expr, std::vector<ExprPtr>& variables) :
+            sexpr(std::move(expr)),
+            variables(std::move(variables)) {}
+};
+
 struct VarExpr : public IExpr {
+    std::string name;
+    ExprPtr value;
+
+    VarExpr(std::string& name) : name(std::move(name)) {}
 };
 
 class Parser {
@@ -69,6 +82,10 @@ private:
     ExprPtr parsePrint();
 
     ExprPtr parseDotimes();
+
+    ExprPtr parseLet();
+
+    ExprPtr parseVar();
 
     ExprPtr parseAtom();
 

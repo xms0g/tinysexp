@@ -34,6 +34,8 @@ ExprPtr Parser::parseExpr() {
         expr = parsePrint();
     } else if (mCurrentToken.type == TokenType::DOTIMES) {
         expr = parseDotimes();
+    } else if (mCurrentToken.type == TokenType::LET) {
+        expr = parseLet();
     } else {
         throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
@@ -81,10 +83,7 @@ ExprPtr Parser::parseDotimes() {
     ExprPtr statement, iterationCount;
     advance();
 
-    consume(TokenType::LPAREN);
-    iterationCount = parseAtom(); // consume variable name
-    iterationCount = parseAtom(); // get the actual number
-    consume(TokenType::RPAREN);
+    iterationCount = parseVar();
 
     if (mCurrentToken.type != TokenType::RPAREN)
         statement = parseExpr();
@@ -92,10 +91,42 @@ ExprPtr Parser::parseDotimes() {
     return std::make_unique<DotimesExpr>(iterationCount, statement);
 }
 
+ExprPtr Parser::parseLet() {
+    ExprPtr sexpr;
+    std::vector<ExprPtr> variables;
+
+    advance();
+    consume(TokenType::LPAREN);
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        variables.push_back(parseVar());
+    }
+    consume(TokenType::RPAREN);
+
+    consume(TokenType::LPAREN);
+    sexpr = parseSExpr();
+    consume(TokenType::RPAREN);
+
+    return std::make_unique<LetExpr>(sexpr, variables);
+
+}
+
+ExprPtr Parser::parseVar() {
+    ExprPtr var, num;
+
+    consume(TokenType::LPAREN);
+    var = parseAtom();
+    num = parseAtom();
+    dynamic_cast<VarExpr*>(var.get())->value = std::move(num);
+    consume(TokenType::RPAREN);
+
+    return var;
+}
+
 ExprPtr Parser::parseAtom() {
     if (mCurrentToken.type == TokenType::VAR) {
+        Token token = mCurrentToken;
         advance();
-        return std::make_unique<VarExpr>();
+        return std::make_unique<VarExpr>(token.value);
     } else {
         return parseNumber();
     }
