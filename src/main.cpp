@@ -13,30 +13,18 @@
 #define STRINGIFY(s) STRINGIFY0(s)
 #define VERSION STRINGIFY(VERSION_MAJOR) "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_PATCH)
 
-void printAST(ExprPtr& ast) {
-    ExprPtr left = std::move(dynamic_cast<BinOpExpr*>(ast.get())->lhs);
-    ExprPtr right = std::move(dynamic_cast<BinOpExpr*>(ast.get())->rhs);
-
-    if (dynamic_cast<NumberExpr*>(left.get())) {
-        std::cout << "LeftNode: " << dynamic_cast<NumberExpr*>(left.get())->n << std::endl;
-    } else
-        printAST(left);
-
-    if (dynamic_cast<NumberExpr*>(right.get())) {
-        std::cout << "RightNode: " << dynamic_cast<NumberExpr*>(right.get())->n << std::endl;
-    } else
-        printAST(right);
-}
+#define ERROR_COLOR "\x1b[31m"
+#define RESET_COLOR "\x1b[0m"
 
 void compile(const char* fn, std::string& program) {
     std::vector<Token> tokens;
     std::string bfCode;
 
-    Lexer lexer{fn, program};
-    Parser parser{fn};
-    CodeGen codegen;
-
     try {
+        Lexer lexer{fn, program};
+        Parser parser{fn};
+        CodeGen codegen;
+
         tokens = lexer.makeTokens();
         parser.setTokens(tokens);
 
@@ -47,9 +35,9 @@ void compile(const char* fn, std::string& program) {
         std::cout << bfCode << '\n';
 
     } catch (IllegalCharError& e) {
-        std::cerr << e.what();
+        std::cerr << ERROR_COLOR << e.what();
     } catch (InvalidSyntaxError& e) {
-        std::cerr << e.what();
+        std::cerr << ERROR_COLOR << e.what();
     }
 }
 
@@ -70,7 +58,7 @@ int main(int argc, char** argv) {
 
     } else {
         while (true) {
-            std::cout << "lbf> ";
+            std::cout << RESET_COLOR << "lbf> ";
             std::getline(std::cin >> std::ws, program);
 
             if (program == "q")
