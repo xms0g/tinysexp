@@ -62,6 +62,7 @@ private:
 
     std::vector<Token> mTokens;
     Token mCurrentToken{};
+    TokenType prevTokenType;
     int mTokenIndex;
     const char* mFileName;
 };

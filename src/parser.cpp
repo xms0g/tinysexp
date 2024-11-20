@@ -42,6 +42,7 @@ ExprPtr Parser::parseExpr() {
         left = std::make_unique<BinOpExpr>(left, right, token);
     } else if (mCurrentToken.type == TokenType::PRINT) {
         Token token = mCurrentToken;
+        prevTokenType = token.type;
         advance();
         left = std::make_unique<PrintExpr>();
         right = parseExpr();
@@ -49,12 +50,16 @@ ExprPtr Parser::parseExpr() {
     } else if (mCurrentToken.type == TokenType::DOTIMES) {
         ExprPtr statement, iterationCount;
         Token token = mCurrentToken;
+        prevTokenType = token.type;
         advance();
         iterationCount = parseExpr();
         statement = parseExpr();
         left = std::make_unique<DotimesExpr>(iterationCount);
         left = std::make_unique<BinOpExpr>(left, statement, token);
     } else if (mCurrentToken.type == TokenType::VAR) {
+        if (prevTokenType != TokenType::PRINT && prevTokenType != TokenType::DOTIMES) {
+            throw InvalidSyntaxError(mFileName, (mCurrentToken.value + " is undefined").c_str(), 0);
+        }
         advance(); //consume var
         if (mCurrentToken.type == TokenType::INT) {
             left = parseNumber();
@@ -62,7 +67,7 @@ ExprPtr Parser::parseExpr() {
             left = std::make_unique<VarExpr>();
         }
     } else {
-        throw InvalidSyntaxError(mFileName, "Missing Operator: must be +,-,*,/", 0);
+        throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
 
     parseParen(TokenType::RPAREN);
