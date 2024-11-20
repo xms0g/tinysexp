@@ -31,6 +31,12 @@ std::vector<Token> Lexer::makeTokens() {
             for (int i = 0; i < 7; ++i) {
                 advance();
             }
+        } else if (!strncmp("let", mCurrentChar, 3)) {
+            tokens.emplace_back(TokenType::LET);
+
+            for (int i = 0; i < 3; ++i) {
+                advance();
+            }
         } else if (std::isalpha(mCurrentChar[0])) {
             tokens.emplace_back(TokenType::VAR, std::string(1, mCurrentChar[0]));
             advance();
