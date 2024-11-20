@@ -16,7 +16,8 @@ struct Token {
     std::string value;
 
     Token() = default;
-    explicit Token(TokenType type, std::string value = ""): type(type), value(std::move(value)) {}
+
+    explicit Token(TokenType type, std::string value = "") : type(type), value(std::move(value)) {}
 
     friend std::ostream& operator<<(std::ostream& os, const Token& t) {
         os << std::format("{}: {}", std::to_string(static_cast<int>(t.type)), t.value);
@@ -29,13 +30,13 @@ struct Position {
     int lineNumber;
     int columnNumber;
 
-    Position(int idx, int ln, int coln): index(idx), lineNumber(ln), columnNumber(coln) {}
+    Position(int idx, int ln, int coln) : index(idx), lineNumber(ln), columnNumber(coln) {}
 
     void advance(const char* token) {
         ++index;
         ++columnNumber;
 
-        if (token && std::string_view(token).starts_with('\n')) {
+        if (token && token[0] == '\n') {
             ++lineNumber;
             columnNumber = 0;
         }
