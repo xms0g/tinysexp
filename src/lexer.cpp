@@ -64,7 +64,7 @@ std::vector<Token> Lexer::makeTokens() {
             tokens.emplace_back(TokenType::RPAREN);
             advance();
         } else {
-            throw IllegalCharError(mFileName, sv.data(), mPos.lineNumber);
+            throw IllegalCharError(mFileName, std::string(1, sv[0]).c_str(), mPos.lineNumber);
         }
     }
 
