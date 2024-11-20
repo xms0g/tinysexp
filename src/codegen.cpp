@@ -20,7 +20,7 @@ int CodeGen::emitSExpr(ExprPtr& expr) {
     if (dynamic_cast<NumberExpr*>(expr.get())) {
         lhsi = dynamic_cast<NumberExpr*>(expr.get())->n;
         return lhsi;
-    } else {
+    } else if (dynamic_cast<BinOpExpr*>(expr.get())) {
         auto* binop = dynamic_cast<BinOpExpr*>(expr.get());
 
         lhsi = emitSExpr(binop->lhs);
