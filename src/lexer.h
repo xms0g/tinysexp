@@ -54,5 +54,6 @@ private:
     std::string mText;
     Position mPos;
     char* mCurrentChar{};
+    TokenType prevTokenType;
     const char* mFileName;
 };

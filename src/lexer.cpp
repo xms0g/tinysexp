@@ -1,7 +1,11 @@
 #include "lexer.h"
+#include <cctype>
 #include "exceptions.hpp"
 
-Lexer::Lexer(const char* fn, std::string text) : mFileName(fn), mText(std::move(text)), mPos(-1, 0, -1) {
+Lexer::Lexer(const char* fn, std::string text) :
+        mFileName(fn),
+        mText(std::move(text)),
+        mPos(-1, 0, -1) {
     advance();
 }
 
@@ -13,16 +17,9 @@ std::vector<Token> Lexer::makeTokens() {
 
         if (sv.starts_with('\t') || sv.starts_with('\n') || sv.starts_with(' '))
             advance();
-        else if (isdigit(sv[0])) {
-            std::string digit;
-
-            while (mCurrentChar && isdigit(mCurrentChar[0])) {
-                digit += mCurrentChar[0];
-                advance();
-            }
-            tokens.emplace_back(TokenType::INT, digit);
-        } else if (sv.starts_with("print")) {
+        else if (sv.starts_with("print")) {
             tokens.emplace_back(TokenType::PRINT);
+            prevTokenType = TokenType::PRINT;
 
             for (int i = 0; i < 5; ++i) {
                 advance();
@@ -66,7 +63,7 @@ std::vector<Token> Lexer::makeTokens() {
             tokens.emplace_back(TokenType::RPAREN);
             advance();
         } else {
-            throw IllegalCharError(mFileName, sv.data(), mPos.lineNumber);
+            throw IllegalCharError(mFileName, std::string(1, sv[0]).c_str(), mPos.lineNumber);
         }
     }
 
