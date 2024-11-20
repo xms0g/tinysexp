@@ -33,7 +33,15 @@ struct BinOpExpr : public IExpr {
             opToken(std::move(opTok)) {}
 };
 
-struct PrintExpr: public IExpr {};
+struct DotimesExpr : public IExpr {
+    ExprPtr iterationCount;
+
+    DotimesExpr(ExprPtr& count) : iterationCount(std::move(count)) {}
+};
+
+struct PrintExpr : public IExpr {};
+
+struct VarExpr : public IExpr {};
 
 class Parser {
 public:

@@ -46,6 +46,21 @@ ExprPtr Parser::parseExpr() {
         left = std::make_unique<PrintExpr>();
         right = parseExpr();
         left = std::make_unique<BinOpExpr>(left, right, token);
+    } else if (mCurrentToken.type == TokenType::DOTIMES) {
+        ExprPtr statement, iterationCount;
+        Token token = mCurrentToken;
+        advance();
+        iterationCount = parseExpr();
+        statement = parseExpr();
+        left = std::make_unique<DotimesExpr>(iterationCount);
+        left = std::make_unique<BinOpExpr>(left, statement, token);
+    } else if (mCurrentToken.type == TokenType::VAR) {
+        advance(); //consume var
+        if (mCurrentToken.type == TokenType::INT) {
+            left = parseNumber();
+        } else {
+            left = std::make_unique<VarExpr>();
+        }
     } else {
         throw InvalidSyntaxError(mFileName, "Missing Operator: must be +,-,*,/", 0);
     }

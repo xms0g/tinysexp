@@ -27,6 +27,26 @@ std::vector<Token> Lexer::makeTokens() {
             for (int i = 0; i < 5; ++i) {
                 advance();
             }
+        } else if (sv.starts_with("dotimes")) {
+            tokens.emplace_back(TokenType::DOTIMES);
+            prevTokenType = TokenType::DOTIMES;
+
+            for (int i = 0; i < 7; ++i) {
+                advance();
+            }
+        } else if (std::isalpha(sv[0]) &&
+                   (prevTokenType == TokenType::PRINT || prevTokenType == TokenType::DOTIMES)) {
+            tokens.emplace_back(TokenType::VAR, std::string(1, sv[0]));
+            advance();
+        } else if (std::isdigit(sv[0])) {
+            std::string digit;
+
+            while (mCurrentChar && std::isdigit(mCurrentChar[0])) {
+                digit += mCurrentChar[0];
+                advance();
+            }
+
+            tokens.emplace_back(TokenType::INT, digit);
         } else if (sv.starts_with('+')) {
             tokens.emplace_back(TokenType::PLUS);
             advance();
