@@ -35,13 +35,21 @@ struct BinOpExpr : public IExpr {
 
 struct DotimesExpr : public IExpr {
     ExprPtr iterationCount;
+    ExprPtr statement;
 
-    DotimesExpr(ExprPtr& count) : iterationCount(std::move(count)) {}
+    DotimesExpr(ExprPtr& iterCount, ExprPtr& statement) :
+            iterationCount(std::move(iterCount)),
+            statement(std::move(statement)) {}
 };
 
-struct PrintExpr : public IExpr {};
+struct PrintExpr : public IExpr {
+    ExprPtr sexpr;
 
-struct VarExpr : public IExpr {};
+    PrintExpr(ExprPtr& expr) : sexpr(std::move(expr)) {}
+};
+
+struct VarExpr : public IExpr {
+};
 
 class Parser {
 public:
