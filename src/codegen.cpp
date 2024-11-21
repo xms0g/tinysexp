@@ -89,15 +89,19 @@ void CodeGen::emitDotimes(ExprPtr& expr, std::string& code) {
         hasRecursive = expr->asDotimes()->statement->type() == TokenType::DOTIMES;
     }
 
+    // ++++[>++[-]<-]
     for (int i = 0; i < iterCount; ++i) {
+        if (hasPrint) {
+            code += ".";
+        }
         code += "+";
     }
 
     code += "[";
-    if (dynamic_cast<PrintExpr*>(dotimes->statement.get())) {
-        code += ".";
-    } else if (dynamic_cast<DotimesExpr*>(dotimes->statement.get())) {
-        emitDotimes(dotimes->statement, code);
+    if (hasRecursive) {
+        code += ">";
+        emitDotimes(expr->asDotimes()->statement, code);
+        code += "<";
     }
     code += "-]";
 }
