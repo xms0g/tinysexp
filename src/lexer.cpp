@@ -71,7 +71,7 @@ void Lexer::process() {
         }
     }
 
-    mTokens.emplace_back(TokenType::_EOF, "EOF");
+    mTokens.emplace_back(TokenType::EOF_, "EOF");
 }
 
 void Lexer::advance() {

@@ -7,7 +7,7 @@ enum class TokenType {
     INT, PLUS, MINUS,
     DIV, MUL, LPAREN,
     RPAREN, PRINT, DOTIMES,
-    VAR, LET, _EOF
+    VAR, LET, EOF_
 };
 
 struct Token {
