@@ -68,8 +68,6 @@ class Parser {
 public:
     Parser(const char* mFileName, Lexer& lexer);
 
-    void setTokens(std::vector<Token>& tokens);
-
     ExprPtr parse();
 
 private:

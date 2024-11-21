@@ -27,17 +27,24 @@ ExprPtr Parser::parseExpr() {
 
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
 
-    if (mCurrentToken.type == TokenType::MUL || mCurrentToken.type == TokenType::DIV ||
-        mCurrentToken.type == TokenType::PLUS || mCurrentToken.type == TokenType::MINUS) {
-        expr = parseSExpr();
-    } else if (mCurrentToken.type == TokenType::PRINT) {
-        expr = parsePrint();
-    } else if (mCurrentToken.type == TokenType::DOTIMES) {
-        expr = parseDotimes();
-    } else if (mCurrentToken.type == TokenType::LET) {
-        expr = parseLet();
-    } else {
-        throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
+    switch (mCurrentToken.type) {
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::DIV:
+        case TokenType::MUL:
+            expr = parseSExpr();
+            break;
+        case TokenType::PRINT:
+            expr = parsePrint();
+            break;
+        case TokenType::DOTIMES:
+            expr = parseDotimes();
+            break;
+        case TokenType::LET:
+            expr = parseLet();
+            break;
+        default:
+            throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
 
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
