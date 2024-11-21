@@ -3,6 +3,7 @@
 
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "Missing Parenthesis";
+constexpr const char* EXPECTED_INT_ERROR = "Expected INT";
 }
 
 Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
@@ -146,7 +147,7 @@ ExprPtr Parser::parseNumber() {
         return std::make_unique<NumberExpr>(std::stoi(token.value));
     }
 
-    throw InvalidSyntaxError(mFileName, "Expected INT", 0);
+    throw InvalidSyntaxError(mFileName, EXPECTED_INT_ERROR, 0);
 }
 
 void Parser::consume(TokenType expected, const char* errorStr) {
