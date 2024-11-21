@@ -45,7 +45,7 @@ struct DotimesExpr : public IExpr {
 struct PrintExpr : public IExpr {
     ExprPtr sexpr;
 
-    PrintExpr(ExprPtr& expr) : sexpr(std::move(expr)) {}
+    explicit PrintExpr(ExprPtr& expr) : sexpr(std::move(expr)) {}
 };
 
 struct LetExpr : public IExpr {
@@ -61,7 +61,7 @@ struct VarExpr : public IExpr {
     std::string name;
     ExprPtr value;
 
-    VarExpr(std::string& name) : name(std::move(name)) {}
+    explicit VarExpr(std::string& name) : name(std::move(name)) {}
 };
 
 class Parser {
