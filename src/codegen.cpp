@@ -20,8 +20,7 @@ int CodeGen::emitSExpr(ExprPtr& expr) {
     int lhsi, rhsi;
 
     if (dynamic_cast<NumberExpr*>(expr.get())) {
-        lhsi = dynamic_cast<NumberExpr*>(expr.get())->n;
-        return lhsi;
+        return dynamic_cast<NumberExpr*>(expr.get())->n;
     } else if (dynamic_cast<VarExpr*>(expr.get())) {
 
     } else if (dynamic_cast<BinOpExpr*>(expr.get())) {
@@ -78,8 +77,9 @@ void CodeGen::emitBinOp(ExprPtr& expr, std::string& code) {
 
 void CodeGen::emitDotimes(ExprPtr& expr, std::string& code) {
     auto* dotimes = dynamic_cast<DotimesExpr*>(expr.get());
+    auto* var = dynamic_cast<VarExpr*>(dotimes->iterationCount.get());
 
-    int iterCount = emitSExpr(dotimes->iterationCount);
+    int iterCount = emitSExpr(var->value);
 
     for (int i = 0; i < iterCount; ++i) {
         code += "+";

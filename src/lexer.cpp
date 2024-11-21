@@ -6,9 +6,7 @@ Lexer::Lexer(const char* fn, std::string text) : mFileName(fn), mText(std::move(
     advance();
 }
 
-std::vector<Token> Lexer::makeTokens() {
-    std::vector<Token> tokens;
-
+void Lexer::process() {
     while (mCurrentChar) {
         if (mCurrentChar[0] == '\t' || mCurrentChar[0] == '\n' || std::isspace(mCurrentChar[0])) {
             advance();
@@ -19,27 +17,27 @@ std::vector<Token> Lexer::makeTokens() {
                 digit += mCurrentChar;
                 advance();
             }
-            tokens.emplace_back(TokenType::INT, digit);
+            mTokens.emplace_back(TokenType::INT, digit);
         } else if (!std::strncmp("print", mCurrentChar, 5)) {
-            tokens.emplace_back(TokenType::PRINT);
+            mTokens.emplace_back(TokenType::PRINT);
 
             for (int i = 0; i < 5; ++i) {
                 advance();
             }
         } else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
-            tokens.emplace_back(TokenType::DOTIMES);
+            mTokens.emplace_back(TokenType::DOTIMES);
 
             for (int i = 0; i < 7; ++i) {
                 advance();
             }
         } else if (!std::strncmp("let", mCurrentChar, 3)) {
-            tokens.emplace_back(TokenType::LET);
+            mTokens.emplace_back(TokenType::LET);
 
             for (int i = 0; i < 3; ++i) {
                 advance();
             }
         } else if (std::isalpha(mCurrentChar[0])) {
-            tokens.emplace_back(TokenType::VAR, std::string(1, mCurrentChar[0]));
+            mTokens.emplace_back(TokenType::VAR, std::string(1, mCurrentChar[0]));
             advance();
         } else if (std::isdigit(mCurrentChar[0])) {
             std::string digit;
@@ -49,33 +47,31 @@ std::vector<Token> Lexer::makeTokens() {
                 advance();
             }
 
-            tokens.emplace_back(TokenType::INT, digit);
+            mTokens.emplace_back(TokenType::INT, digit);
         } else if (mCurrentChar[0] == '+') {
-            tokens.emplace_back(TokenType::PLUS);
+            mTokens.emplace_back(TokenType::PLUS);
             advance();
         } else if (mCurrentChar[0] == '-') {
-            tokens.emplace_back(TokenType::MINUS);
+            mTokens.emplace_back(TokenType::MINUS);
             advance();
         } else if (mCurrentChar[0] == '*') {
-            tokens.emplace_back(TokenType::MUL);
+            mTokens.emplace_back(TokenType::MUL);
             advance();
         } else if (mCurrentChar[0] == '/') {
-            tokens.emplace_back(TokenType::DIV);
+            mTokens.emplace_back(TokenType::DIV);
             advance();
         } else if (mCurrentChar[0] == '(') {
-            tokens.emplace_back(TokenType::LPAREN);
+            mTokens.emplace_back(TokenType::LPAREN);
             advance();
         } else if (mCurrentChar[0] == ')') {
-            tokens.emplace_back(TokenType::RPAREN);
+            mTokens.emplace_back(TokenType::RPAREN);
             advance();
         } else {
             throw IllegalCharError(mFileName, std::string(1, mCurrentChar[0]).c_str(), mPos.lineNumber);
         }
     }
 
-    tokens.emplace_back(TokenType::_EOF, "EOF");
-
-    return tokens;
+    mTokens.emplace_back(TokenType::_EOF, "EOF");
 }
 
 void Lexer::advance() {
@@ -84,6 +80,6 @@ void Lexer::advance() {
     if (mPos.index < mText.size()) {
         mCurrentChar = &mText[mPos.index];
     } else {
-        mCurrentChar = 0;
+        mCurrentChar = nullptr;
     }
 }

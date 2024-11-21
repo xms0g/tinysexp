@@ -17,22 +17,15 @@
 #define RESET_COLOR "\x1b[0m"
 
 void compile(const char* fn, std::string& program) {
-    std::vector<Token> tokens;
-    std::string bfCode;
-
     try {
         Lexer lexer{fn, program};
-        Parser parser{fn};
+        Parser parser{fn, lexer};
         CodeGen codegen;
 
-        tokens = lexer.makeTokens();
-        parser.setTokens(tokens);
-
+        lexer.process();
         ExprPtr ast = parser.parse();
 
-        bfCode = codegen.emit(ast);
-
-        std::cout << bfCode << '\n';
+        std::cout << codegen.emit(ast) << '\n';
 
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();

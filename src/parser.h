@@ -66,7 +66,7 @@ struct VarExpr : public IExpr {
 
 class Parser {
 public:
-    explicit Parser(const char* mFileName);
+    Parser(const char* mFileName, Lexer& lexer);
 
     void setTokens(std::vector<Token>& tokens);
 
@@ -93,7 +93,7 @@ private:
 
     void consume(TokenType expected);
 
-    std::vector<Token> mTokens;
+    Lexer& mLexer;
     Token mCurrentToken{};
     int mTokenIndex;
     const char* mFileName;

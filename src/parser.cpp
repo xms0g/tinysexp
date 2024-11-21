@@ -1,22 +1,18 @@
 #include "parser.h"
 #include "exceptions.hpp"
 
-Parser::Parser(const char* fn) : mFileName(fn), mTokenIndex(-1) {}
-
-void Parser::setTokens(std::vector<Token>& tokens) {
-    mTokens = std::move(tokens);
-    advance();
-}
+Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
 
 ExprPtr Parser::parse() {
+    advance();
     return parseExpr();
 }
 
 Token Parser::advance() {
     ++mTokenIndex;
 
-    if (mTokenIndex < mTokens.size()) {
-        mCurrentToken = mTokens[mTokenIndex];
+    if (mTokenIndex < mLexer.getTokenSize()) {
+        mCurrentToken = mLexer.getToken(mTokenIndex);
     }
 
     return mCurrentToken;

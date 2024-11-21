@@ -41,13 +41,18 @@ class Lexer {
 public:
     Lexer(const char* fn, std::string text);
 
-    std::vector<Token> makeTokens();
+    void process();
+
+    [[nodiscard]] size_t getTokenSize() const { return mTokens.size(); }
+
+    Token getToken(int index) { return mTokens[index]; }
 
 private:
     void advance();
 
     std::string mText;
     Position mPos;
+    std::vector<Token> mTokens;
     char* mCurrentChar{};
     const char* mFileName;
 };
