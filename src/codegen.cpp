@@ -3,14 +3,22 @@
 std::string CodeGen::emit(ExprPtr& ast) {
     std::string code;
 
-    if (dynamic_cast<BinOpExpr*>(ast.get())) {
-        emitBinOp(ast, code);
-    } else if (dynamic_cast<PrintExpr*>(ast.get())) {
-        emitPrint(ast, code);
-    } else if (dynamic_cast<DotimesExpr*>(ast.get())) {
-        emitDotimes(ast, code);
-    } else if (dynamic_cast<LetExpr*>(ast.get())) {
-        emitLet(ast, code);
+    switch (ast->type()) {
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::DIV:
+        case TokenType::MUL:
+            emitBinOp(ast, code);
+            break;
+        case TokenType::PRINT:
+            emitPrint(ast, code);
+            break;
+        case TokenType::DOTIMES:
+            emitDotimes(ast, code);
+            break;
+        case TokenType::LET:
+            emitLet(ast, code);
+            break;
     }
 
     return code;
@@ -19,17 +27,15 @@ std::string CodeGen::emit(ExprPtr& ast) {
 int CodeGen::emitSExpr(ExprPtr& expr) {
     int lhsi, rhsi;
 
-    if (dynamic_cast<NumberExpr*>(expr.get())) {
-        return dynamic_cast<NumberExpr*>(expr.get())->n;
-    } else if (dynamic_cast<VarExpr*>(expr.get())) {
+    if (expr->type() == TokenType::INT) {
+        return expr->asNumber()->n;
+    } else if (expr->type() == TokenType::VAR) {
+        return expr->asVar()->value->asNumber()->n;
+    } else {
+        lhsi = emitSExpr(expr->asBinOp()->lhs);
+        rhsi = emitSExpr(expr->asBinOp()->rhs);
 
-    } else if (dynamic_cast<BinOpExpr*>(expr.get())) {
-        auto* binop = dynamic_cast<BinOpExpr*>(expr.get());
-
-        lhsi = emitSExpr(binop->lhs);
-        rhsi = emitSExpr(binop->rhs);
-
-        switch (binop->opToken.type) {
+        switch (expr->asBinOp()->opToken.type) {
             case TokenType::PLUS:
                 return lhsi + rhsi;
             case TokenType::MINUS:
@@ -40,18 +46,17 @@ int CodeGen::emitSExpr(ExprPtr& expr) {
                 return lhsi * rhsi;
         }
     }
+
     return 0;
 }
 
 void CodeGen::emitBinOp(ExprPtr& expr, std::string& code) {
     int lhsi, rhsi;
 
-    auto* binop = dynamic_cast<BinOpExpr*>(expr.get());
+    lhsi = emitSExpr(expr->asBinOp()->lhs);
+    rhsi = emitSExpr(expr->asBinOp()->rhs);
 
-    lhsi = emitSExpr(binop->lhs);
-    rhsi = emitSExpr(binop->rhs);
-
-    switch (binop->opToken.type) {
+    switch (expr->asBinOp()->opToken.type) {
         case TokenType::PLUS:
             for (int i = 0; i < lhsi + rhsi; ++i) {
                 code += "+";
@@ -76,10 +81,13 @@ void CodeGen::emitBinOp(ExprPtr& expr, std::string& code) {
 }
 
 void CodeGen::emitDotimes(ExprPtr& expr, std::string& code) {
-    auto* dotimes = dynamic_cast<DotimesExpr*>(expr.get());
-    auto* var = dynamic_cast<VarExpr*>(dotimes->iterationCount.get());
+    int iterCount = emitSExpr(expr->asDotimes()->iterationCount->asVar()->value);
+    bool hasPrint{false}, hasRecursive{false};
 
-    int iterCount = emitSExpr(var->value);
+    if (expr->asDotimes()->statement) {
+        hasPrint = expr->asDotimes()->statement->type() == TokenType::PRINT;
+        hasRecursive = expr->asDotimes()->statement->type() == TokenType::DOTIMES;
+    }
 
     for (int i = 0; i < iterCount; ++i) {
         code += "+";
@@ -95,9 +103,7 @@ void CodeGen::emitDotimes(ExprPtr& expr, std::string& code) {
 }
 
 void CodeGen::emitPrint(ExprPtr& expr, std::string& code) {
-    auto* print = dynamic_cast<PrintExpr*>(expr.get());
-
-    int sexpr = emitSExpr(print->sexpr);
+    int sexpr = emitSExpr(expr->asPrint()->sexpr);
 
     for (int i = 0; i < sexpr; ++i) {
         code += "+";
@@ -106,13 +112,12 @@ void CodeGen::emitPrint(ExprPtr& expr, std::string& code) {
 }
 
 void CodeGen::emitLet(ExprPtr& expr, std::string& code) {
-    auto* let = dynamic_cast<LetExpr*>(expr.get());
+    LetExpr* let = expr->asLet();
 
     for (int i = 0; i < let->variables.size(); ++i) {
-        auto* var = dynamic_cast<VarExpr*>(let->variables[i].get());
-        auto* value = dynamic_cast<NumberExpr*>(var->value.get());
+        NumberExpr* var = let->variables[i]->asNumber();
 
-        for (int j = 0; j < value->n; ++j) {
+        for (int j = 0; j < var->n; ++j) {
             code += "+";
         }
 
@@ -120,31 +125,28 @@ void CodeGen::emitLet(ExprPtr& expr, std::string& code) {
             code += ">";
     }
 
-    if (dynamic_cast<BinOpExpr*>(let->sexpr.get())) {
-        auto* binop = dynamic_cast<BinOpExpr*>(let->sexpr.get());
-
-
-        switch (binop->opToken.type) {
-            case TokenType::PLUS:
-                // 3 + 2
-                // +++>++[<+>-]
-                break;
-            case TokenType::MINUS:
-                // 3 - 2
-                // +++>++[<->-]
-                break;
-            case TokenType::DIV:
-
-                break;
-            case TokenType::MUL:
-                // 3 * 2
-                // +++>++-[<+++>-]
-                break;
-        }
-
-    } else if (dynamic_cast<PrintExpr*>(let->sexpr.get())) {
-
-    } else if (dynamic_cast<DotimesExpr*>(let->sexpr.get())) {
-
+    switch (let->sexpr->type()) {
+        case TokenType::PLUS:
+            // 3 + 2
+            // +++>++[<+>-]
+            break;
+        case TokenType::MINUS:
+            // 3 - 2
+            // +++>++[<->-]
+            break;
+        case TokenType::DIV:
+            break;
+        case TokenType::MUL:
+            // 3 * 2
+            // +++>++-[<+++>-]
+            break;
+        case TokenType::PRINT:
+            break;
+        case TokenType::DOTIMES:
+            break;
+        case TokenType::VAR:
+            break;
+        case TokenType::LET:
+            break;
     }
 }
