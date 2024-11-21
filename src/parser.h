@@ -91,7 +91,7 @@ private:
 
     ExprPtr parseNumber();
 
-    void consume(TokenType expected);
+    void consume(TokenType expected, const char* errorStr);
 
     Lexer& mLexer;
     Token mCurrentToken{};

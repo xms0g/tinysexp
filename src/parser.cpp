@@ -1,6 +1,10 @@
 #include "parser.h"
 #include "exceptions.hpp"
 
+namespace {
+constexpr const char* MISSING_PAREN_ERROR = "Missing Parenthesis";
+}
+
 Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
 
 ExprPtr Parser::parse() {
@@ -21,7 +25,7 @@ Token Parser::advance() {
 ExprPtr Parser::parseExpr() {
     ExprPtr expr;
 
-    consume(TokenType::LPAREN);
+    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
 
     if (mCurrentToken.type == TokenType::MUL || mCurrentToken.type == TokenType::DIV ||
         mCurrentToken.type == TokenType::PLUS || mCurrentToken.type == TokenType::MINUS) {
@@ -36,7 +40,7 @@ ExprPtr Parser::parseExpr() {
         throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
 
-    consume(TokenType::RPAREN);
+    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     return expr;
 }
@@ -49,9 +53,9 @@ ExprPtr Parser::parseSExpr() {
     left = parseAtom();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN);
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         right = parseSExpr();
-        consume(TokenType::RPAREN);
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         right = parseAtom();
     }
@@ -65,9 +69,9 @@ ExprPtr Parser::parsePrint() {
     advance();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN);
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         statement = parseSExpr();
-        consume(TokenType::RPAREN);
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         statement = parseAtom();
     }
@@ -92,15 +96,15 @@ ExprPtr Parser::parseLet() {
     std::vector<ExprPtr> variables;
 
     advance();
-    consume(TokenType::LPAREN);
+    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     while (mCurrentToken.type == TokenType::LPAREN) {
         variables.push_back(parseVar());
     }
-    consume(TokenType::RPAREN);
+    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
-    consume(TokenType::LPAREN);
+    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     sexpr = parseSExpr();
-    consume(TokenType::RPAREN);
+    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     return std::make_unique<LetExpr>(sexpr, variables);
 
@@ -109,11 +113,11 @@ ExprPtr Parser::parseLet() {
 ExprPtr Parser::parseVar() {
     ExprPtr var, num;
 
-    consume(TokenType::LPAREN);
+    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     var = parseAtom();
     num = parseAtom();
     dynamic_cast<VarExpr*>(var.get())->value = std::move(num);
-    consume(TokenType::RPAREN);
+    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     return var;
 }
@@ -138,8 +142,8 @@ ExprPtr Parser::parseNumber() {
     throw InvalidSyntaxError(mFileName, "Expected INT", 0);
 }
 
-void Parser::consume(TokenType expected) {
+void Parser::consume(TokenType expected, const char* errorStr) {
     if (mCurrentToken.type != expected) {
-        throw InvalidSyntaxError(mFileName, "Missing Parenthesis", 0);
+        throw InvalidSyntaxError(mFileName, errorStr, 0);
     } else advance();
 }
