@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "exceptions.hpp"
+#include "visitors.hpp"
 
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "Missing Parenthesis";
@@ -49,7 +50,6 @@ ExprPtr Parser::parseExpr() {
     }
 
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-
     return expr;
 }
 
@@ -60,12 +60,21 @@ ExprPtr Parser::parseSExpr() {
     advance();
     left = parseAtom();
 
+    auto found = symbolTable.find(StringVisitor::getResult(left));
+    if (found != symbolTable.end()) {
+        left = std::make_unique<NumberExpr>(found->second);
+    }
+
     if (mCurrentToken.type == TokenType::LPAREN) {
         consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         right = parseSExpr();
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         right = parseAtom();
+        found = symbolTable.find(StringVisitor::getResult(right));
+        if (found != symbolTable.end()) {
+            right = std::make_unique<NumberExpr>(found->second);
+        }
     }
 
     return std::make_unique<BinOpExpr>(left, right, token);
@@ -91,9 +100,12 @@ ExprPtr Parser::parseDotimes() {
     ExprPtr statement, iterationCount;
     advance();
 
-    iterationCount = parseVar();
+    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+    advance();
+    iterationCount = parseAtom();
+    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
-    if (mCurrentToken.type != TokenType::RPAREN)
+    if (mCurrentToken.type == TokenType::LPAREN)
         statement = parseExpr();
 
     return std::make_unique<DotimesExpr>(iterationCount, statement);
@@ -106,35 +118,29 @@ ExprPtr Parser::parseLet() {
     advance();
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     while (mCurrentToken.type == TokenType::LPAREN) {
-        variables.push_back(parseVar());
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+        ExprPtr name = parseAtom();
+        ExprPtr value = parseAtom();
+
+        symbolTable.emplace(StringVisitor::getResult(name), IntVisitor::getResult(value));
+
+        variables.emplace_back(std::make_unique<VarExpr>(name, value));
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
-    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-    sexpr = parseSExpr();
-    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+    if (mCurrentToken.type == TokenType::LPAREN)
+        sexpr = parseExpr();
 
     return std::make_unique<LetExpr>(sexpr, variables);
 
-}
-
-ExprPtr Parser::parseVar() {
-    ExprPtr var, num;
-
-    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-    var = parseAtom();
-    num = parseAtom();
-    dynamic_cast<VarExpr*>(var.get())->value = std::move(num);
-    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-
-    return var;
 }
 
 ExprPtr Parser::parseAtom() {
     if (mCurrentToken.type == TokenType::VAR) {
         Token token = mCurrentToken;
         advance();
-        return std::make_unique<VarExpr>(token.value);
+        return std::make_unique<StringExpr>(token.value);
     } else {
         return parseNumber();
     }

@@ -29,6 +29,15 @@ struct NumberExpr : IExpr {
     }
 };
 
+struct StringExpr : IExpr {
+    std::string str;
+
+    StringExpr() = default;
+    explicit StringExpr(std::string& str) : str(str) {}
+
+    MAKE_VISITABLE
+};
+
 struct BinOpExpr : IExpr {
     ExprPtr lhs;
     ExprPtr rhs;
@@ -73,10 +82,10 @@ struct LetExpr : IExpr {
 };
 
 struct VarExpr : IExpr {
-    std::string name;
+    ExprPtr name;
     ExprPtr value;
 
-    explicit VarExpr(std::string& name) : name(std::move(name)) {}
+    explicit VarExpr(ExprPtr& name, ExprPtr& value) : name(std::move(name)), value(std::move(value)) {}
 
     MAKE_VISITABLE
 };
@@ -100,8 +109,6 @@ private:
 
     ExprPtr parseLet();
 
-    ExprPtr parseVar();
-
     ExprPtr parseAtom();
 
     ExprPtr parseNumber();
@@ -112,4 +119,5 @@ private:
     Token mCurrentToken{};
     int mTokenIndex;
     const char* mFileName;
+    std::unordered_map<std::string, int> symbolTable;
 };
