@@ -1,6 +1,7 @@
 #pragma once
 
 struct NumberExpr;
+struct StringExpr;
 struct BinOpExpr;
 struct DotimesExpr;
 struct PrintExpr;
@@ -14,6 +15,8 @@ public:
     virtual ~ExprVisitor() = default;
 
     virtual void visit(const NumberExpr&) {}
+
+    virtual void visit(const StringExpr&) {}
 
     virtual void visit(const BinOpExpr&) {}
 
