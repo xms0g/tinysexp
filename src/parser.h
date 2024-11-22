@@ -4,42 +4,24 @@
 #include <utility>
 #include <memory>
 #include "lexer.h"
+#include "visitor.hpp"
 
-class NumberExpr;
-class BinOpExpr;
-class DotimesExpr;
-class PrintExpr;
-class LetExpr;
-class VarExpr;
+#define MAKE_VISITABLE virtual void accept(ExprVisitor& visitor) override { visitor.visit(*this); }
 
 struct IExpr {
     virtual ~IExpr() = default;
 
-    virtual TokenType type() = 0;
-
-    virtual NumberExpr* asNumber() { return nullptr; }
-
-    virtual BinOpExpr* asBinOp() { return nullptr; }
-
-    virtual DotimesExpr* asDotimes() { return nullptr; }
-
-    virtual PrintExpr* asPrint() { return nullptr; }
-
-    virtual LetExpr* asLet() { return nullptr; }
-
-    virtual VarExpr* asVar() { return nullptr; }
+    virtual void accept(ExprVisitor& visitor) = 0;
 };
 
 using ExprPtr = std::unique_ptr<IExpr>;
 
-struct NumberExpr : public IExpr {
+struct NumberExpr : IExpr {
     int n;
 
     explicit NumberExpr(int n) : n(n) {}
 
-    TokenType type() override { return TokenType::INT; }
-
-    NumberExpr* asNumber() override { return this; }
+    MAKE_VISITABLE
 
     friend std::ostream& operator<<(std::ostream& os, const NumberExpr& nn) {
         os << std::format("{}", nn.n);
@@ -47,7 +29,7 @@ struct NumberExpr : public IExpr {
     }
 };
 
-struct BinOpExpr : public IExpr {
+struct BinOpExpr : IExpr {
     ExprPtr lhs;
     ExprPtr rhs;
     Token opToken;
@@ -57,12 +39,10 @@ struct BinOpExpr : public IExpr {
             rhs(std::move(rn)),
             opToken(std::move(opTok)) {}
 
-    TokenType type() override { return opToken.type; }
-
-    BinOpExpr* asBinOp() override { return this; }
+    MAKE_VISITABLE
 };
 
-struct DotimesExpr : public IExpr {
+struct DotimesExpr : IExpr {
     ExprPtr iterationCount;
     ExprPtr statement;
 
@@ -70,22 +50,18 @@ struct DotimesExpr : public IExpr {
             iterationCount(std::move(iterCount)),
             statement(std::move(statement)) {}
 
-    TokenType type() override { return TokenType::DOTIMES; }
-
-    DotimesExpr* asDotimes() override { return this; }
+    MAKE_VISITABLE
 };
 
-struct PrintExpr : public IExpr {
+struct PrintExpr : IExpr {
     ExprPtr sexpr;
 
     explicit PrintExpr(ExprPtr& expr) : sexpr(std::move(expr)) {}
 
-    TokenType type() override { return TokenType::PRINT; }
-
-    PrintExpr* asPrint() override { return this; }
+    MAKE_VISITABLE
 };
 
-struct LetExpr : public IExpr {
+struct LetExpr : IExpr {
     ExprPtr sexpr;
     std::vector<ExprPtr> variables;
 
@@ -93,20 +69,16 @@ struct LetExpr : public IExpr {
             sexpr(std::move(expr)),
             variables(std::move(variables)) {}
 
-    TokenType type() override { return TokenType::LET; }
-
-    LetExpr* asLet() override { return this; }
+    MAKE_VISITABLE
 };
 
-struct VarExpr : public IExpr {
+struct VarExpr : IExpr {
     std::string name;
     ExprPtr value;
 
     explicit VarExpr(std::string& name) : name(std::move(name)) {}
 
-    TokenType type() override { return TokenType::VAR; }
-
-    VarExpr* asVar() override { return this; }
+    MAKE_VISITABLE
 };
 
 class Parser {

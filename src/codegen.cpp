@@ -1,156 +1,149 @@
 #include "codegen.h"
 
 std::string CodeGen::emit(ExprPtr& ast) {
-    std::string code;
-
-    switch (ast->type()) {
-        case TokenType::PLUS:
-        case TokenType::MINUS:
-        case TokenType::DIV:
-        case TokenType::MUL:
-            emitBinOp(ast, code);
-            break;
-        case TokenType::PRINT:
-            emitPrint(ast, code);
-            break;
-        case TokenType::DOTIMES:
-            emitDotimes(ast, code);
-            break;
-        case TokenType::LET:
-            emitLet(ast, code);
-            break;
-    }
-
-    return code;
+    return ASTVisitor::getResult(ast);
 }
 
-int CodeGen::emitSExpr(ExprPtr& expr) {
+void ASTVisitor::visit(const BinOpExpr& binop) {
     int lhsi, rhsi;
 
-    if (expr->type() == TokenType::INT) {
-        return expr->asNumber()->n;
-    } else if (expr->type() == TokenType::VAR) {
-        return expr->asVar()->value->asNumber()->n;
-    } else {
-        lhsi = emitSExpr(expr->asBinOp()->lhs);
-        rhsi = emitSExpr(expr->asBinOp()->rhs);
+    lhsi = IntVisitor::getResult(binop.lhs);
+    rhsi = IntVisitor::getResult(binop.rhs);
 
-        switch (expr->asBinOp()->opToken.type) {
-            case TokenType::PLUS:
-                return lhsi + rhsi;
-            case TokenType::MINUS:
-                return lhsi - rhsi;
-            case TokenType::DIV:
-                return lhsi / rhsi;
-            case TokenType::MUL:
-                return lhsi * rhsi;
-        }
-    }
-
-    return 0;
-}
-
-void CodeGen::emitBinOp(ExprPtr& expr, std::string& code) {
-    int lhsi, rhsi;
-
-    lhsi = emitSExpr(expr->asBinOp()->lhs);
-    rhsi = emitSExpr(expr->asBinOp()->rhs);
-
-    switch (expr->asBinOp()->opToken.type) {
+    switch (binop.opToken.type) {
         case TokenType::PLUS:
             for (int i = 0; i < lhsi + rhsi; ++i) {
-                code += "+";
+                store(code += "+");
             }
             break;
         case TokenType::MINUS:
             for (int i = 0; i < lhsi - rhsi; ++i) {
-                code += "+";
+                store(code += "+");
             }
             break;
         case TokenType::DIV:
             for (int i = 0; i < lhsi / rhsi; ++i) {
-                code += "+";
+                store(code += "+");
             }
             break;
         case TokenType::MUL:
             for (int i = 0; i < lhsi * rhsi; ++i) {
-                code += "+";
+                store(code += "+");
             }
             break;
     }
 }
 
-void CodeGen::emitDotimes(ExprPtr& expr, std::string& code) {
-    int iterCount = emitSExpr(expr->asDotimes()->iterationCount->asVar()->value);
+void ASTVisitor::visit(const DotimesExpr& dotimes) {
+    int iterCount = IntVisitor::getResult(dotimes.iterationCount);
     bool hasPrint{false}, hasRecursive{false};
 
-    if (expr->asDotimes()->statement) {
-        hasPrint = expr->asDotimes()->statement->type() == TokenType::PRINT;
-        hasRecursive = expr->asDotimes()->statement->type() == TokenType::DOTIMES;
+    if (dotimes.statement) {
+        hasPrint = TypeVisitor::getResult(dotimes.statement) == typeid(PrintExpr).hash_code();
+        hasRecursive = TypeVisitor::getResult(dotimes.statement) == typeid(DotimesExpr).hash_code();
     }
 
     // ++++[>++[-]<-]
     for (int i = 0; i < iterCount; ++i) {
         if (hasPrint) {
-            code += ".";
+            store(code += ".");
         }
-        code += "+";
+        store(code += "+");
     }
 
-    code += "[";
+    store(code += "[");
     if (hasRecursive) {
-        code += ">";
-        emitDotimes(expr->asDotimes()->statement, code);
-        code += "<";
+        store(code += ">");
+        store(code += ASTVisitor::getResult(dotimes.statement));
+        store(code += "<");
     }
-    code += "-]";
+    store(code += "-]");
 }
 
-void CodeGen::emitPrint(ExprPtr& expr, std::string& code) {
-    int sexpr = emitSExpr(expr->asPrint()->sexpr);
+void ASTVisitor::visit(const PrintExpr& print) {
+    int sexpr = IntVisitor::getResult(print.sexpr);
 
     for (int i = 0; i < sexpr; ++i) {
-        code += "+";
+        store(code += "+");
     }
-    code += ".";
+    store(code += ".");
 }
 
-void CodeGen::emitLet(ExprPtr& expr, std::string& code) {
-    LetExpr* let = expr->asLet();
+void ASTVisitor::visit(const LetExpr& let) {
+    for (int i = 0; i < let.variables.size(); ++i) {
+        int value = IntVisitor::getResult(let.variables[i]);
 
-    for (int i = 0; i < let->variables.size(); ++i) {
-        NumberExpr* var = let->variables[i]->asNumber();
-
-        for (int j = 0; j < var->n; ++j) {
-            code += "+";
+        for (int j = 0; j < value; ++j) {
+            store(code += "+");
         }
 
-        if (let->variables.size() > 1 && i != let->variables.size() - 1)
-            code += ">";
+        if (let.variables.size() > 1 && i != let.variables.size() - 1)
+            store(code += ">");
     }
 
-    switch (let->sexpr->type()) {
+    store(ASTVisitor::getResult(let.sexpr));
+//    switch (let.sexpr->type()) {
+//        case TokenType::PLUS:
+//            // 3 + 2
+//            // +++>++[<+>-]
+//            break;
+//        case TokenType::MINUS:
+//            // 3 - 2
+//            // +++>++[<->-]
+//            break;
+//        case TokenType::DIV:
+//            break;
+//        case TokenType::MUL:
+//            // 3 * 2
+//            // +++>++-[<+++>-]
+//            break;
+//        case TokenType::PRINT:
+//            break;
+//        case TokenType::DOTIMES:
+//            break;
+//        case TokenType::VAR:
+//            break;
+//        case TokenType::LET:
+//            break;
+//    }
+}
+
+void ASTVisitor::visit(const VarExpr&) {
+
+}
+
+void IntVisitor::visit(const NumberExpr& num) {
+    store(num.n);
+}
+
+void IntVisitor::visit(const BinOpExpr& binop) {
+    int lhsi, rhsi;
+
+    lhsi = IntVisitor::getResult(binop.lhs);
+    rhsi = IntVisitor::getResult(binop.rhs);
+
+    switch (binop.opToken.type) {
         case TokenType::PLUS:
-            // 3 + 2
-            // +++>++[<+>-]
-            break;
+            store(lhsi + rhsi);
         case TokenType::MINUS:
-            // 3 - 2
-            // +++>++[<->-]
-            break;
+            store(lhsi - rhsi);
         case TokenType::DIV:
-            break;
+            store(lhsi / rhsi);
         case TokenType::MUL:
-            // 3 * 2
-            // +++>++-[<+++>-]
-            break;
-        case TokenType::PRINT:
-            break;
-        case TokenType::DOTIMES:
-            break;
-        case TokenType::VAR:
-            break;
-        case TokenType::LET:
-            break;
+            store(lhsi * rhsi);
     }
 }
+
+void IntVisitor::visit(const VarExpr& var) {
+    store(IntVisitor::getResult(var.value));
+}
+
+void TypeVisitor::visit(const PrintExpr&) {
+    store(typeid(PrintExpr).hash_code());
+}
+
+void TypeVisitor::visit(const DotimesExpr&) {
+    store(typeid(DotimesExpr).hash_code());
+}
+
+
