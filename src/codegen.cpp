@@ -1,5 +1,6 @@
 #include "codegen.h"
 #include <typeindex>
+#include "visitors.hpp"
 
 std::string CodeGen::emit(ExprPtr& ast) {
     return ASTVisitor::getResult(ast);
