@@ -47,8 +47,7 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
     // ++++[>++[-]<-]
     for (int i = 0; i < iterCount; ++i) {
         if (hasPrint) {
-            ASTVisitor::getResult(dotimes.statement);
-            store(code += "."); //TODO: (print (+ i 1)) case not handled
+            store(code += ASTVisitor::getResult(dotimes.statement)); //TODO: (print (+ i 1)) case not handled
         }
         store(code += "+");
     }
@@ -83,43 +82,18 @@ void ASTVisitor::visit(const LetExpr& let) {
             store(code += ">");
     }
 
-    if (let.sexpr) { //TODO: Not Handled
+    if (let.sexpr) {
         store(code += ">");
         store(code += ASTVisitor::getResult(let.sexpr));
-//        switch (vbinop.opToken.type) {
-//            case TokenType::PLUS:
-//                store(code += "+");
-//                // 3 + 2
-//                // +++>++[<+>-]
-//                break;
-//            case TokenType::MINUS:
-//                // 3 - 2
-//                // +++>++[<->-]
-//                break;
-//            case TokenType::DIV:
-//                break;
-//            case TokenType::MUL:
-//                // 3 * 2
-//                // +++>++-[<+++>-]
-//                break;
-//            case TokenType::PRINT:
-//                break;
-//            case TokenType::DOTIMES:
-//                break;
-//            case TokenType::VAR:
-//                break;
-//            case TokenType::LET:
-//                break;
-//        }
     }
-}
-
-void ASTVisitor::visit(const VarExpr&) {
-
 }
 
 void IntVisitor::visit(const NumberExpr& num) {
     store(num.n);
+}
+
+void IntVisitor::visit(const StringExpr& str) {
+    store(0);
 }
 
 void IntVisitor::visit(const BinOpExpr& binop) {

@@ -33,13 +33,11 @@ public:
 
     void visit(const LetExpr& let) override;
 
-    void visit(const VarExpr& var) override;
-
 private:
     std::string code;
 };
 
-MAKE_VISITOR(IntVisitor, int, MAKE_MTHD_NUMBER, NULL_, MAKE_MTHD_BINOP, NULL_, NULL_, NULL_, MAKE_MTHD_VAR)
+MAKE_VISITOR(IntVisitor, int, MAKE_MTHD_NUMBER, MAKE_MTHD_STR, MAKE_MTHD_BINOP, NULL_, NULL_, NULL_, MAKE_MTHD_VAR)
 
 MAKE_VISITOR(StringVisitor, std::string, NULL_, MAKE_MTHD_STR, NULL_, NULL_, NULL_, NULL_, MAKE_MTHD_VAR)
 
