@@ -33,6 +33,7 @@ struct StringExpr : IExpr {
     std::string str;
 
     StringExpr() = default;
+
     explicit StringExpr(std::string& str) : str(str) {}
 
     MAKE_VISITABLE
