@@ -7,7 +7,6 @@ struct DotimesExpr;
 struct PrintExpr;
 struct LetExpr;
 struct VarExpr;
-
 class ExprVisitor {
 public:
     ExprVisitor() = default;
@@ -20,9 +19,13 @@ public:
 
     virtual void visit(const BinOpExpr&) {}
 
+    virtual void visit(const BinOpExpr& binop, int param) {}
+
     virtual void visit(const DotimesExpr&) {}
 
     virtual void visit(const PrintExpr&) {}
+
+    virtual void visit(const PrintExpr&, int param) {}
 
     virtual void visit(const LetExpr&) {}
 
@@ -45,3 +48,26 @@ public:
 private:
     RType mValue;
 };
+
+#define MAKE_VISITOR(NAME, RVALUE, METHOD_NUMBER, METHOD_STR, METHOD_BINOP, METHOD_DOTIMES, METHOD_PRINT, METHOD_LET, MAKE_VAR) \
+        class NAME : public GenericVisitor<NAME, ExprPtr, RVALUE>, public ExprVisitor { \
+        public:             \
+            METHOD_NUMBER   \
+            METHOD_STR      \
+            METHOD_BINOP    \
+            METHOD_DOTIMES  \
+            METHOD_PRINT    \
+            METHOD_LET      \
+            MAKE_VAR        \
+            };
+
+#define MAKE_MTHD_NUMBER void visit(const NumberExpr& num) override;
+#define MAKE_MTHD_STR void visit(const StringExpr& num) override;
+#define MAKE_MTHD_BINOP void visit(const BinOpExpr& binop) override;
+#define MAKE_MTHD_BINOP_PARAM void visit(const BinOpExpr& binop, int param) override;
+#define MAKE_MTHD_DOTIMES void visit(const DotimesExpr& dotimes) override;
+#define MAKE_MTHD_PRINT void visit(const PrintExpr& print) override;
+#define MAKE_MTHD_PRINT_PARAM void visit(const PrintExpr& print, int param) override;
+#define MAKE_MTHD_LET void visit(const LetExpr& let) override;
+#define MAKE_MTHD_VAR void visit(const VarExpr& var) override;
+#define NULL_
