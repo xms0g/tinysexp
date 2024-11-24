@@ -61,9 +61,8 @@ ExprPtr Parser::parseSExpr() {
     advance();
     left = parseAtom();
 
-    auto found = symbolTable.find(StringVisitor::getResult(left));
-    if (found != symbolTable.end()) {
-        left = std::make_unique<NumberExpr>(found->second);
+    if (int value = checkVarError(left)) {
+        left = std::make_unique<NumberExpr>(value);
     }
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -72,9 +71,8 @@ ExprPtr Parser::parseSExpr() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         right = parseAtom();
-        found = symbolTable.find(StringVisitor::getResult(right));
-        if (found != symbolTable.end()) {
-            right = std::make_unique<NumberExpr>(found->second);
+        if (int value = checkVarError(right)) {
+            right = std::make_unique<NumberExpr>(value);
         }
     }
 
@@ -110,6 +108,7 @@ ExprPtr Parser::parseDotimes() {
     name = parseAtom();
     value = parseAtom();
 
+    //TODO:fix print (* i i) replaces (* 10 10)
     symbolTable.emplace(StringVisitor::getResult(name), IntVisitor::getResult(value));
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
@@ -168,4 +167,19 @@ void Parser::consume(TokenType expected, const char* errorStr) {
     if (mCurrentToken.type != expected) {
         throw InvalidSyntaxError(mFileName, errorStr, 0);
     } else advance();
+}
+
+int Parser::checkVarError(ExprPtr& var) {
+    std::string strvar = StringVisitor::getResult(var);
+
+    if (!strvar.empty()) {
+        auto found = symbolTable.find(strvar);
+        if (found == symbolTable.end()) {
+            throw InvalidSyntaxError(mFileName, (strvar + VAR_NOT_DEFINED).c_str(), 0);
+        }
+        return found->second;
+    }
+
+    return 0;
+
 }

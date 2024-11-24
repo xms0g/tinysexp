@@ -116,6 +116,8 @@ private:
 
     void consume(TokenType expected, const char* errorStr);
 
+    int checkVarError(ExprPtr& var);
+
     Lexer& mLexer;
     Token mCurrentToken{};
     int mTokenIndex;
