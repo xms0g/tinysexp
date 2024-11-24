@@ -21,33 +21,18 @@ void Lexer::process() {
         } else if (!std::strncmp("print", mCurrentChar, 5)) {
             mTokens.emplace_back(TokenType::PRINT);
 
-            for (int i = 0; i < 5; ++i) {
-                advance();
-            }
+            for (int i = 0; i < 5; ++i) advance();
         } else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
             mTokens.emplace_back(TokenType::DOTIMES);
 
-            for (int i = 0; i < 7; ++i) {
-                advance();
-            }
+            for (int i = 0; i < 7; ++i) advance();
         } else if (!std::strncmp("let", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::LET);
 
-            for (int i = 0; i < 3; ++i) {
-                advance();
-            }
+            for (int i = 0; i < 3; ++i) advance();
         } else if (std::isalpha(mCurrentChar[0])) {
             mTokens.emplace_back(TokenType::VAR, std::string(1, mCurrentChar[0]));
             advance();
-        } else if (std::isdigit(mCurrentChar[0])) {
-            std::string digit;
-
-            while (mCurrentChar && std::isdigit(mCurrentChar[0])) {
-                digit += mCurrentChar;
-                advance();
-            }
-
-            mTokens.emplace_back(TokenType::INT, digit);
         } else if (mCurrentChar[0] == '+') {
             mTokens.emplace_back(TokenType::PLUS);
             advance();
