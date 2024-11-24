@@ -107,7 +107,7 @@ ExprPtr Parser::parseDotimes() {
     value = parseAtom();
 
     //TODO:fix print (* i i) replaces (* 10 10)
-    symbolTable.emplace(StringVisitor::getResult(name), IntVisitor::getResult(value));
+    symbolTable.emplace(StringEvaluator::getResult(name), IntEvaluator::getResult(value));
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     if (mCurrentToken.type == TokenType::LPAREN)
@@ -127,7 +127,7 @@ ExprPtr Parser::parseLet() {
         ExprPtr name = parseAtom();
         ExprPtr value = parseAtom();
 
-        symbolTable.emplace(StringVisitor::getResult(name), IntVisitor::getResult(value));
+        symbolTable.emplace(StringEvaluator::getResult(name), IntEvaluator::getResult(value));
 
         variables.emplace_back(std::make_unique<VarExpr>(name, value));
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
@@ -168,7 +168,7 @@ void Parser::consume(TokenType expected, const char* errorStr) {
 }
 
 int Parser::checkVarError(ExprPtr& var) {
-    std::string strvar = StringVisitor::getResult(var);
+    std::string strvar = StringEvaluator::getResult(var);
 
     if (!strvar.empty()) {
         auto found = symbolTable.find(strvar);
