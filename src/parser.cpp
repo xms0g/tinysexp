@@ -90,10 +90,8 @@ ExprPtr Parser::parsePrint() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         statement = parseAtom();
-        std::string sstmnt = StringVisitor::getResult(statement);
-        auto found = symbolTable.find(sstmnt);
-        if (found == symbolTable.end()) {
-            throw InvalidSyntaxError(mFileName, (sstmnt + VAR_NOT_DEFINED).c_str(), 0);
+        if (int value = checkVarError(statement)) {
+            statement = std::make_unique<NumberExpr>(value);
         }
     }
 
