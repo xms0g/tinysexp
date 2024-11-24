@@ -62,7 +62,7 @@ private:
             };
 
 #define MAKE_MTHD_NUMBER void visit(const NumberExpr& num) override;
-#define MAKE_MTHD_STR void visit(const StringExpr& num) override;
+#define MAKE_MTHD_STR void visit(const StringExpr& str) override;
 #define MAKE_MTHD_BINOP void visit(const BinOpExpr& binop) override;
 #define MAKE_MTHD_BINOP_PARAM void visit(const BinOpExpr& binop, int param) override;
 #define MAKE_MTHD_DOTIMES void visit(const DotimesExpr& dotimes) override;

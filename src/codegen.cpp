@@ -7,13 +7,19 @@ std::string CodeGen::emit(ExprPtr& ast) {
 
 void ASTVisitor::visit(const BinOpExpr& binop) {
     int lhsi, rhsi;
+    std::string rhss;
 
     lhsi = IntVisitor::getResult(binop.lhs);
-    rhsi = IntVisitor::getResult(binop.rhs);
+    rhss = ASTVisitor::getResult(binop.rhs);
 
     store(code += std::string(lhsi, '+'));
     store(code += ">");
-    store(code += std::string(rhsi, '+'));
+    if (rhss.empty()) {
+        rhsi = IntVisitor::getResult(binop.rhs);
+        store(code += std::string(rhsi, '+'));
+    } else {
+        store(code += rhss);
+    }
 
     switch (binop.opToken.type) {
         case TokenType::PLUS:
@@ -23,10 +29,10 @@ void ASTVisitor::visit(const BinOpExpr& binop) {
             store(code += "[<->-]<");
             break;
         case TokenType::DIV:
-            store(code += std::format("<[{}>>+<<]>>[-<<+>>]", std::string(rhsi, '-')));
+            store(code += std::format("<[{}>>+<<]>>[-<<+>>]<<", std::string(rhsi, '-')));
             break;
         case TokenType::MUL:
-            store(code += std::format("-[<{}>-]",  std::string(lhsi, '+')));
+            store(code += std::format("-[<{}>-]<", std::string(lhsi, '+')));
             break;
     }
 }
@@ -76,7 +82,7 @@ void ASTVisitor::visit(const LetExpr& let) {
 
     for (int i = 0; i < let.variables.size(); ++i) {
         int value = IntVisitor::getResult(let.variables[i]);
-        store(code += std::string(value , '+'));
+        store(code += std::string(value, '+'));
 
         if (let.variables.size() > 1 && i != let.variables.size() - 1)
             store(code += ">");
@@ -152,7 +158,7 @@ void VarVisitor::visit(const BinOpExpr& binop) {
             store(bf += std::format("<[{}>>+<<]>>[-<<+>>]", std::string(rhsi, '-')));
             break;
         case TokenType::MUL:
-            store(bf += std::format("-[<{}>-]",  std::string(lhsi, '+')));
+            store(bf += std::format("-[<{}>-]", std::string(lhsi, '+')));
             break;
     }
 }
