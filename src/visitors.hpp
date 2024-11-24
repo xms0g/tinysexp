@@ -4,6 +4,8 @@
 
 class ASTVisitor : public GenericVisitor<ASTVisitor, ExprPtr, std::string>, public ExprVisitor {
 public:
+    void visit(const NumberExpr& num) override;
+
     void visit(const BinOpExpr& binop) override;
 
     void visit(const DotimesExpr& dotimes) override;

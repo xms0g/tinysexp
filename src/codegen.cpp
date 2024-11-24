@@ -5,6 +5,10 @@ std::string CodeGen::emit(ExprPtr& ast) {
     return ASTVisitor::getResult(ast);
 }
 
+void ASTVisitor::visit(const NumberExpr& num) {
+    store(code += std::string(num.n, '+'));
+}
+
 void ASTVisitor::visit(const BinOpExpr& binop) {
     int lhsi, rhsi;
     std::string rhss;
