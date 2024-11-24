@@ -46,25 +46,17 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
         hasRecursive = TypeVisitor::getResult(dotimes.statement) == typeid(DotimesExpr).hash_code();
     }
 
-    // ++++[>++[-]<-]
-
     store(code += std::string(iterCount, '+'));
     store(code += "[>");
 
-//    TokenType t = TokenVisitor::getResult(dotimes.statement);
-//    if (t == TokenType::PLUS) {
-//        store(code += "<<+>>");
-//    }
-//    store(code += "[");
     if (hasPrint) {
         store(code += VarVisitor::getResult(dotimes.statement));
     }
-//
-//    if (hasRecursive) {
-//        store(code += ">");
-//        store(code += ASTVisitor::getResult(dotimes.statement));
-//        store(code += "<");
-//    }
+
+    if (hasRecursive) {
+        store(code += ASTVisitor::getResult(dotimes.statement));
+    }
+
     if (!hasPrint)
         store(code += "<-]");
 }
@@ -97,19 +89,6 @@ void IntVisitor::visit(const StringExpr& str) {
     store(-1);
 }
 
-void IntVisitor::visit(const BinOpExpr& binop) {
-    int lhsi, rhsi;
-
-    lhsi = IntVisitor::getResult(binop.lhs);
-    rhsi = IntVisitor::getResult(binop.rhs);
-
-    if (lhsi > 0) {
-        store(lhsi);
-    } else {
-        store(rhsi);
-    }
-}
-
 void IntVisitor::visit(const VarExpr& var) {
     store(IntVisitor::getResult(var.value));
 }
@@ -130,51 +109,10 @@ void TypeVisitor::visit(const DotimesExpr&) {
     store(typeid(DotimesExpr).hash_code());
 }
 
-void VarVisitor::visit(const BinOpExpr& binop) {
-    int lhsi, rhsi;
-    std::string bf;
-
-    lhsi = IntVisitor::getResult(binop.lhs);
-    rhsi = IntVisitor::getResult(binop.rhs);
-
-//    if (lhsi < 0) {
-//        step = rhsi;
-//    } else if (rhsi < 0) {
-//        step = lhsi;
-//    }
-
-    store(bf += std::string(lhsi, '+'));
-    store(bf += ">");
-    store(bf += std::string(rhsi, '+'));
-
-    switch (binop.opToken.type) {
-        case TokenType::PLUS:
-            store(bf += "[<+>-]<");
-            break;
-        case TokenType::MINUS:
-            store(bf += "[<->-]<");
-            break;
-        case TokenType::DIV:
-            store(bf += std::format("<[{}>>+<<]>>[-<<+>>]", std::string(rhsi, '-')));
-            break;
-        case TokenType::MUL:
-            store(bf += std::format("-[<{}>-]", std::string(lhsi, '+')));
-            break;
-    }
-}
-
 void VarVisitor::visit(const PrintExpr& print) {
     std::string bf;
-    store(bf += VarVisitor::getResult(print.sexpr));
+    store(bf += ASTVisitor::getResult(print.sexpr));
     store(bf += ".");
     store(bf += "<->[-]<]");
-}
-
-void TokenVisitor::visit(const BinOpExpr& binop) {
-    store(binop.opToken.type);
-}
-
-void TokenVisitor::visit(const PrintExpr& print) {
-    store(TokenVisitor::getResult(print.sexpr));
 }
 
