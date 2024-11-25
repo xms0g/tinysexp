@@ -7,7 +7,7 @@
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 5
-#define VERSION_PATCH 4
+#define VERSION_PATCH 5
 
 #define STRINGIFY0(s) # s
 #define STRINGIFY(s) STRINGIFY0(s)
@@ -35,18 +35,30 @@ void compile(const char* fn, std::string& program) {
 
 int main(int argc, char** argv) {
     std::string program;
+    const char* fn = argv[1];
 
     if (argc > 1) {
         std::ifstream file;
-        file.open(argv[1], std::ios::in);
 
-        file.seekg(0, std::ios::end);
-        size_t length = file.tellg();
-        file.seekg(0, std::ios::beg);
+        file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
+        try {
+            file.open(fn, std::ios::in);
 
-        file.read(program.data(), length);
+            file.seekg(0, std::ios::end);
+            std::size_t length = file.tellg();
+            file.seekg(0, std::ios::beg);
 
-        compile(argv[1], program);
+            program.resize(length);
+
+            file.read(program.data(), length);
+
+            file.close();
+        } catch (std::ifstream::failure& e) {
+            std::cerr << "Exception opening/reading file: " << e.what() << "\t";
+            exit(EXIT_FAILURE);
+        }
+
+        compile(fn, program);
 
     } else {
         while (true) {
