@@ -10,14 +10,6 @@ void Lexer::process() {
     while (mCurrentChar) {
         if (mCurrentChar[0] == '\t' || mCurrentChar[0] == '\n' || std::isspace(mCurrentChar[0])) {
             advance();
-        } else if (isdigit(mCurrentChar[0])) {
-            std::string digit;
-
-            while (mCurrentChar && isdigit(mCurrentChar[0])) {
-                digit += mCurrentChar;
-                advance();
-            }
-            mTokens.emplace_back(TokenType::INT, digit);
         } else if (!std::strncmp("print", mCurrentChar, 5)) {
             mTokens.emplace_back(TokenType::PRINT);
 
@@ -30,6 +22,14 @@ void Lexer::process() {
             mTokens.emplace_back(TokenType::LET);
 
             for (int i = 0; i < 3; ++i) advance();
+        } else if (isdigit(mCurrentChar[0])) {
+            std::string digit;
+
+            while (mCurrentChar && isdigit(mCurrentChar[0])) {
+                digit += mCurrentChar;
+                advance();
+            }
+            mTokens.emplace_back(TokenType::INT, digit);
         } else if (std::isalpha(mCurrentChar[0])) {
             mTokens.emplace_back(TokenType::VAR, std::string(1, mCurrentChar[0]));
             advance();
