@@ -17,9 +17,9 @@ struct IExpr {
 using ExprPtr = std::unique_ptr<IExpr>;
 
 struct NumberExpr : IExpr {
-    int n;
+    uint8_t n;
 
-    explicit NumberExpr(int n) : n(n) {}
+    explicit NumberExpr(uint8_t n) : n(n) {}
 
     MAKE_VISITABLE
 
@@ -35,6 +35,12 @@ struct StringExpr : IExpr {
     StringExpr() = default;
 
     explicit StringExpr(std::string& str) : str(str) {}
+
+    MAKE_VISITABLE
+};
+
+struct NILExpr : IExpr {
+    NILExpr() = default;
 
     MAKE_VISITABLE
 };
@@ -71,13 +77,28 @@ struct PrintExpr : IExpr {
     MAKE_VISITABLE
 };
 
+struct ReadExpr : IExpr {
+    ReadExpr() = default;
+
+    MAKE_VISITABLE
+};
+
 struct LetExpr : IExpr {
-    ExprPtr sexpr;
+    std::vector<ExprPtr> sexprs;
     std::vector<ExprPtr> variables;
 
-    LetExpr(ExprPtr& expr, std::vector<ExprPtr>& variables) :
-            sexpr(std::move(expr)),
+    LetExpr(std::vector<ExprPtr>& sexprs, std::vector<ExprPtr>& variables) :
+            sexprs(std::move(sexprs)),
             variables(std::move(variables)) {}
+
+    MAKE_VISITABLE
+};
+
+struct SetqExpr : IExpr {
+    ExprPtr var;
+
+    SetqExpr(ExprPtr& var) :
+            var(std::move(var)) {}
 
     MAKE_VISITABLE
 };
@@ -106,9 +127,13 @@ private:
 
     ExprPtr parsePrint();
 
+    ExprPtr parseRead();
+
     ExprPtr parseDotimes();
 
     ExprPtr parseLet();
+
+    ExprPtr parseSetq();
 
     ExprPtr parseAtom();
 

@@ -46,6 +46,9 @@ ExprPtr Parser::parseExpr() {
         case TokenType::LET:
             expr = parseLet();
             break;
+        case TokenType::SETQ:
+            expr = parseSetq();
+            break;
         default:
             throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
@@ -61,8 +64,9 @@ ExprPtr Parser::parseSExpr() {
     advance();
     left = parseAtom();
 
-    if (int value = checkVarError(left)) {
-        left = std::make_unique<NumberExpr>(value);
+    if (int ivalue = checkVarError(left)) {
+        ExprPtr value = std::make_unique<NumberExpr>(ivalue);
+        left = std::make_unique<VarExpr>(left, value);
     }
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -71,8 +75,9 @@ ExprPtr Parser::parseSExpr() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         right = parseAtom();
-        if (int value = checkVarError(right)) {
-            right = std::make_unique<NumberExpr>(value);
+        if (int ivalue = checkVarError(right)) {
+            ExprPtr value = std::make_unique<NumberExpr>(ivalue);
+            right = std::make_unique<VarExpr>(right, value);
         }
     }
 
@@ -90,8 +95,9 @@ ExprPtr Parser::parsePrint() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         statement = parseAtom();
-        if (int value = checkVarError(statement)) {
-            statement = std::make_unique<NumberExpr>(value);
+        if (int ivalue = checkVarError(statement)) {
+            ExprPtr value = std::make_unique<NumberExpr>(ivalue);
+            statement = std::make_unique<VarExpr>(statement, value);
         }
     }
 
@@ -117,28 +123,61 @@ ExprPtr Parser::parseDotimes() {
 }
 
 ExprPtr Parser::parseLet() {
-    ExprPtr sexpr;
+    ExprPtr name, value;
     std::vector<ExprPtr> variables;
+    std::vector<ExprPtr> sexprs;
 
     advance();
+
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-    while (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-        ExprPtr name = parseAtom();
-        ExprPtr value = parseAtom();
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        while (mCurrentToken.type == TokenType::LPAREN) {
+            consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+            name = parseAtom();
+            value = parseAtom();
 
-        symbolTable.emplace(StringEvaluator::getResult(name), IntEvaluator::getResult(value));
+            symbolTable.emplace(StringEvaluator::getResult(name), IntEvaluator::getResult(value));
 
-        variables.emplace_back(std::make_unique<VarExpr>(name, value));
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+            variables.emplace_back(std::make_unique<VarExpr>(name, value));
+            consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+        }
+    } else {
+        while (mCurrentToken.type == TokenType::VAR) {
+            name = parseAtom();
+            value = std::make_unique<NILExpr>();
+            symbolTable.emplace(StringEvaluator::getResult(name), -1);
+            variables.emplace_back(std::make_unique<VarExpr>(name, value));
+        }
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
-    if (mCurrentToken.type == TokenType::LPAREN)
-        sexpr = parseExpr();
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        while (mCurrentToken.type == TokenType::LPAREN) {
+            sexprs.emplace_back(parseExpr());
+        }
+    }
 
-    return std::make_unique<LetExpr>(sexpr, variables);
+    return std::make_unique<LetExpr>(sexprs, variables);
 
+}
+
+ExprPtr Parser::parseSetq() {
+    ExprPtr var, name, value;
+    advance();
+
+    name = parseAtom();
+
+    //TODO: refactor
+    auto found = symbolTable.find(StringEvaluator::getResult(name));
+    if (found == symbolTable.end()) {
+        throw InvalidSyntaxError(mFileName, (found->first + VAR_NOT_DEFINED).c_str(), 0);
+    }
+
+    value = parseAtom();
+    symbolTable[found->first] = IntEvaluator::getResult(value);
+    var = std::make_unique<VarExpr>(name, value);
+
+    return std::make_unique<SetqExpr>(var);
 }
 
 ExprPtr Parser::parseAtom() {

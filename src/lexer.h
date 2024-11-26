@@ -4,10 +4,21 @@
 #include <vector>
 
 enum class TokenType {
-    INT, PLUS, MINUS,
-    DIV, MUL, LPAREN,
-    RPAREN, PRINT, DOTIMES,
-    VAR, LET, EOF_
+    // Type
+    INT, VAR,
+    // Operators
+    PLUS, MINUS, DIV, MUL,
+    // IO
+    PRINT, READ,
+    // Loop
+    DOTIMES,
+    // Condition
+    IF,
+    // Assignment
+    LET, SETQ,
+
+    LPAREN, RPAREN,
+    EOF_
 };
 
 struct Token {

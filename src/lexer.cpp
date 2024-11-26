@@ -22,6 +22,10 @@ void Lexer::process() {
             mTokens.emplace_back(TokenType::LET);
 
             for (int i = 0; i < 3; ++i) advance();
+        } else if (!std::strncmp("setq", mCurrentChar, 4)) {
+            mTokens.emplace_back(TokenType::SETQ);
+
+            for (int i = 0; i < 4; ++i) advance();
         } else if (isdigit(mCurrentChar[0])) {
             std::string digit;
 
