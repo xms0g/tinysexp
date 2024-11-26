@@ -6,7 +6,7 @@ std::string CodeGen::emit(ExprPtr& ast) {
 }
 
 std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const ExprPtr&)) {
-    int lhsi, rhsi;
+    uint8_t lhsi, rhsi;
     std::string rhss, bf;
 
     lhsi = IntEvaluator::getResult(binop.lhs);
@@ -19,6 +19,7 @@ std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const
         bf += std::string(rhsi, '+');
     } else {
         bf += rhss;
+        rhsi = rhss.length();
     }
 
     switch (binop.opToken.type) {
@@ -57,7 +58,7 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
     store(code += "[>");
 
     if (hasSExpr) {
-        store(code += ASTVisitor::getResult(dotimes.statement));
+        store(code += getResult(dotimes.statement));
     }
 
     if (hasPrint) {
@@ -65,7 +66,7 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
     }
 
     if (hasRecursive) {
-        store(code += ASTVisitor::getResult(dotimes.statement));
+        store(code += getResult(dotimes.statement));
     }
 
     if (hasPrint || hasSExpr)
@@ -80,35 +81,44 @@ void ASTVisitor::visit(const PrintExpr& print) {
 }
 
 void ASTVisitor::visit(const LetExpr& let) {
-    if (let.sexpr) {
-        store(code += ASTVisitor::getResult(let.sexpr));
-        return;
+    for (const auto& sexpr: let.sexprs) {
+        store(code += getResult(sexpr));
     }
 
+    if (!let.sexprs.empty()) return;
+
     for (int i = 0; i < let.variables.size(); ++i) {
+        settedVariables.emplace(StringEvaluator::getResult(let.variables[i]));
+
         int value = IntEvaluator::getResult(let.variables[i]);
-        store(code += std::string(value, '+'));
+        if (value > 0)
+            store(code += std::string(value, '+'));
 
         if (let.variables.size() > 1 && i != let.variables.size() - 1)
             store(code += ">");
     }
 }
 
+void ASTVisitor::visit(const SetqExpr& setq) {
+    store(code += std::string(IntEvaluator::getResult(setq.var), '+'));
+    store(code += ">");
+    settedVariables.emplace(StringEvaluator::getResult(setq.var));
+}
+
 void IntEvaluator::visit(const NumberExpr& num) {
     store(num.n);
 }
 
-void IntEvaluator::visit(const StringExpr& str) {
-    store(-1);
-}
-
-//TODO:Check this out. Seems Redundant
 void IntEvaluator::visit(const VarExpr& var) {
     store(IntEvaluator::getResult(var.value));
 }
 
 void StringEvaluator::visit(const StringExpr& str) {
     store(str.str);
+}
+
+void StringEvaluator::visit(const VarExpr& var) {
+    store(StringEvaluator::getResult(var.name));
 }
 
 void TypeEvaluator::visit(const PrintExpr&) {
@@ -134,12 +144,19 @@ void PrintEvaluator::visit(const NumberExpr& num) {
 
 void PrintEvaluator::visit(const BinOpExpr& binop) {
     std::string bf;
-    store(bf + CodeGen::emitBinOp(binop, PrintEvaluator::getResult));
+    store(bf += CodeGen::emitBinOp(binop, PrintEvaluator::getResult));
 }
 
 void PrintEvaluator::visit(const PrintExpr& print) {
     std::string bf;
     store(bf += PrintEvaluator::getResult(print.sexpr));
     store(bf += ".");
+}
+
+void PrintEvaluator::visit(const VarExpr& var) {
+    std::string bf;
+    if (!ASTVisitor::settedVariables.contains(StringEvaluator::getResult(var.name))) {
+        store(bf += std::string(IntEvaluator::getResult(var.value), '+'));
+    }
 }
 

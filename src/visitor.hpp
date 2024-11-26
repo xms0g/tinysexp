@@ -2,10 +2,12 @@
 
 struct NumberExpr;
 struct StringExpr;
+struct NILExpr;
 struct BinOpExpr;
 struct DotimesExpr;
 struct PrintExpr;
 struct LetExpr;
+struct SetqExpr;
 struct VarExpr;
 class ExprVisitor {
 public:
@@ -17,9 +19,9 @@ public:
 
     virtual void visit(const StringExpr&) {}
 
-    virtual void visit(const BinOpExpr&) {}
+    virtual void visit(const NILExpr&) {}
 
-    virtual void visit(const BinOpExpr& binop, int param) {}
+    virtual void visit(const BinOpExpr&) {}
 
     virtual void visit(const DotimesExpr&) {}
 
@@ -28,6 +30,8 @@ public:
     virtual void visit(const PrintExpr&, int param) {}
 
     virtual void visit(const LetExpr&) {}
+
+    virtual void visit(const SetqExpr&) {}
 
     virtual void visit(const VarExpr&) {}
 };
