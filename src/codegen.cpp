@@ -46,8 +46,6 @@ std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const
     return bf;
 }
 
-std::unordered_set<std::string> ASTVisitor::settedVariables;
-
 void ASTVisitor::visit(const BinOpExpr& binop) {
     store(code + CodeGen::emitBinOp(binop, ASTVisitor::getResult));
 }
@@ -101,8 +99,6 @@ void ASTVisitor::visit(const LetExpr& let) {
     if (!let.sexprs.empty()) return;
 
     for (int i = 0; i < let.variables.size(); ++i) {
-        settedVariables.emplace(StringEvaluator::getResult(let.variables[i]));
-
         int value = IntEvaluator::getResult(let.variables[i]);
         if (value > 0)
             store(code += std::string(value, '+'));
@@ -120,8 +116,6 @@ void ASTVisitor::visit(const SetqExpr& setq) {
     } else {
         store(code += getResult(setq.var));
     }
-
-    settedVariables.emplace(StringEvaluator::getResult(setq.var));
 }
 
 void ASTVisitor::visit(const VarExpr& var) {
@@ -182,8 +176,6 @@ void PrintEvaluator::visit(const PrintExpr& print) {
 
 void PrintEvaluator::visit(const VarExpr& var) {
     std::string bf;
-    if (!ASTVisitor::settedVariables.contains(StringEvaluator::getResult(var.name))) {
-        store(bf += std::string(IntEvaluator::getResult(var.value), '+'));
-    }
+    store(bf += std::string(IntEvaluator::getResult(var.value), '+'));
 }
 

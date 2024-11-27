@@ -21,8 +21,6 @@ public:
 
 private:
     std::string code;
-public:
-    static std::unordered_set<std::string> settedVariables;
 };
 
 MAKE_VISITOR(IntEvaluator, uint8_t, MAKE_MTHD_NUMBER, MAKE_MTHD_VAR, MAKE_MTHD_READ, NULL_)
