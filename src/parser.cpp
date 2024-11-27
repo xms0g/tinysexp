@@ -11,8 +11,19 @@ constexpr const char* VAR_NOT_DEFINED = " is not defined";
 Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
 
 ExprPtr Parser::parse() {
+    ExprPtr root, currentExpr, prevExpr;
     advance();
-    return parseExpr();
+    while (mCurrentToken.type != TokenType::EOF_) {
+        currentExpr = parseExpr();
+        if (prevExpr) {
+            prevExpr->child = currentExpr;
+            prevExpr = prevExpr->child;
+        } else {
+            prevExpr = currentExpr;
+            root = prevExpr;
+        }
+    }
+    return root;
 }
 
 Token Parser::advance() {
@@ -28,36 +39,34 @@ Token Parser::advance() {
 ExprPtr Parser::parseExpr() {
     ExprPtr expr;
 
-    while (mCurrentToken.type != TokenType::EOF_) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
 
-        switch (mCurrentToken.type) {
-            case TokenType::PLUS:
-            case TokenType::MINUS:
-            case TokenType::DIV:
-            case TokenType::MUL:
-                expr = parseSExpr();
-                break;
-            case TokenType::PRINT:
-                expr = parsePrint();
-                break;
-            case TokenType::READ:
-                expr = parseRead();
-                break;
-            case TokenType::DOTIMES:
-                expr = parseDotimes();
-                break;
-            case TokenType::LET:
-                expr = parseLet();
-                break;
-            case TokenType::SETQ:
-                expr = parseSetq();
-                break;
-            default:
-                throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
-        }
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+    switch (mCurrentToken.type) {
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::DIV:
+        case TokenType::MUL:
+            expr = parseSExpr();
+            break;
+        case TokenType::PRINT:
+            expr = parsePrint();
+            break;
+        case TokenType::READ:
+            expr = parseRead();
+            break;
+        case TokenType::DOTIMES:
+            expr = parseDotimes();
+            break;
+        case TokenType::LET:
+            expr = parseLet();
+            break;
+        case TokenType::SETQ:
+            expr = parseSetq();
+            break;
+        default:
+            throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
+    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     return expr;
 }

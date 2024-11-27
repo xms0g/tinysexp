@@ -2,7 +2,14 @@
 #include <typeindex>
 
 std::string CodeGen::emit(ExprPtr& ast) {
-    return ASTVisitor::getResult(ast);
+    std::string generatedCode;
+
+    ExprPtr next = ast;
+    while (next != nullptr) {
+        generatedCode += ASTVisitor::getResult(next);
+        next = next->child;
+    }
+    return generatedCode;
 }
 
 std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const ExprPtr&)) {
@@ -38,6 +45,8 @@ std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const
     }
     return bf;
 }
+
+std::unordered_set<std::string> ASTVisitor::settedVariables;
 
 void ASTVisitor::visit(const BinOpExpr& binop) {
     store(code + CodeGen::emitBinOp(binop, ASTVisitor::getResult));

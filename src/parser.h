@@ -9,12 +9,14 @@
 #define MAKE_VISITABLE virtual void accept(ExprVisitor& visitor) override { visitor.visit(*this); }
 
 struct IExpr {
+    std::shared_ptr<IExpr> child;
+
     virtual ~IExpr() = default;
 
     virtual void accept(ExprVisitor& visitor) = 0;
 };
 
-using ExprPtr = std::unique_ptr<IExpr>;
+using ExprPtr = std::shared_ptr<IExpr>;
 
 struct NumberExpr : IExpr {
     uint8_t n;
