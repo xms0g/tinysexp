@@ -28,32 +28,37 @@ Token Parser::advance() {
 ExprPtr Parser::parseExpr() {
     ExprPtr expr;
 
-    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+    while (mCurrentToken.type != TokenType::EOF_) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
 
-    switch (mCurrentToken.type) {
-        case TokenType::PLUS:
-        case TokenType::MINUS:
-        case TokenType::DIV:
-        case TokenType::MUL:
-            expr = parseSExpr();
-            break;
-        case TokenType::PRINT:
-            expr = parsePrint();
-            break;
-        case TokenType::DOTIMES:
-            expr = parseDotimes();
-            break;
-        case TokenType::LET:
-            expr = parseLet();
-            break;
-        case TokenType::SETQ:
-            expr = parseSetq();
-            break;
-        default:
-            throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
+        switch (mCurrentToken.type) {
+            case TokenType::PLUS:
+            case TokenType::MINUS:
+            case TokenType::DIV:
+            case TokenType::MUL:
+                expr = parseSExpr();
+                break;
+            case TokenType::PRINT:
+                expr = parsePrint();
+                break;
+            case TokenType::READ:
+                expr = parseRead();
+                break;
+            case TokenType::DOTIMES:
+                expr = parseDotimes();
+                break;
+            case TokenType::LET:
+                expr = parseLet();
+                break;
+            case TokenType::SETQ:
+                expr = parseSetq();
+                break;
+            default:
+                throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
+        }
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     }
 
-    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     return expr;
 }
 
@@ -104,6 +109,15 @@ ExprPtr Parser::parsePrint() {
     return std::make_unique<PrintExpr>(statement);
 }
 
+ExprPtr Parser::parseRead() {
+    ExprPtr statement;
+    advance();
+
+    statement = std::make_unique<ReadExpr>();
+
+    return statement;
+}
+
 ExprPtr Parser::parseDotimes() {
     ExprPtr statement, name, value;
     advance();
@@ -145,7 +159,7 @@ ExprPtr Parser::parseLet() {
         while (mCurrentToken.type == TokenType::VAR) {
             name = parseAtom();
             value = std::make_unique<NILExpr>();
-            symbolTable.emplace(StringEvaluator::getResult(name), -1);
+            symbolTable.emplace(StringEvaluator::getResult(name), 0);
             variables.emplace_back(std::make_unique<VarExpr>(name, value));
         }
     }
@@ -167,16 +181,16 @@ ExprPtr Parser::parseSetq() {
 
     name = parseAtom();
 
-    //TODO: refactor
-    auto found = symbolTable.find(StringEvaluator::getResult(name));
-    if (found == symbolTable.end()) {
-        throw InvalidSyntaxError(mFileName, (found->first + VAR_NOT_DEFINED).c_str(), 0);
+    checkVarError(name);
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        value = parseExpr();
+    } else {
+        value = parseAtom();
+        symbolTable[StringEvaluator::getResult(name)] = IntEvaluator::getResult(value);
     }
 
-    value = parseAtom();
-    symbolTable[found->first] = IntEvaluator::getResult(value);
     var = std::make_unique<VarExpr>(name, value);
-
     return std::make_unique<SetqExpr>(var);
 }
 

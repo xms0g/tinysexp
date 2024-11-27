@@ -14,6 +14,10 @@ void Lexer::process() {
             mTokens.emplace_back(TokenType::PRINT);
 
             for (int i = 0; i < 5; ++i) advance();
+        } else if (!std::strncmp("read", mCurrentChar, 4)) {
+            mTokens.emplace_back(TokenType::READ);
+
+            for (int i = 0; i < 4; ++i) advance();
         } else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
             mTokens.emplace_back(TokenType::DOTIMES);
 

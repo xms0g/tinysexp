@@ -80,6 +80,10 @@ void ASTVisitor::visit(const PrintExpr& print) {
     store(code += ".");
 }
 
+void ASTVisitor::visit(const ReadExpr&) {
+    store(code += ",");
+}
+
 void ASTVisitor::visit(const LetExpr& let) {
     for (const auto& sexpr: let.sexprs) {
         store(code += getResult(sexpr));
@@ -100,9 +104,19 @@ void ASTVisitor::visit(const LetExpr& let) {
 }
 
 void ASTVisitor::visit(const SetqExpr& setq) {
-    store(code += std::string(IntEvaluator::getResult(setq.var), '+'));
-    store(code += ">");
+    int value = IntEvaluator::getResult(setq.var);
+    if (value) {
+        store(code += std::string(value, '+'));
+        store(code += ">");
+    } else {
+        store(code += getResult(setq.var));
+    }
+
     settedVariables.emplace(StringEvaluator::getResult(setq.var));
+}
+
+void ASTVisitor::visit(const VarExpr& var) {
+    store(code += getResult(var.value));
 }
 
 void IntEvaluator::visit(const NumberExpr& num) {
@@ -111,6 +125,10 @@ void IntEvaluator::visit(const NumberExpr& num) {
 
 void IntEvaluator::visit(const VarExpr& var) {
     store(IntEvaluator::getResult(var.value));
+}
+
+void IntEvaluator::visit(const ReadExpr& print) {
+    store(0);
 }
 
 void StringEvaluator::visit(const StringExpr& str) {
