@@ -47,7 +47,8 @@ std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const
 }
 
 void ASTVisitor::visit(const BinOpExpr& binop) {
-    store(code + CodeGen::emitBinOp(binop, ASTVisitor::getResult));
+    store(code += CodeGen::emitBinOp(binop, ASTVisitor::getResult));
+
 }
 
 void ASTVisitor::visit(const DotimesExpr& dotimes) {
