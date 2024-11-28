@@ -226,6 +226,8 @@ private:
 
     ExprPtr checkVarError(ExprPtr& expr);
 
+    void strToVar(ExprPtr& expr);
+
     Lexer& mLexer;
     Token mCurrentToken{};
     int mTokenIndex;

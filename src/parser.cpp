@@ -78,26 +78,16 @@ ExprPtr Parser::parseSExpr() {
     Token token = mCurrentToken;
     advance();
 
-    //TODO:code repetition
     left = parseAtom();
-    if (left->type() == ExprType::STR) {
-        if (ExprPtr value = checkVarError(left)) {
-            left = std::make_shared<VarExpr>(left, value);
-        }
-    }
+    strToVar(left);
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         right = parseSExpr();
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
-        //TODO:code repetition
         right = parseAtom();
-        if (right->type() == ExprType::STR) {
-            if (ExprPtr value = checkVarError(right)) {
-                right = std::make_shared<VarExpr>(right, value);
-            }
-        }
+        strToVar(right);
     }
 
     return std::make_shared<BinOpExpr>(left, right, token);
@@ -114,21 +104,15 @@ ExprPtr Parser::parsePrint() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         statement = parseAtom();
-        if (ExprPtr value = checkVarError(statement)) {
-            statement = std::make_shared<VarExpr>(statement, value);
-        }
+        strToVar(statement);
     }
 
     return std::make_shared<PrintExpr>(statement);
 }
 
 ExprPtr Parser::parseRead() {
-    ExprPtr statement;
     advance();
-
-    statement = std::make_shared<ReadExpr>();
-
-    return statement;
+    return std::make_shared<ReadExpr>();;
 }
 
 ExprPtr Parser::parseDotimes() {
@@ -162,25 +146,22 @@ ExprPtr Parser::parseLet() {
     advance();
 
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        while (mCurrentToken.type == TokenType::LPAREN) {
-            consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-            name = parseAtom();
-            value = parseAtom();
-
-            symbolTable.emplace(name->asStr().str, value);
-
-            variables.emplace_back(std::make_shared<VarExpr>(name, value));
-            consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-        }
-    } else {
-        while (mCurrentToken.type == TokenType::VAR) {
-            name = parseAtom();
-            value = std::make_shared<NILExpr>();
-            symbolTable.emplace(name->asStr().str, value);
-            variables.emplace_back(std::make_shared<VarExpr>(name, value));
-        }
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+        name = parseAtom();
+        value = parseAtom();
+        symbolTable.emplace(name->asStr().str, value);
+        variables.emplace_back(std::make_shared<VarExpr>(name, value));
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     }
+
+    while (mCurrentToken.type == TokenType::VAR) {
+        name = parseAtom();
+        value = std::make_shared<NILExpr>();
+        symbolTable.emplace(name->asStr().str, value);
+        variables.emplace_back(std::make_shared<VarExpr>(name, value));
+    }
+
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -246,4 +227,12 @@ ExprPtr Parser::checkVarError(ExprPtr& expr) {
         throw InvalidSyntaxError(mFileName, (name + VAR_NOT_DEFINED).c_str(), 0);
     }
     return found->second;
+}
+
+void Parser::strToVar(ExprPtr& expr) {
+    if (expr->type() == ExprType::STR) {
+        if (ExprPtr value = checkVarError(expr)) {
+            expr = std::make_shared<VarExpr>(expr, value);
+        }
+    }
 }
