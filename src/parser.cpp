@@ -78,8 +78,7 @@ ExprPtr Parser::parseSExpr() {
     advance();
     left = parseAtom();
 
-    if (int ivalue = checkVarError(left)) {
-        ExprPtr value = std::make_unique<NumberExpr>(ivalue);
+    if (ExprPtr value = checkVarError(left)) {
         left = std::make_unique<VarExpr>(left, value);
     }
 
@@ -89,8 +88,7 @@ ExprPtr Parser::parseSExpr() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         right = parseAtom();
-        if (int ivalue = checkVarError(right)) {
-            ExprPtr value = std::make_unique<NumberExpr>(ivalue);
+        if (ExprPtr value = checkVarError(right)) {
             right = std::make_unique<VarExpr>(right, value);
         }
     }
@@ -109,8 +107,7 @@ ExprPtr Parser::parsePrint() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         statement = parseAtom();
-        if (int ivalue = checkVarError(statement)) {
-            ExprPtr value = std::make_unique<NumberExpr>(ivalue);
+        if (ExprPtr value = checkVarError(statement)) {
             statement = std::make_unique<VarExpr>(statement, value);
         }
     }
@@ -128,7 +125,9 @@ ExprPtr Parser::parseRead() {
 }
 
 ExprPtr Parser::parseDotimes() {
-    ExprPtr statement, name, value;
+    std::vector<ExprPtr> statements;
+    ExprPtr name, value;
+
     advance();
 
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
@@ -136,13 +135,16 @@ ExprPtr Parser::parseDotimes() {
     value = parseAtom();
 
     //TODO:fix print (* i i) replaces (* 10 10)
-    symbolTable.emplace(StringEvaluator::getResult(name), IntEvaluator::getResult(value));
+    symbolTable.emplace(StringEvaluator::getResult(name), value);
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
-    if (mCurrentToken.type == TokenType::LPAREN)
-        statement = parseExpr();
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        while (mCurrentToken.type == TokenType::LPAREN) {
+            statements.emplace_back(parseExpr());
+        }
+    }
 
-    return std::make_unique<DotimesExpr>(value, statement);
+    return std::make_unique<DotimesExpr>(value, statements);
 }
 
 ExprPtr Parser::parseLet() {
@@ -159,7 +161,7 @@ ExprPtr Parser::parseLet() {
             name = parseAtom();
             value = parseAtom();
 
-            symbolTable.emplace(StringEvaluator::getResult(name), IntEvaluator::getResult(value));
+            symbolTable.emplace(StringEvaluator::getResult(name), value);
 
             variables.emplace_back(std::make_unique<VarExpr>(name, value));
             consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
@@ -168,7 +170,7 @@ ExprPtr Parser::parseLet() {
         while (mCurrentToken.type == TokenType::VAR) {
             name = parseAtom();
             value = std::make_unique<NILExpr>();
-            symbolTable.emplace(StringEvaluator::getResult(name), 0);
+            symbolTable.emplace(StringEvaluator::getResult(name), value);
             variables.emplace_back(std::make_unique<VarExpr>(name, value));
         }
     }
@@ -196,8 +198,9 @@ ExprPtr Parser::parseSetq() {
         value = parseExpr();
     } else {
         value = parseAtom();
-        symbolTable[StringEvaluator::getResult(name)] = IntEvaluator::getResult(value);
     }
+
+    symbolTable[StringEvaluator::getResult(name)] = value;
 
     var = std::make_unique<VarExpr>(name, value);
     return std::make_unique<SetqExpr>(var);
@@ -229,7 +232,7 @@ void Parser::consume(TokenType expected, const char* errorStr) {
     } else advance();
 }
 
-int Parser::checkVarError(ExprPtr& var) {
+ExprPtr Parser::checkVarError(ExprPtr& var) {
     std::string strvar = StringEvaluator::getResult(var);
 
     if (!strvar.empty()) {
@@ -240,6 +243,6 @@ int Parser::checkVarError(ExprPtr& var) {
         return found->second;
     }
 
-    return 0;
+    return nullptr;
 
 }

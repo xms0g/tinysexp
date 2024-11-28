@@ -62,11 +62,11 @@ struct BinOpExpr : IExpr {
 
 struct DotimesExpr : IExpr {
     ExprPtr iterationCount;
-    ExprPtr statement;
+    std::vector<ExprPtr> statements;
 
-    DotimesExpr(ExprPtr& iterCount, ExprPtr& statement) :
+    DotimesExpr(ExprPtr& iterCount, std::vector<ExprPtr>& statements) :
             iterationCount(std::move(iterCount)),
-            statement(std::move(statement)) {}
+            statements(std::move(statements)) {}
 
     MAKE_VISITABLE
 };
@@ -143,11 +143,11 @@ private:
 
     void consume(TokenType expected, const char* errorStr);
 
-    int checkVarError(ExprPtr& var);
+    ExprPtr checkVarError(ExprPtr& var);
 
     Lexer& mLexer;
     Token mCurrentToken{};
     int mTokenIndex;
     const char* mFileName;
-    std::unordered_map<std::string, int> symbolTable;
+    std::unordered_map<std::string, ExprPtr> symbolTable;
 };
