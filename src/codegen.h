@@ -25,7 +25,6 @@ private:
     void putVar(const NumberExpr& num);
 
     std::string generatedCode;
-
 };
 
 

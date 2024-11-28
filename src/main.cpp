@@ -34,11 +34,25 @@ void compile(const char* fn, std::string& program) {
     }
 }
 
+void repl() {
+    std::string program;
+
+    while (true) {
+        std::cout << RESET_COLOR << "lbf> ";
+        std::getline(std::cin >> std::ws, program);
+
+        if (program == "q")
+            break;
+
+        compile("<stdin>", program);
+    }
+}
+
 int main(int argc, char** argv) {
     std::string program;
     const char* fn = argv[1];
 
-    if (argc > 1) {
+    if (argc == 2) {
         std::ifstream file;
 
         file.exceptions(std::ifstream::badbit | std::ifstream::failbit);
@@ -62,15 +76,7 @@ int main(int argc, char** argv) {
         compile(fn, program);
 
     } else {
-        while (true) {
-            std::cout << RESET_COLOR << "lbf> ";
-            std::getline(std::cin >> std::ws, program);
-
-            if (program == "q")
-                break;
-
-            compile("<stdin>", program);
-        }
+       repl();
     }
 
     return 0;
