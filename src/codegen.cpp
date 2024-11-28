@@ -1,5 +1,4 @@
 #include "codegen.h"
-#include <typeindex>
 
 std::string CodeGen::emit(ExprPtr& ast) {
     ExprPtr next = ast;
@@ -53,8 +52,12 @@ void CodeGen::emitBinOp(const BinOpExpr& binop) {
         rhsi = binop.rhs->asNum().n;
         putVar(binop.rhs->asNum());
     } else if (binop.rhs->type() == ExprType::VAR) {
-        rhsi = binop.rhs->asVar().value->asNum().n;
-        putVar(binop.rhs->asVar().value->asNum());
+        if (binop.rhs->asVar().value->type() == ExprType::READ) {
+            emitRead(binop.rhs->asVar().value->asRead());
+        } else {
+            rhsi = binop.rhs->asVar().value->asNum().n;
+            putVar(binop.rhs->asVar().value->asNum());
+        }
     } else if (binop.rhs->type() == ExprType::BINOP) {
         emitBinOp(binop.rhs->asBinop());
     }
