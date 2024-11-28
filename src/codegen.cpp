@@ -38,8 +38,13 @@ void CodeGen::emitBinOp(const BinOpExpr& binop) {
         lhsi = binop.lhs->asNum().n;
         putVar(binop.lhs->asNum());
     } else if (binop.lhs->type() == ExprType::VAR) {
-        lhsi = binop.lhs->asVar().value->asNum().n;
-        putVar(binop.lhs->asVar().value->asNum());
+        if (binop.lhs->asVar().value->type() == ExprType::READ) {
+            emitRead(binop.lhs->asVar().value->asRead());
+        } else {
+            lhsi = binop.lhs->asVar().value->asNum().n;
+            putVar(binop.lhs->asVar().value->asNum());
+        }
+
     }
 
     generatedCode += ">";
@@ -130,11 +135,11 @@ void CodeGen::emitLet(const LetExpr& let) {
 }
 
 void CodeGen::emitSetq(const SetqExpr& setq) {
-    if (setq.var->type() == ExprType::VAR) {
+    if (setq.var->asVar().value->type() == ExprType::READ) {
+        emitRead(setq.var->asVar().value->asRead());
+    } else {
         putVar(setq.var->asVar().value->asNum());
         generatedCode += ">";
-    } else if (setq.var->type() == ExprType::READ) {
-        emitRead(setq.var->asRead());
     }
 }
 
