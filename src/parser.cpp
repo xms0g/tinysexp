@@ -80,7 +80,7 @@ ExprPtr Parser::parseSExpr() {
 
     //TODO:code repetition
     left = parseAtom();
-    if (left->type() == ExprType::VAR) {
+    if (left->type() == ExprType::STR) {
         if (ExprPtr value = checkVarError(left)) {
             left = std::make_shared<VarExpr>(left, value);
         }
@@ -93,7 +93,7 @@ ExprPtr Parser::parseSExpr() {
     } else {
         //TODO:code repetition
         right = parseAtom();
-        if (right->type() == ExprType::VAR) {
+        if (right->type() == ExprType::STR) {
             if (ExprPtr value = checkVarError(right)) {
                 right = std::make_shared<VarExpr>(right, value);
             }
