@@ -82,7 +82,7 @@ ExprPtr Parser::parseSExpr() {
     left = parseAtom();
     if (left->type() == ExprType::VAR) {
         if (ExprPtr value = checkVarError(left)) {
-            left = std::make_unique<VarExpr>(left, value);
+            left = std::make_shared<VarExpr>(left, value);
         }
     }
 
@@ -95,12 +95,12 @@ ExprPtr Parser::parseSExpr() {
         right = parseAtom();
         if (right->type() == ExprType::VAR) {
             if (ExprPtr value = checkVarError(right)) {
-                right = std::make_unique<VarExpr>(right, value);
+                right = std::make_shared<VarExpr>(right, value);
             }
         }
     }
 
-    return std::make_unique<BinOpExpr>(left, right, token);
+    return std::make_shared<BinOpExpr>(left, right, token);
 }
 
 ExprPtr Parser::parsePrint() {
@@ -115,18 +115,18 @@ ExprPtr Parser::parsePrint() {
     } else {
         statement = parseAtom();
         if (ExprPtr value = checkVarError(statement)) {
-            statement = std::make_unique<VarExpr>(statement, value);
+            statement = std::make_shared<VarExpr>(statement, value);
         }
     }
 
-    return std::make_unique<PrintExpr>(statement);
+    return std::make_shared<PrintExpr>(statement);
 }
 
 ExprPtr Parser::parseRead() {
     ExprPtr statement;
     advance();
 
-    statement = std::make_unique<ReadExpr>();
+    statement = std::make_shared<ReadExpr>();
 
     return statement;
 }
@@ -151,7 +151,7 @@ ExprPtr Parser::parseDotimes() {
         }
     }
 
-    return std::make_unique<DotimesExpr>(value, statements);
+    return std::make_shared<DotimesExpr>(value, statements);
 }
 
 ExprPtr Parser::parseLet() {
@@ -170,15 +170,15 @@ ExprPtr Parser::parseLet() {
 
             symbolTable.emplace(name->asStr().str, value);
 
-            variables.emplace_back(std::make_unique<VarExpr>(name, value));
+            variables.emplace_back(std::make_shared<VarExpr>(name, value));
             consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
         }
     } else {
         while (mCurrentToken.type == TokenType::VAR) {
             name = parseAtom();
-            value = std::make_unique<NILExpr>();
+            value = std::make_shared<NILExpr>();
             symbolTable.emplace(name->asStr().str, value);
-            variables.emplace_back(std::make_unique<VarExpr>(name, value));
+            variables.emplace_back(std::make_shared<VarExpr>(name, value));
         }
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
@@ -189,7 +189,7 @@ ExprPtr Parser::parseLet() {
         }
     }
 
-    return std::make_unique<LetExpr>(sexprs, variables);
+    return std::make_shared<LetExpr>(sexprs, variables);
 
 }
 
@@ -209,15 +209,15 @@ ExprPtr Parser::parseSetq() {
 
     symbolTable[name->asStr().str] = value;
 
-    var = std::make_unique<VarExpr>(name, value);
-    return std::make_unique<SetqExpr>(var);
+    var = std::make_shared<VarExpr>(name, value);
+    return std::make_shared<SetqExpr>(var);
 }
 
 ExprPtr Parser::parseAtom() {
     if (mCurrentToken.type == TokenType::VAR) {
         Token token = mCurrentToken;
         advance();
-        return std::make_unique<StringExpr>(token.value);
+        return std::make_shared<StringExpr>(token.value);
     } else {
         return parseNumber();
     }
@@ -227,7 +227,7 @@ ExprPtr Parser::parseNumber() {
     if (mCurrentToken.type == TokenType::INT) {
         Token token = mCurrentToken;
         advance();
-        return std::make_unique<NumberExpr>(std::stoi(token.value));
+        return std::make_shared<NumberExpr>(std::stoi(token.value));
     }
 
     throw InvalidSyntaxError(mFileName, EXPECTED_INT_ERROR, 0);
