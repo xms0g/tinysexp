@@ -32,11 +32,12 @@ void CodeGen::emitBinOp(const BinOpExpr& binop) {
 
     if (binop.lhs->type() == ExprType::INT) {
         lhsi = binop.lhs->asNum().n;
+        putVar(binop.lhs->asNum());
     } else if (binop.lhs->type() == ExprType::VAR) {
         lhsi = binop.lhs->asVar().value->asNum().n;
+        putVar(binop.lhs->asVar().value->asNum());
     }
 
-    putVar(binop.lhs->asVar().value->asNum());
     generatedCode += ">";
 
     if (binop.rhs->type() == ExprType::INT) {
