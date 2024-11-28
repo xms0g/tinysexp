@@ -8,6 +8,8 @@ public:
     std::string emit(ExprPtr& ast);
 
 private:
+    void emitExpr(const ExprPtr& expr);
+
     void emitBinOp(const BinOpExpr& binop);
 
     void emitDotimes(const DotimesExpr& dotimes);

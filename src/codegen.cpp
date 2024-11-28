@@ -5,26 +5,30 @@ std::string CodeGen::emit(ExprPtr& ast) {
     ExprPtr next = ast;
 
     while (next != nullptr) {
-        switch (next->type()) {
-            case ExprType::BINOP:
-                emitBinOp(next->asBinop());
-                break;
-            case ExprType::DOTIMES:
-                emitDotimes(next->asDotimes());
-                break;
-            case ExprType::PRINT:
-                emitPrint(next->asPrint());
-                break;
-            case ExprType::LET:
-                emitLet(next->asLet());
-                break;
-            case ExprType::SETQ:
-                emitSetq(next->asSetq());
-                break;
-        }
+        emitExpr(next);
         next = next->child;
     }
     return generatedCode;
+}
+
+void CodeGen::emitExpr(const ExprPtr& expr) {
+    switch (expr->type()) {
+        case ExprType::BINOP:
+            emitBinOp(expr->asBinop());
+            break;
+        case ExprType::DOTIMES:
+            emitDotimes(expr->asDotimes());
+            break;
+        case ExprType::PRINT:
+            emitPrint(expr->asPrint());
+            break;
+        case ExprType::LET:
+            emitLet(expr->asLet());
+            break;
+        case ExprType::SETQ:
+            emitSetq(expr->asSetq());
+            break;
+    }
 }
 
 void CodeGen::emitBinOp(const BinOpExpr& binop) {
@@ -72,8 +76,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     generatedCode += std::string(dotimes.iterationCount->asNum().n, '+');
     generatedCode += "[>";
 
-    for (auto& statement: dotimes.statements) {
-
+    for (const auto& statement: dotimes.statements) {
         if (statement->type() == ExprType::PRINT) {
             hasPrint = true;
             emitPrint(statement->asPrint());
@@ -81,7 +84,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
             emitDotimes(statement->asDotimes());
         } else if (statement->type() == ExprType::SETQ) {
             emitSetq(statement->asSetq());
-        }else if (statement->type() == ExprType::LET) {
+        } else if (statement->type() == ExprType::LET) {
             emitLet(statement->asLet());
         } else if (statement->type() == ExprType::BINOP || statement->type() == ExprType::INT) {
             hasSExpr = true;
@@ -113,17 +116,7 @@ void CodeGen::emitRead(const ReadExpr& read) {
 
 void CodeGen::emitLet(const LetExpr& let) {
     for (const auto& sexpr: let.sexprs) {
-        if (sexpr->type() == ExprType::LET) {
-            emitLet(sexpr->asLet());
-        } else if (sexpr->type() == ExprType::SETQ) {
-            emitSetq(sexpr->asSetq());
-        } else if (sexpr->type() == ExprType::BINOP) {
-            emitBinOp(sexpr->asBinop());
-        } else if (sexpr->type() == ExprType::DOTIMES) {
-            emitDotimes(sexpr->asDotimes());
-        } else if (sexpr->type() == ExprType::PRINT) {
-            emitPrint(sexpr->asPrint());
-        }
+        emitExpr(sexpr);
     }
 
     if (!let.sexprs.empty()) return;
