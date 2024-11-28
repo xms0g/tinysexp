@@ -4,6 +4,12 @@
 std::string CodeGen::emit(ExprPtr& ast) {
     std::string generatedCode;
 
+    generatedCode = "section .bss\n"
+                    "section .data\n"
+                    "section. text\n"
+                    "\tglobal _start\n"
+                    "_start:\n\t";
+
     ExprPtr next = ast;
     while (next != nullptr) {
         generatedCode += ASTVisitor::getResult(next);
@@ -12,38 +18,39 @@ std::string CodeGen::emit(ExprPtr& ast) {
     return generatedCode;
 }
 
+std::string CodeGen::emitOP(const char* op) {
+    return std::format("{} rdi, rsi\n"
+                       "mov rax, rdi\n", op);
+}
+
 std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const ExprPtr&)) {
     uint8_t lhsi, rhsi;
-    std::string rhss, bf;
+    std::string rhss, code;
 
     lhsi = IntEvaluator::getResult(binop.lhs);
+    code += std::format("mov rdi, {}\n", lhsi);
     rhss = func(binop.rhs);
 
-    bf += std::string(lhsi, '+');
-    bf += ">";
     if (rhss.empty()) {
         rhsi = IntEvaluator::getResult(binop.rhs);
-        bf += std::string(rhsi, '+');
-    } else {
-        bf += rhss;
-        rhsi = rhss.length();
+        code += std::format("mov rsi, {}\n", rhsi);
     }
 
     switch (binop.opToken.type) {
         case TokenType::PLUS:
-            bf += "[<+>-]<";
+            code += emitOP("add");
             break;
         case TokenType::MINUS:
-            bf += "[<->-]<";
+            code += emitOP("sub");
             break;
         case TokenType::DIV:
-            bf += std::format("<[{}>>+<<]>>[-<<+>>]<<", std::string(rhsi, '-'));
+            code += emitOP("div");
             break;
         case TokenType::MUL:
-            bf += std::format("-[<{}>-]<", std::string(lhsi, '+'));
+            code += emitOP("mul");
             break;
     }
-    return bf;
+    return code;
 }
 
 void ASTVisitor::visit(const BinOpExpr& binop) {
@@ -55,26 +62,22 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
     int iterCount = IntEvaluator::getResult(dotimes.iterationCount);
     bool hasPrint{false}, hasRecursive{false}, hasSExpr{false};
 
-    if (dotimes.statement) {
-        hasPrint = TypeEvaluator::getResult(dotimes.statement) == typeid(PrintExpr).hash_code();
-        hasRecursive = TypeEvaluator::getResult(dotimes.statement) == typeid(DotimesExpr).hash_code();
-        hasSExpr = TypeEvaluator::getResult(dotimes.statement) == typeid(BinOpExpr).hash_code() ||
-                   TypeEvaluator::getResult(dotimes.statement) == typeid(NumberExpr).hash_code();
-    }
-
     store(code += std::string(iterCount, '+'));
     store(code += "[>");
 
-    if (hasSExpr) {
-        store(code += getResult(dotimes.statement));
-    }
+    for (auto& statement:dotimes.statements) {
+        hasPrint = TypeEvaluator::getResult(statement) == typeid(PrintExpr).hash_code();
+        hasRecursive = TypeEvaluator::getResult(statement) == typeid(DotimesExpr).hash_code();
+        hasSExpr = TypeEvaluator::getResult(statement) == typeid(BinOpExpr).hash_code() ||
+                   TypeEvaluator::getResult(statement) == typeid(NumberExpr).hash_code();
 
-    if (hasPrint) {
-        store(code += PrintEvaluator::getResult(dotimes.statement));
-    }
+        if (hasSExpr || hasRecursive) {
+            store(code += getResult(statement));
+        }
 
-    if (hasRecursive) {
-        store(code += getResult(dotimes.statement));
+        if (hasPrint) {
+            store(code += PrintEvaluator::getResult(statement));
+        }
     }
 
     if (hasPrint || hasSExpr)
