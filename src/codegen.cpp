@@ -2,181 +2,207 @@
 #include <typeindex>
 
 std::string CodeGen::emit(ExprPtr& ast) {
-    std::string generatedCode;
-
     ExprPtr next = ast;
+
     while (next != nullptr) {
-        generatedCode += ASTVisitor::getResult(next);
+        switch (next->type()) {
+            case ExprType::BINOP:
+                emitBinOp(next->asBinop());
+                break;
+            case ExprType::DOTIMES:
+                emitDotimes(next->asDotimes());
+                break;
+            case ExprType::PRINT:
+                emitPrint(next->asPrint());
+                break;
+            case ExprType::LET:
+                emitLet(next->asLet());
+                break;
+            case ExprType::SETQ:
+                emitSetq(next->asSetq());
+                break;
+        }
         next = next->child;
     }
     return generatedCode;
 }
 
-std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const ExprPtr&)) {
+void CodeGen::emitBinOp(const BinOpExpr& binop) {
     uint8_t lhsi, rhsi;
-    std::string rhss, bf;
 
-    lhsi = IntEvaluator::getResult(binop.lhs);
-    rhss = func(binop.rhs);
+    if (binop.lhs->type() == ExprType::INT) {
+        lhsi = binop.lhs->asNum().n;
+        putVar(binop.lhs->asNum());
+        generatedCode += ">";
+    }
 
-    bf += std::string(lhsi, '+');
-    bf += ">";
-    if (rhss.empty()) {
-        rhsi = IntEvaluator::getResult(binop.rhs);
-        bf += std::string(rhsi, '+');
-    } else {
-        bf += rhss;
-        rhsi = rhss.length();
+    if (binop.rhs->type() == ExprType::INT) {
+        rhsi = binop.rhs->asNum().n;
+        putVar(binop.rhs->asNum());
+    } else if (binop.rhs->type() == ExprType::VAR) {
+        rhsi = binop.rhs->asVar().value->asNum().n;
+        putVar(binop.rhs->asVar().value->asNum());
+    } else if (binop.rhs->type() == ExprType::BINOP) {
+        emitBinOp(binop.rhs->asBinop());
     }
 
     switch (binop.opToken.type) {
         case TokenType::PLUS:
-            bf += "[<+>-]<";
+            generatedCode += "[<+>-]<";
             break;
         case TokenType::MINUS:
-            bf += "[<->-]<";
+            generatedCode += "[<->-]<";
             break;
         case TokenType::DIV:
-            bf += std::format("<[{}>>+<<]>>[-<<+>>]<<", std::string(rhsi, '-'));
+            generatedCode += std::format("<[{}>>+<<]>>[-<<+>>]<<", std::string(rhsi, '-'));
             break;
         case TokenType::MUL:
-            bf += std::format("-[<{}>-]<", std::string(lhsi, '+'));
+            generatedCode += std::format("-[<{}>-]<", std::string(lhsi, '+'));
             break;
     }
-    return bf;
 }
 
-void ASTVisitor::visit(const BinOpExpr& binop) {
-    store(code += CodeGen::emitBinOp(binop, ASTVisitor::getResult));
+void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
+    bool hasPrint{false}, hasSExpr{false};
 
-}
+    generatedCode += std::string(dotimes.iterationCount->asNum().n, '+');
+    generatedCode += "[>";
 
-void ASTVisitor::visit(const DotimesExpr& dotimes) {
-    int iterCount = IntEvaluator::getResult(dotimes.iterationCount);
-    bool hasPrint{false}, hasRecursive{false}, hasSExpr{false};
+    for (auto& statement: dotimes.statements) {
 
-    if (dotimes.statement) {
-        hasPrint = TypeEvaluator::getResult(dotimes.statement) == typeid(PrintExpr).hash_code();
-        hasRecursive = TypeEvaluator::getResult(dotimes.statement) == typeid(DotimesExpr).hash_code();
-        hasSExpr = TypeEvaluator::getResult(dotimes.statement) == typeid(BinOpExpr).hash_code() ||
-                   TypeEvaluator::getResult(dotimes.statement) == typeid(NumberExpr).hash_code();
-    }
-
-    store(code += std::string(iterCount, '+'));
-    store(code += "[>");
-
-    if (hasSExpr) {
-        store(code += getResult(dotimes.statement));
-    }
-
-    if (hasPrint) {
-        store(code += PrintEvaluator::getResult(dotimes.statement));
-    }
-
-    if (hasRecursive) {
-        store(code += getResult(dotimes.statement));
+        if (statement->type() == ExprType::PRINT) {
+            hasPrint = true;
+            emitPrint(statement->asPrint());
+        } else if (statement->type() == ExprType::DOTIMES) {
+            emitDotimes(statement->asDotimes());
+        } else if (statement->type() == ExprType::SETQ) {
+            emitSetq(statement->asSetq());
+        }else if (statement->type() == ExprType::LET) {
+            emitLet(statement->asLet());
+        } else if (statement->type() == ExprType::BINOP || statement->type() == ExprType::INT) {
+            hasSExpr = true;
+            //TODO:Check this out
+            emitBinOp(statement->asBinop());
+        }
     }
 
     if (hasPrint || hasSExpr)
-        store(code += "<->[-]<]");
+        generatedCode += "<->[-]<]";
     else
-        store(code += "<-]");
+        generatedCode += "<-]";
 }
 
-void ASTVisitor::visit(const PrintExpr& print) {
-    store(code += PrintEvaluator::getResult(print.sexpr));
-    store(code += ".");
+void CodeGen::emitPrint(const PrintExpr& print) {
+    if (print.sexpr->type() == ExprType::INT) {
+        putVar(print.sexpr->asNum());
+    } else if (print.sexpr->type() == ExprType::VAR) {
+        putVar(print.sexpr->asVar().value->asNum());
+    } else if (print.sexpr->type() == ExprType::BINOP) {
+        emitBinOp(print.sexpr->asBinop());
+    }
+    generatedCode += ".";
 }
 
-void ASTVisitor::visit(const ReadExpr&) {
-    store(code += ",");
+void CodeGen::emitRead(const ReadExpr& read) {
+    generatedCode += ",";
 }
 
-void ASTVisitor::visit(const LetExpr& let) {
+void CodeGen::emitLet(const LetExpr& let) {
     for (const auto& sexpr: let.sexprs) {
-        store(code += getResult(sexpr));
+        if (sexpr->type() == ExprType::LET) {
+            emitLet(sexpr->asLet());
+        } else if (sexpr->type() == ExprType::SETQ) {
+            emitSetq(sexpr->asSetq());
+        } else if (sexpr->type() == ExprType::BINOP) {
+            emitBinOp(sexpr->asBinop());
+        } else if (sexpr->type() == ExprType::DOTIMES) {
+            emitDotimes(sexpr->asDotimes());
+        } else if (sexpr->type() == ExprType::PRINT) {
+            emitPrint(sexpr->asPrint());
+        }
     }
 
     if (!let.sexprs.empty()) return;
 
     for (int i = 0; i < let.variables.size(); ++i) {
-        int value = IntEvaluator::getResult(let.variables[i]);
-        if (value > 0)
-            store(code += std::string(value, '+'));
+        putVar(let.variables[i]->asVar().value->asNum());
 
         if (let.variables.size() > 1 && i != let.variables.size() - 1)
-            store(code += ">");
+            generatedCode += ">";
     }
 }
 
-void ASTVisitor::visit(const SetqExpr& setq) {
-    int value = IntEvaluator::getResult(setq.var);
-    if (value) {
-        store(code += std::string(value, '+'));
-        store(code += ">");
-    } else {
-        store(code += getResult(setq.var));
+void CodeGen::emitSetq(const SetqExpr& setq) {
+    if (setq.var->type() == ExprType::VAR) {
+        putVar(setq.var->asVar().value->asNum());
+        generatedCode += ">";
+    } else if (setq.var->type() == ExprType::READ) {
+        emitRead(setq.var->asRead());
     }
 }
 
-void ASTVisitor::visit(const VarExpr& var) {
-    store(code += getResult(var.value));
+void CodeGen::putVar(const NumberExpr& num) {
+    generatedCode += std::string(num.n, '+');
 }
 
-void IntEvaluator::visit(const NumberExpr& num) {
-    store(num.n);
-}
-
-void IntEvaluator::visit(const VarExpr& var) {
-    store(IntEvaluator::getResult(var.value));
-}
-
-void IntEvaluator::visit(const ReadExpr& print) {
-    store(0);
-}
-
-void StringEvaluator::visit(const StringExpr& str) {
-    store(str.str);
-}
-
-void StringEvaluator::visit(const VarExpr& var) {
-    store(StringEvaluator::getResult(var.name));
-}
-
-void TypeEvaluator::visit(const PrintExpr&) {
-    store(typeid(PrintExpr).hash_code());
-}
-
-void TypeEvaluator::visit(const DotimesExpr&) {
-    store(typeid(DotimesExpr).hash_code());
-}
-
-void TypeEvaluator::visit(const NumberExpr& num) {
-    store(typeid(NumberExpr).hash_code());
-}
-
-void TypeEvaluator::visit(const BinOpExpr& binop) {
-    store(typeid(BinOpExpr).hash_code());
-}
-
-void PrintEvaluator::visit(const NumberExpr& num) {
-    std::string bf;
-    store(bf += std::string(num.n, '+'));
-}
-
-void PrintEvaluator::visit(const BinOpExpr& binop) {
-    std::string bf;
-    store(bf += CodeGen::emitBinOp(binop, PrintEvaluator::getResult));
-}
-
-void PrintEvaluator::visit(const PrintExpr& print) {
-    std::string bf;
-    store(bf += PrintEvaluator::getResult(print.sexpr));
-    store(bf += ".");
-}
-
-void PrintEvaluator::visit(const VarExpr& var) {
-    std::string bf;
-    store(bf += std::string(IntEvaluator::getResult(var.value), '+'));
-}
-
+//void ASTVisitor::visit(const VarExpr& var) {
+//    store(code += getResult(var.value));
+//}
+//
+//void IntEvaluator::visit(const NumberExpr& num) {
+//    store(num.n);
+//}
+//
+//void IntEvaluator::visit(const VarExpr& var) {
+//    store(IntEvaluator::getResult(var.value));
+//}
+//
+//void IntEvaluator::visit(const ReadExpr& print) {
+//    store(0);
+//}
+//
+//void StringEvaluator::visit(const StringExpr& str) {
+//    store(str.str);
+//}
+//
+//void StringEvaluator::visit(const VarExpr& var) {
+//    store(StringEvaluator::getResult(var.name));
+//}
+//
+//void TypeEvaluator::visit(const PrintExpr&) {
+//    store(typeid(PrintExpr).hash_code());
+//}
+//
+//void TypeEvaluator::visit(const DotimesExpr&) {
+//    store(typeid(DotimesExpr).hash_code());
+//}
+//
+//void TypeEvaluator::visit(const NumberExpr& num) {
+//    store(typeid(NumberExpr).hash_code());
+//}
+//
+//void TypeEvaluator::visit(const BinOpExpr& binop) {
+//    store(typeid(BinOpExpr).hash_code());
+//}
+//
+//void PrintEvaluator::visit(const NumberExpr& num) {
+//    std::string bf;
+//    store(bf += std::string(num.n, '+'));
+//}
+//
+//void PrintEvaluator::visit(const BinOpExpr& binop) {
+//    std::string bf;
+//    store(bf += CodeGen::emitBinOp(binop, PrintEvaluator::getResult));
+//}
+//
+//void PrintEvaluator::visit(const PrintExpr& print) {
+//    std::string bf;
+//    store(bf += PrintEvaluator::getResult(print.sexpr));
+//    store(bf += ".");
+//}
+//
+//void PrintEvaluator::visit(const VarExpr& var) {
+//    std::string bf;
+//    store(bf += std::string(IntEvaluator::getResult(var.value), '+'));
+//}
+//

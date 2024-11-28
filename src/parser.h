@@ -4,16 +4,44 @@
 #include <utility>
 #include <memory>
 #include "lexer.h"
-#include "visitor.hpp"
 
-#define MAKE_VISITABLE virtual void accept(ExprVisitor& visitor) override { visitor.visit(*this); }
+struct NumberExpr;
+struct StringExpr;
+struct BinOpExpr;
+struct DotimesExpr;
+struct PrintExpr;
+struct ReadExpr;
+struct LetExpr;
+struct SetqExpr;
+struct VarExpr;
+
+enum class ExprType {
+    BINOP,
+    DOTIMES,
+    PRINT,
+    READ,
+    LET,
+    SETQ,
+    VAR,
+    INT,
+    STR
+};
 
 struct IExpr {
     std::shared_ptr<IExpr> child;
 
     virtual ~IExpr() = default;
 
-    virtual void accept(ExprVisitor& visitor) = 0;
+    virtual ExprType type() = 0;
+    virtual NumberExpr& asNum() {}
+    virtual StringExpr& asStr() {}
+    virtual BinOpExpr& asBinop() {}
+    virtual DotimesExpr& asDotimes() {}
+    virtual PrintExpr& asPrint() {}
+    virtual ReadExpr& asRead() {}
+    virtual LetExpr& asLet() {}
+    virtual SetqExpr& asSetq() {}
+    virtual VarExpr& asVar() {}
 };
 
 using ExprPtr = std::shared_ptr<IExpr>;
@@ -23,7 +51,13 @@ struct NumberExpr : IExpr {
 
     explicit NumberExpr(uint8_t n) : n(n) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::INT;
+    }
+
+    NumberExpr& asNum() override {
+        return *this;
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const NumberExpr& nn) {
         os << std::format("{}", nn.n);
@@ -38,13 +72,18 @@ struct StringExpr : IExpr {
 
     explicit StringExpr(std::string& str) : str(str) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::STR;
+    }
+
+    StringExpr& asStr() override {
+        return *this;
+    }
 };
 
 struct NILExpr : IExpr {
     NILExpr() = default;
-
-    MAKE_VISITABLE
+    ExprType type() override {}
 };
 
 struct BinOpExpr : IExpr {
@@ -57,7 +96,13 @@ struct BinOpExpr : IExpr {
             rhs(std::move(rn)),
             opToken(std::move(opTok)) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::BINOP;
+    }
+
+    BinOpExpr& asBinop() override {
+        return *this;
+    }
 };
 
 struct DotimesExpr : IExpr {
@@ -68,7 +113,13 @@ struct DotimesExpr : IExpr {
             iterationCount(std::move(iterCount)),
             statements(std::move(statements)) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::DOTIMES;
+    }
+
+    DotimesExpr& asDotimes() override {
+        return *this;
+    }
 };
 
 struct PrintExpr : IExpr {
@@ -76,13 +127,25 @@ struct PrintExpr : IExpr {
 
     explicit PrintExpr(ExprPtr& expr) : sexpr(std::move(expr)) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::PRINT;
+    }
+
+    PrintExpr& asPrint() override {
+        return *this;
+    }
 };
 
 struct ReadExpr : IExpr {
     ReadExpr() = default;
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::READ;
+    }
+
+    ReadExpr& asRead() override {
+        return *this;
+    }
 };
 
 struct LetExpr : IExpr {
@@ -93,7 +156,13 @@ struct LetExpr : IExpr {
             sexprs(std::move(sexprs)),
             variables(std::move(variables)) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::LET;
+    }
+
+    LetExpr& asLet() override {
+        return *this;
+    }
 };
 
 struct SetqExpr : IExpr {
@@ -102,7 +171,13 @@ struct SetqExpr : IExpr {
     SetqExpr(ExprPtr& var) :
             var(std::move(var)) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::SETQ;
+    }
+
+    SetqExpr& asSetq() override {
+        return *this;
+    }
 };
 
 struct VarExpr : IExpr {
@@ -111,7 +186,13 @@ struct VarExpr : IExpr {
 
     explicit VarExpr(ExprPtr& name, ExprPtr& value) : name(std::move(name)), value(std::move(value)) {}
 
-    MAKE_VISITABLE
+    ExprType type() override {
+        return ExprType::VAR;
+    }
+
+    VarExpr& asVar() override {
+        return *this;
+    }
 };
 
 class Parser {
@@ -143,7 +224,7 @@ private:
 
     void consume(TokenType expected, const char* errorStr);
 
-    ExprPtr checkVarError(ExprPtr& var);
+    ExprPtr checkVarError(ExprPtr& expr);
 
     Lexer& mLexer;
     Token mCurrentToken{};

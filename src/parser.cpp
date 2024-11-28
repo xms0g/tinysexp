@@ -1,6 +1,5 @@
 #include "parser.h"
 #include "exceptions.hpp"
-#include "visitors.hpp"
 
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "missing parenthesis";
@@ -12,7 +11,9 @@ Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTo
 
 ExprPtr Parser::parse() {
     ExprPtr root, currentExpr, prevExpr;
+
     advance();
+
     while (mCurrentToken.type != TokenType::EOF_) {
         currentExpr = parseExpr();
         if (prevExpr) {
@@ -76,10 +77,13 @@ ExprPtr Parser::parseSExpr() {
 
     Token token = mCurrentToken;
     advance();
-    left = parseAtom();
 
-    if (ExprPtr value = checkVarError(left)) {
-        left = std::make_unique<VarExpr>(left, value);
+    //TODO:code repetition
+    left = parseAtom();
+    if (left->type() == ExprType::VAR) {
+        if (ExprPtr value = checkVarError(left)) {
+            left = std::make_unique<VarExpr>(left, value);
+        }
     }
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -87,9 +91,12 @@ ExprPtr Parser::parseSExpr() {
         right = parseSExpr();
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
+        //TODO:code repetition
         right = parseAtom();
-        if (ExprPtr value = checkVarError(right)) {
-            right = std::make_unique<VarExpr>(right, value);
+        if (right->type() == ExprType::VAR) {
+            if (ExprPtr value = checkVarError(right)) {
+                right = std::make_unique<VarExpr>(right, value);
+            }
         }
     }
 
@@ -135,7 +142,7 @@ ExprPtr Parser::parseDotimes() {
     value = parseAtom();
 
     //TODO:fix print (* i i) replaces (* 10 10)
-    symbolTable.emplace(StringEvaluator::getResult(name), value);
+    symbolTable.emplace(name->asStr().str, value);
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -161,7 +168,7 @@ ExprPtr Parser::parseLet() {
             name = parseAtom();
             value = parseAtom();
 
-            symbolTable.emplace(StringEvaluator::getResult(name), value);
+            symbolTable.emplace(name->asStr().str, value);
 
             variables.emplace_back(std::make_unique<VarExpr>(name, value));
             consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
@@ -170,7 +177,7 @@ ExprPtr Parser::parseLet() {
         while (mCurrentToken.type == TokenType::VAR) {
             name = parseAtom();
             value = std::make_unique<NILExpr>();
-            symbolTable.emplace(StringEvaluator::getResult(name), value);
+            symbolTable.emplace(name->asStr().str, value);
             variables.emplace_back(std::make_unique<VarExpr>(name, value));
         }
     }
@@ -200,7 +207,7 @@ ExprPtr Parser::parseSetq() {
         value = parseAtom();
     }
 
-    symbolTable[StringEvaluator::getResult(name)] = value;
+    symbolTable[name->asStr().str] = value;
 
     var = std::make_unique<VarExpr>(name, value);
     return std::make_unique<SetqExpr>(var);
@@ -232,17 +239,11 @@ void Parser::consume(TokenType expected, const char* errorStr) {
     } else advance();
 }
 
-ExprPtr Parser::checkVarError(ExprPtr& var) {
-    std::string strvar = StringEvaluator::getResult(var);
-
-    if (!strvar.empty()) {
-        auto found = symbolTable.find(strvar);
-        if (found == symbolTable.end()) {
-            throw InvalidSyntaxError(mFileName, (strvar + VAR_NOT_DEFINED).c_str(), 0);
-        }
-        return found->second;
+ExprPtr Parser::checkVarError(ExprPtr& expr) {
+    std::string name = expr->asStr().str;
+    auto found = symbolTable.find(name);
+    if (found == symbolTable.end()) {
+        throw InvalidSyntaxError(mFileName, (name + VAR_NOT_DEFINED).c_str(), 0);
     }
-
-    return nullptr;
-
+    return found->second;
 }

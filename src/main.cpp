@@ -20,11 +20,12 @@ void compile(const char* fn, std::string& program) {
     try {
         Lexer lexer{fn, program};
         Parser parser{fn, lexer};
+        CodeGen codeGen;
 
         lexer.process();
         ExprPtr ast = parser.parse();
 
-        std::cout << CodeGen::emit(ast) << '\n';
+        std::cout << codeGen.emit(ast) << '\n';
 
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();
