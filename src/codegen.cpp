@@ -1,14 +1,32 @@
 #include "codegen.h"
 #include <typeindex>
 
-std::string CodeGen::emit(ExprPtr& ast) {
-    std::string generatedCode;
+static const std::unordered_map<Register, std::string> stringRepFromReg = {
+        {Register::RAX, "RAX"},
+        {Register::RBX, "RBX"},
+        {Register::RCX, "RCX"},
+        {Register::RDX, "RDX"},
+        {Register::RDI, "RDI"},
+        {Register::RSI, "RSI"},
+        {Register::R8, "R8"},
+        {Register::R9, "R9"},
+        {Register::R10, "R10"},
+        {Register::R11, "R11"},
+        {Register::R12, "R12"},
+        {Register::R13, "R13"},
+        {Register::R14, "R14"},
+        {Register::R15, "R15"},
+};
 
-    generatedCode = "section .bss\n"
-                    "section .data\n"
-                    "section. text\n"
-                    "\tglobal _start\n"
-                    "_start:\n\t";
+std::string CodeGen::emit(ExprPtr& ast) {
+    std::string generatedCode =
+            "section .bss\n"
+            "section .data\n"
+            "section. text\n"
+            "\tglobal _start\n"
+            "_start:\n"
+            "\tpush rbp\n"
+            "\tmov rbp, rsp\n";
 
     ExprPtr next = ast;
     while (next != nullptr) {
@@ -18,44 +36,75 @@ std::string CodeGen::emit(ExprPtr& ast) {
     return generatedCode;
 }
 
-std::string CodeGen::emitOP(const char* op) {
-    return std::format("{} rdi, rsi\n"
-                       "mov rax, rdi\n", op);
-}
 
-std::string CodeGen::emitBinOp(const BinOpExpr& binop, std::string(* func)(const ExprPtr&)) {
-    uint8_t lhsi, rhsi;
-    std::string rhss, code;
+void ASTVisitor::visit(const BinOpExpr& binop) {
+    int lhsi, rhsi;
+    std::string lhss, rhss;
 
     lhsi = IntEvaluator::getResult(binop.lhs);
-    code += std::format("mov rdi, {}\n", lhsi);
-    rhss = func(binop.rhs);
+    rhsi = IntEvaluator::getResult(binop.rhs);
+
+    Register reg = getAvaliableRegister();
+    registersInUse.emplace(reg);
+    lhss = stringRepFromReg.at(reg);
+    store(code += std::format("mov {}, {}\n", lhss, lhsi));
+
+    rhss = getResult(binop.rhs);
 
     if (rhss.empty()) {
         rhsi = IntEvaluator::getResult(binop.rhs);
-        code += std::format("mov rsi, {}\n", rhsi);
+        reg = getAvaliableRegister();
+        registersInUse.emplace(reg);
+        rhss = stringRepFromReg.at(reg);
+        store(code += std::format("mov {}, {}\n", rhss, rhsi));
     }
 
     switch (binop.opToken.type) {
         case TokenType::PLUS:
-            code += emitOP("add");
+            store(code += std::format("add {} {}\n", lhss, rhss));
             break;
         case TokenType::MINUS:
-            code += emitOP("sub");
+            store(code += std::format("sub {} {}\n", lhss, rhss));
             break;
         case TokenType::DIV:
-            code += emitOP("div");
+            store(code += std::format("idiv {} {}\n", lhss, rhss));
             break;
         case TokenType::MUL:
-            code += emitOP("mul");
+            store(code += std::format("imul {} {}\n", lhss, rhss));
             break;
     }
-    return code;
+
 }
 
-void ASTVisitor::visit(const BinOpExpr& binop) {
-    store(code += CodeGen::emitBinOp(binop, ASTVisitor::getResult));
-
+Register ASTVisitor::getAvaliableRegister() {
+    if (!registersInUse.contains(Register::RAX))
+        return Register::RAX;
+    else if (!registersInUse.contains(Register::RBX))
+        return Register::RBX;
+    else if (!registersInUse.contains(Register::RCX))
+        return Register::RCX;
+    else if (!registersInUse.contains(Register::RDX))
+        return Register::RDX;
+    else if (!registersInUse.contains(Register::RDI))
+        return Register::RDI;
+    else if (!registersInUse.contains(Register::RSI))
+        return Register::RSI;
+    else if (!registersInUse.contains(Register::R8))
+        return Register::R8;
+    else if (!registersInUse.contains(Register::R9))
+        return Register::R9;
+    else if (!registersInUse.contains(Register::R10))
+        return Register::R10;
+    else if (!registersInUse.contains(Register::R11))
+        return Register::R11;
+    else if (!registersInUse.contains(Register::R12))
+        return Register::R12;
+    else if (!registersInUse.contains(Register::R13))
+        return Register::R13;
+    else if (!registersInUse.contains(Register::R14))
+        return Register::R14;
+    else if (!registersInUse.contains(Register::R15))
+        return Register::R15;
 }
 
 void ASTVisitor::visit(const DotimesExpr& dotimes) {
@@ -65,7 +114,7 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
     store(code += std::string(iterCount, '+'));
     store(code += "[>");
 
-    for (auto& statement:dotimes.statements) {
+    for (auto& statement: dotimes.statements) {
         hasPrint = TypeEvaluator::getResult(statement) == typeid(PrintExpr).hash_code();
         hasRecursive = TypeEvaluator::getResult(statement) == typeid(DotimesExpr).hash_code();
         hasSExpr = TypeEvaluator::getResult(statement) == typeid(BinOpExpr).hash_code() ||
@@ -169,7 +218,7 @@ void PrintEvaluator::visit(const NumberExpr& num) {
 
 void PrintEvaluator::visit(const BinOpExpr& binop) {
     std::string bf;
-    store(bf += CodeGen::emitBinOp(binop, PrintEvaluator::getResult));
+    //store(bf += CodeGen::emitBinOp(binop, PrintEvaluator::getResult));
 }
 
 void PrintEvaluator::visit(const PrintExpr& print) {
