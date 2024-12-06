@@ -10,6 +10,7 @@ struct ReadExpr;
 struct LetExpr;
 struct SetqExpr;
 struct VarExpr;
+
 class ExprVisitor {
 public:
     ExprVisitor() = default;
@@ -38,7 +39,7 @@ public:
 };
 
 template<typename VisitorImpl, typename VisitablePtr, typename RType>
-class GenericVisitor {
+class ValueGetter {
 public:
     static RType getResult(const VisitablePtr& n) {
         VisitorImpl visitor;
@@ -55,7 +56,7 @@ private:
 };
 
 #define MAKE_VISITOR(NAME, RVALUE, METHOD0, METHOD1, METHOD2, METHOD3) \
-        class NAME : public GenericVisitor<NAME, ExprPtr, RVALUE>, public ExprVisitor { \
+        class NAME : public ValueGetter<NAME, ExprPtr, RVALUE>, public ExprVisitor { \
         public:     \
             METHOD0 \
             METHOD1 \

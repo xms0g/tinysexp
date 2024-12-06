@@ -14,7 +14,7 @@ enum class Register {
     R14, R15
 };
 
-class ASTVisitor : public GenericVisitor<ASTVisitor, ExprPtr, std::string>, public ExprVisitor {
+class ASTVisitor : public ValueGetter<ASTVisitor, ExprPtr, std::string>, public ExprVisitor {
 public:
     void visit(const BinOpExpr& binop) override;
 
@@ -31,7 +31,6 @@ public:
     void visit(const VarExpr& var) override;
 
 private:
-    Register getAvaliableRegister();
     std::string code;
     std::unordered_set<Register> registersInUse;
 };

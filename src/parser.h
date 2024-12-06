@@ -32,11 +32,11 @@ struct NumberExpr : IExpr {
 };
 
 struct StringExpr : IExpr {
-    std::string str;
+    std::string data;
 
     StringExpr() = default;
 
-    explicit StringExpr(std::string& str) : str(str) {}
+    explicit StringExpr(std::string& str) : data(str) {}
 
     MAKE_VISITABLE
 };
