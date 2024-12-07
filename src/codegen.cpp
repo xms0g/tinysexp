@@ -32,23 +32,29 @@ std::string CodeGen::emit(ExprPtr& ast) {
         generatedCode += ASTVisitor::getResult(next);
         next = next->child;
     }
+    generatedCode += "\tpop rbp\n"
+                     "\tret\n";
     return generatedCode;
 }
 
-
 void ASTVisitor::visit(const BinOpExpr& binop) {
+    int lhsi, rhsi;
+
+    lhsi = IntEvaluator::getResult(binop.lhs);
+    rhsi = IntEvaluator::getResult(binop.rhs);
+
     switch (binop.opToken.type) {
         case TokenType::PLUS:
-            store(code += std::format("add {} {}\n", lhss, rhss));
+            store(code += std::format("\tmov rax, {}\n", lhsi + rhsi));
             break;
         case TokenType::MINUS:
-            store(code += std::format("sub {} {}\n", lhss, rhss));
+            store(code += std::format("\tmov rax, {}\n", lhsi - rhsi));
             break;
         case TokenType::DIV:
-            store(code += std::format("idiv {} {}\n", lhss, rhss));
+            store(code += std::format("\tmov rax, {}\n", lhsi / rhsi));
             break;
         case TokenType::MUL:
-            store(code += std::format("imul {} {}\n", lhss, rhss));
+            store(code += std::format("\tmov rax, {}\n", lhsi * rhsi));
             break;
     }
 
@@ -84,6 +90,28 @@ void IntEvaluator::visit(const NumberExpr& num) {
 
 void IntEvaluator::visit(const VarExpr& var) {
     store(IntEvaluator::getResult(var.value));
+}
+
+void IntEvaluator::visit(const BinOpExpr& binop) {
+    int lhsi, rhsi;
+
+    lhsi = IntEvaluator::getResult(binop.lhs);
+    rhsi = IntEvaluator::getResult(binop.rhs);
+
+    switch (binop.opToken.type) {
+        case TokenType::PLUS:
+            store(lhsi + rhsi);
+            break;
+        case TokenType::MINUS:
+            store(lhsi - rhsi);
+            break;
+        case TokenType::DIV:
+            store(lhsi / rhsi);
+            break;
+        case TokenType::MUL:
+            store(lhsi * rhsi);
+            break;
+    }
 }
 
 void StringEvaluator::visit(const StringExpr& str) {
