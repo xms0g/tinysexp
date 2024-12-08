@@ -75,8 +75,8 @@ ExprPtr Parser::parseSExpr() {
 
     Token token = mCurrentToken;
     advance();
-    left = parseAtom();
 
+    left = parseAtom();
     if (ExprPtr value = checkVarError(left)) {
         left = std::make_shared<VarExpr>(left, value);
     }
@@ -133,7 +133,6 @@ ExprPtr Parser::parseDotimes() {
     name = parseAtom();
     value = parseAtom();
 
-    //TODO:fix print (* i i) replaces (* 10 10)
     symbolTable.emplace(StringEvaluator::getResult(name), value);
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
@@ -173,14 +172,12 @@ ExprPtr Parser::parseLet() {
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        while (mCurrentToken.type == TokenType::LPAREN) {
-            sexprs.emplace_back(parseExpr());
-        }
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        sexprs.emplace_back(parseExpr());
     }
 
     return std::make_shared<LetExpr>(sexprs, variables);
-
 }
 
 ExprPtr Parser::parseSetq() {

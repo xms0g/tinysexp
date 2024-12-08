@@ -1,6 +1,6 @@
 #pragma once
 
-#include <format>
+#include <unordered_map>
 #include <utility>
 #include <memory>
 #include "lexer.h"
@@ -24,11 +24,6 @@ struct NumberExpr : IExpr {
     explicit NumberExpr(uint8_t n) : n(n) {}
 
     MAKE_VISITABLE
-
-    friend std::ostream& operator<<(std::ostream& os, const NumberExpr& nn) {
-        os << std::format("{}", nn.n);
-        return os;
-    }
 };
 
 struct StringExpr : IExpr {
