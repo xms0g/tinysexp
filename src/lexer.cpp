@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include <cstring>
+#include <algorithm>
 #include "exceptions.hpp"
 
 Lexer::Lexer(const char* fn, std::string text) : mFileName(fn), mText(std::move(text)), mPos(-1, 0, -1) {
@@ -30,17 +31,22 @@ void Lexer::process() {
             mTokens.emplace_back(TokenType::SETQ);
 
             for (int i = 0; i < 4; ++i) advance();
-        } else if (isdigit(mCurrentChar[0])) {
-            std::string digit;
+        } else if (std::isalnum(mCurrentChar[0])) {
+            std::string token;
 
-            while (mCurrentChar && isdigit(mCurrentChar[0])) {
-                digit += mCurrentChar;
+            while (mCurrentChar && std::isalnum(mCurrentChar[0])) {
+                token += mCurrentChar[0];
                 advance();
             }
-            mTokens.emplace_back(TokenType::INT, digit);
-        } else if (std::isalpha(mCurrentChar[0])) {
-            mTokens.emplace_back(TokenType::VAR, std::string(1, mCurrentChar[0]));
-            advance();
+
+            if (std::ranges::all_of(token.begin(), token.end(), [&](char c) {
+                if (!std::isdigit(c)) return false;
+                return true;
+            })) {
+                mTokens.emplace_back(TokenType::INT, token);
+            } else {
+                mTokens.emplace_back(TokenType::VAR, token);
+            }
         } else if (mCurrentChar[0] == '+') {
             mTokens.emplace_back(TokenType::PLUS);
             advance();
