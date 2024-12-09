@@ -1,6 +1,5 @@
 #include "parser.h"
 #include "exceptions.hpp"
-#include "visitors.hpp"
 
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "missing parenthesis";
@@ -186,7 +185,8 @@ ExprPtr Parser::parseSetq() {
 
     name = parseAtom();
 
-    checkVarError(name);
+    //TODO: not mandatory
+    //checkVarError(name);
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         value = parseExpr();

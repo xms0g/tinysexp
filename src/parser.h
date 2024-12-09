@@ -4,6 +4,10 @@
 #include <utility>
 #include <memory>
 #include "lexer.h"
+
+struct IExpr;
+using ExprPtr = std::shared_ptr<IExpr>;
+
 #include "visitor.hpp"
 
 #define MAKE_VISITABLE virtual void accept(ExprVisitor& visitor) override { visitor.visit(*this); }
@@ -16,7 +20,7 @@ struct IExpr {
     virtual void accept(ExprVisitor& visitor) = 0;
 };
 
-using ExprPtr = std::shared_ptr<IExpr>;
+
 
 struct NumberExpr : IExpr {
     uint8_t n;
