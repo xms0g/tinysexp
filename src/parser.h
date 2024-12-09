@@ -20,12 +20,18 @@ struct IExpr {
     virtual void accept(ExprVisitor& visitor) = 0;
 };
 
+struct IntExpr : IExpr {
+    int n;
 
+    explicit IntExpr(int n) : n(n) {}
 
-struct NumberExpr : IExpr {
-    uint8_t n;
+    MAKE_VISITABLE
+};
 
-    explicit NumberExpr(uint8_t n) : n(n) {}
+struct FloatExpr : IExpr {
+    float n;
+
+    explicit FloatExpr(float n) : n(n) {}
 
     MAKE_VISITABLE
 };

@@ -31,7 +31,7 @@ void Lexer::process() {
             mTokens.emplace_back(TokenType::SETQ);
 
             for (int i = 0; i < 4; ++i) advance();
-        } else if (std::isalnum(mCurrentChar[0])) {
+        } else if (std::isalpha(mCurrentChar[0])) {
             std::string token;
 
             while (mCurrentChar && std::isalnum(mCurrentChar[0])) {
@@ -39,15 +39,20 @@ void Lexer::process() {
                 advance();
             }
 
-            if (std::ranges::all_of(token.begin(), token.end(), [&](char c) {
-                if (!std::isdigit(c)) return false;
-                return true;
-            })) {
-                mTokens.emplace_back(TokenType::INT, token);
-            } else {
-                mTokens.emplace_back(TokenType::VAR, token);
+            mTokens.emplace_back(TokenType::VAR, token);
+        } else if (std::isdigit(mCurrentChar[0])) {
+            std::string token;
+            bool isFloat;
+
+            while (mCurrentChar && (std::isdigit(mCurrentChar[0]) || mCurrentChar[0] == '.')) {
+                if (!isFloat && mCurrentChar[0] == '.') isFloat = true;
+                token += mCurrentChar[0];
+                advance();
             }
-        } else if (mCurrentChar[0] == '+') {
+
+            mTokens.emplace_back(isFloat ? TokenType::FLOAT: TokenType::INT, token);
+        }
+        else if (mCurrentChar[0] == '+') {
             mTokens.emplace_back(TokenType::PLUS);
             advance();
         } else if (mCurrentChar[0] == '-') {

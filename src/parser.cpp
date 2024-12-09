@@ -3,7 +3,7 @@
 
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "missing parenthesis";
-constexpr const char* EXPECTED_INT_ERROR = "expected int";
+constexpr const char* EXPECTED_NUMBER_ERROR = "expected int or float";
 constexpr const char* VAR_NOT_DEFINED = " is not defined";
 }
 
@@ -211,13 +211,16 @@ ExprPtr Parser::parseAtom() {
 }
 
 ExprPtr Parser::parseNumber() {
-    if (mCurrentToken.type == TokenType::INT) {
-        Token token = mCurrentToken;
-        advance();
-        return std::make_shared<NumberExpr>(std::stoi(token.value));
+    Token token = mCurrentToken;
+    advance();
+
+    if (token.type == TokenType::INT) {
+        return std::make_shared<IntExpr>(std::stoi(token.value));
+    } else if (token.type == TokenType::FLOAT) {
+        return std::make_shared<FloatExpr>(std::stof(token.value));
     }
 
-    throw InvalidSyntaxError(mFileName, EXPECTED_INT_ERROR, 0);
+    throw InvalidSyntaxError(mFileName, EXPECTED_NUMBER_ERROR, 0);
 }
 
 void Parser::consume(TokenType expected, const char* errorStr) {
