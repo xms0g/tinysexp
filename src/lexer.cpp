@@ -44,8 +44,12 @@ void Lexer::process() {
             std::string token;
             bool isFloat;
 
-            while (mCurrentChar && (std::isdigit(mCurrentChar[0]) || mCurrentChar[0] == '.')) {
+            while (mCurrentChar && (std::isalnum(mCurrentChar[0]) || mCurrentChar[0] == '.')) {
+                if (std::isalpha(mCurrentChar[0]))
+                    throw IllegalCharError(mFileName, (token + mCurrentChar[0]).c_str(), mPos.lineNumber);
+
                 if (!isFloat && mCurrentChar[0] == '.') isFloat = true;
+
                 token += mCurrentChar[0];
                 advance();
             }
