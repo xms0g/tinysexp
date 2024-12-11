@@ -216,8 +216,8 @@ ExprPtr Parser::parseNumber() {
 
     if (token.type == TokenType::INT) {
         return std::make_shared<IntExpr>(std::stoi(token.value));
-    } else if (token.type == TokenType::FLOAT) {
-        return std::make_shared<FloatExpr>(std::stof(token.value));
+    } else if (token.type == TokenType::DOUBLE) {
+        return std::make_shared<DoubleExpr>(std::stof(token.value));
     }
 
     throw InvalidSyntaxError(mFileName, EXPECTED_NUMBER_ERROR, 0);

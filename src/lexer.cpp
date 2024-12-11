@@ -54,7 +54,7 @@ void Lexer::process() {
                 advance();
             }
 
-            mTokens.emplace_back(isFloat ? TokenType::FLOAT: TokenType::INT, token);
+            mTokens.emplace_back(isFloat ? TokenType::DOUBLE: TokenType::INT, token);
         }
         else if (mCurrentChar[0] == '+') {
             mTokens.emplace_back(TokenType::PLUS);

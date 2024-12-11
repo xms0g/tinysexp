@@ -23,15 +23,15 @@ struct IExpr {
 struct IntExpr : IExpr {
     int n;
 
-    explicit IntExpr(int n) : n(n) {}
+    explicit IntExpr(int n_) : n(n_) {}
 
     MAKE_VISITABLE
 };
 
-struct FloatExpr : IExpr {
-    float n;
+struct DoubleExpr : IExpr {
+    double n;
 
-    explicit FloatExpr(float n) : n(n) {}
+    explicit DoubleExpr(double n_) : n(n_) {}
 
     MAKE_VISITABLE
 };
@@ -104,7 +104,7 @@ struct LetExpr : IExpr {
 struct SetqExpr : IExpr {
     ExprPtr var;
 
-    SetqExpr(ExprPtr& var) :
+    explicit SetqExpr(ExprPtr& var) :
             var(std::move(var)) {}
 
     MAKE_VISITABLE
@@ -114,7 +114,7 @@ struct VarExpr : IExpr {
     ExprPtr name;
     ExprPtr value;
 
-    explicit VarExpr(ExprPtr& name, ExprPtr& value) : name(std::move(name)), value(std::move(value)) {}
+    VarExpr(ExprPtr& name, ExprPtr& value) : name(std::move(name)), value(std::move(value)) {}
 
     MAKE_VISITABLE
 };

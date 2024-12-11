@@ -5,7 +5,7 @@
 
 enum class TokenType {
     // Type
-    INT, FLOAT, VAR,
+    INT, DOUBLE, VAR,
     // Operators
     PLUS, MINUS, DIV, MUL,
     // IO
