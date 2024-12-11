@@ -1,4 +1,10 @@
 #include "codegen.h"
+#include <format>
+
+#define VISIT(L, OP, R) \
+    std::visit([&](auto var1, auto var2) { \
+        store(var1 OP var2); \
+    }, L, R)
 
 static const std::unordered_map<Register, std::string> stringRepFromReg = {
         {Register::RAX, "RAX"},
@@ -7,8 +13,8 @@ static const std::unordered_map<Register, std::string> stringRepFromReg = {
         {Register::RDX, "RDX"},
         {Register::RDI, "RDI"},
         {Register::RSI, "RSI"},
-        {Register::R8,   "R8"},
-        {Register::R9,   "R9"},
+        {Register::R8,  "R8"},
+        {Register::R9,  "R9"},
         {Register::R10, "R10"},
         {Register::R11, "R11"},
         {Register::R12, "R12"},
@@ -19,42 +25,63 @@ static const std::unordered_map<Register, std::string> stringRepFromReg = {
 
 std::string CodeGen::emit(ExprPtr& ast) {
     std::string generatedCode =
-            "section .bss\n"
-            "section .data\n"
+            //"section .data\n" //for global variables
             "section. text\n"
             "\tglobal _start\n"
             "_start:\n"
             "\tpush rbp\n"
             "\tmov rbp, rsp\n";
 
-    ExprPtr next = ast;
-    while (next != nullptr) {
-        generatedCode += ASTVisitor::getResult(next);
-        next = next->child;
+    while (ast != nullptr) {
+        generatedCode += ASTVisitor::getResult(ast);
+        ast = ast->child;
     }
     generatedCode += "\tpop rbp\n"
                      "\tret\n";
     return generatedCode;
 }
 
-void ASTVisitor::visit(const BinOpExpr& binop) {
-    int lhsi, rhsi;
 
-    lhsi = IntEvaluator::getResult(binop.lhs);
-    rhsi = IntEvaluator::getResult(binop.rhs);
+void ASTVisitor::visit(const BinOpExpr& binop) {
+    std::variant<int, double> lhs, rhs;
+    std::string reg;
+
+    lhs = NumberEvaluator::getResult(binop.lhs);
+    rhs = NumberEvaluator::getResult(binop.rhs);
+
+    // unsigned long long l = *((unsigned long long*)&dToUse);
+
+    reg = (std::holds_alternative<double>(lhs) || std::holds_alternative<double>(rhs)) ? "xmm0" : "rax";
 
     switch (binop.opToken.type) {
-        case TokenType::PLUS:
-            store(code += std::format("\tmov rax, {}\n", lhsi + rhsi));
+        case TokenType::PLUS: {
+
+            store(code += std::format("\tmov {}, {}\n", reg,
+                                      (std::holds_alternative<int>(lhs) ? std::get<int>(lhs) : std::get<double>(lhs)) +
+                                      (std::holds_alternative<int>(rhs) ? std::get<int>(rhs) : std::get<double>(rhs))
+            ));
             break;
+        }
         case TokenType::MINUS:
-            store(code += std::format("\tmov rax, {}\n", lhsi - rhsi));
+            store(code += std::format("\tmov {}, {}\n",
+                                      reg,
+                                      (std::holds_alternative<int>(lhs) ? std::get<int>(lhs) : std::get<double>(lhs)) -
+                                      (std::holds_alternative<int>(rhs) ? std::get<int>(rhs) : std::get<double>(rhs))
+            ));
             break;
         case TokenType::DIV:
-            store(code += std::format("\tmov rax, {}\n", lhsi / rhsi));
+            store(code += std::format("\tmov {}, {}\n",
+                                      reg,
+                                      (std::holds_alternative<int>(lhs) ? std::get<int>(lhs) : std::get<double>(lhs)) /
+                                      (std::holds_alternative<int>(rhs) ? std::get<int>(rhs) : std::get<double>(rhs))
+            ));
             break;
         case TokenType::MUL:
-            store(code += std::format("\tmov rax, {}\n", lhsi * rhsi));
+            store(code += std::format("\tmov {}, {}\n",
+                                      reg,
+                                      (std::holds_alternative<int>(lhs) ? std::get<int>(lhs) : std::get<double>(lhs)) *
+                                      (std::holds_alternative<int>(rhs) ? std::get<int>(rhs) : std::get<double>(rhs))
+            ));
             break;
     }
 
@@ -84,32 +111,36 @@ void ASTVisitor::visit(const VarExpr& var) {
 
 }
 
-void IntEvaluator::visit(const NumberExpr& num) {
+void NumberEvaluator::visit(const IntExpr& num) {
     store(num.n);
 }
 
-void IntEvaluator::visit(const VarExpr& var) {
-    store(IntEvaluator::getResult(var.value));
+void NumberEvaluator::visit(const DoubleExpr& num) {
+    store(num.n);
 }
 
-void IntEvaluator::visit(const BinOpExpr& binop) {
-    int lhsi, rhsi;
+void NumberEvaluator::visit(const VarExpr& var) {
+    //store(var);
+}
 
-    lhsi = IntEvaluator::getResult(binop.lhs);
-    rhsi = IntEvaluator::getResult(binop.rhs);
+void NumberEvaluator::visit(const BinOpExpr& binop) {
+    std::variant<int, double> lhs, rhs;
+
+    lhs = NumberEvaluator::getResult(binop.lhs);
+    rhs = NumberEvaluator::getResult(binop.rhs);
 
     switch (binop.opToken.type) {
         case TokenType::PLUS:
-            store(lhsi + rhsi);
+            VISIT(lhs, +, rhs);
             break;
         case TokenType::MINUS:
-            store(lhsi - rhsi);
+            VISIT(lhs, -, rhs);
             break;
         case TokenType::DIV:
-            store(lhsi / rhsi);
+            VISIT(lhs, /, rhs);
             break;
         case TokenType::MUL:
-            store(lhsi * rhsi);
+            VISIT(lhs, *, rhs);
             break;
     }
 }

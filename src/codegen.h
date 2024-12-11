@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <variant>
 #include "parser.h"
 #include "visitor.hpp"
 
@@ -38,4 +39,8 @@ private:
 namespace CodeGen {
 std::string emit(ExprPtr& ast);
 }
+
+using T = std::variant<int, double>;
+
+MAKE_VISITOR(NumberEvaluator, T, MAKE_MTHD_INT MAKE_MTHD_VAR MAKE_MTHD_BINOP MAKE_MTHD_DOUBLE)
 
