@@ -1,7 +1,7 @@
 #pragma once
 
 struct IntExpr;
-struct FloatExpr;
+struct DoubleExpr;
 struct StringExpr;
 struct NILExpr;
 struct BinOpExpr;
@@ -20,7 +20,7 @@ public:
 
     virtual void visit(const IntExpr&) {}
 
-    virtual void visit(const FloatExpr&) {}
+    virtual void visit(const DoubleExpr&) {}
 
     virtual void visit(const StringExpr&) {}
 
@@ -58,17 +58,14 @@ private:
     RType mValue;
 };
 
-#define MAKE_VISITOR(NAME, RVALUE, METHOD0, METHOD1, METHOD2, METHOD3) \
+#define MAKE_VISITOR(NAME, RVALUE, ...) \
         class NAME : public ValueGetter<NAME, ExprPtr, RVALUE>, public ExprVisitor { \
         public:     \
-            METHOD0 \
-            METHOD1 \
-            METHOD2 \
-            METHOD3 \
+            __VA_ARGS__ \
         };
 
 #define MAKE_MTHD_INT void visit(const IntExpr& num) override;
-#define MAKE_MTHD_FLOAT void visit(const FloatExpr& num) override;
+#define MAKE_MTHD_DOUBLE void visit(const DoubleExpr& num) override;
 #define MAKE_MTHD_STR void visit(const StringExpr& str) override;
 #define MAKE_MTHD_BINOP void visit(const BinOpExpr& binop) override;
 #define MAKE_MTHD_BINOP_PARAM void visit(const BinOpExpr& binop, int param) override;
@@ -78,9 +75,6 @@ private:
 #define MAKE_MTHD_PRINT_PARAM void visit(const PrintExpr& print, int param) override;
 #define MAKE_MTHD_LET void visit(const LetExpr& let) override;
 #define MAKE_MTHD_VAR void visit(const VarExpr& var) override;
-#define NULL_
 
-MAKE_VISITOR(IntEvaluator, int, MAKE_MTHD_INT, MAKE_MTHD_VAR, MAKE_MTHD_BINOP, NULL_)
-
-MAKE_VISITOR(StringEvaluator, std::string, MAKE_MTHD_VAR, MAKE_MTHD_STR, NULL_, NULL_)
+MAKE_VISITOR(StringEvaluator, std::string, MAKE_MTHD_VAR MAKE_MTHD_STR)
 
