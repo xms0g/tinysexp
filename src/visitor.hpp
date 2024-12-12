@@ -10,6 +10,7 @@ struct PrintExpr;
 struct ReadExpr;
 struct LetExpr;
 struct SetqExpr;
+struct DefvarExpr;
 struct VarExpr;
 
 class ExprVisitor {
@@ -38,6 +39,8 @@ public:
 
     virtual void visit(const SetqExpr&) {}
 
+    virtual void visit(const DefvarExpr&) {}
+
     virtual void visit(const VarExpr&) {}
 };
 
@@ -60,7 +63,7 @@ private:
 
 #define MAKE_VISITOR(NAME, RVALUE, ...) \
         class NAME : public ValueGetter<NAME, ExprPtr, RVALUE>, public ExprVisitor { \
-        public:     \
+        public:         \
             __VA_ARGS__ \
         };
 
@@ -72,7 +75,6 @@ private:
 #define MAKE_MTHD_DOTIMES void visit(const DotimesExpr& dotimes) override;
 #define MAKE_MTHD_PRINT void visit(const PrintExpr& print) override;
 #define MAKE_MTHD_READ void visit(const ReadExpr& print) override;
-#define MAKE_MTHD_PRINT_PARAM void visit(const PrintExpr& print, int param) override;
 #define MAKE_MTHD_LET void visit(const LetExpr& let) override;
 #define MAKE_MTHD_VAR void visit(const VarExpr& var) override;
 

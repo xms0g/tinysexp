@@ -15,8 +15,8 @@ enum class TokenType {
     // Condition
     IF,
     // Assignment
-    LET, SETQ,
-
+    LET, SETQ, DEFVAR,
+    // Others
     LPAREN, RPAREN,
     EOF_
 };

@@ -61,6 +61,9 @@ ExprPtr Parser::parseExpr() {
         case TokenType::SETQ:
             expr = parseSetq();
             break;
+        case TokenType::DEFVAR:
+            expr = parseDefvar();
+            break;
         default:
             throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
@@ -198,6 +201,19 @@ ExprPtr Parser::parseSetq() {
 
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<SetqExpr>(var);
+}
+
+ExprPtr Parser::parseDefvar() {
+    ExprPtr var, name, value;
+    advance();
+
+    name = parseAtom();
+    value = parseAtom();
+
+    symbolTable[StringEvaluator::getResult(name)] = value;
+
+    var = std::make_shared<VarExpr>(name, value);
+    return std::make_shared<DefvarExpr>(var);
 }
 
 ExprPtr Parser::parseAtom() {

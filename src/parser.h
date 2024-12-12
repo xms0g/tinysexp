@@ -110,6 +110,15 @@ struct SetqExpr : IExpr {
     MAKE_VISITABLE
 };
 
+struct DefvarExpr : IExpr {
+    ExprPtr var;
+
+    explicit DefvarExpr(ExprPtr& var) :
+            var(std::move(var)) {}
+
+    MAKE_VISITABLE
+};
+
 struct VarExpr : IExpr {
     ExprPtr name;
     ExprPtr value;
@@ -141,6 +150,8 @@ private:
     ExprPtr parseLet();
 
     ExprPtr parseSetq();
+
+    ExprPtr parseDefvar();
 
     ExprPtr parseAtom();
 

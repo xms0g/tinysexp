@@ -31,7 +31,11 @@ void Lexer::process() {
             mTokens.emplace_back(TokenType::SETQ);
 
             for (int i = 0; i < 4; ++i) advance();
-        } else if (std::isalpha(mCurrentChar[0])) {
+        }else if (!std::strncmp("defvar", mCurrentChar, 4)) {
+            mTokens.emplace_back(TokenType::DEFVAR);
+
+            for (int i = 0; i < 6; ++i) advance();
+        }else if (std::isalpha(mCurrentChar[0])) {
             std::string token;
 
             while (mCurrentChar && std::isalnum(mCurrentChar[0])) {
