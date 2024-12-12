@@ -61,6 +61,8 @@ public:
 private:
     void advance();
 
+    void advance(int step);
+
     std::string mText;
     Position mPos;
     std::vector<Token> mTokens;

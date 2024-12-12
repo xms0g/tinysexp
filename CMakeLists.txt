@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(lbf)
+project(lisp64)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -12,4 +12,4 @@ set(SOURCES
         src/parser.cpp src/parser.h
         src/codegen.cpp src/codegen.h)
 
-add_executable(lbf src/main.cpp ${SOURCES})
+add_executable(${PROJECT_NAME} src/main.cpp ${SOURCES})
