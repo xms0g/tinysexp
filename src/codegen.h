@@ -29,6 +29,8 @@ public:
 
     void visit(const SetqExpr& setq) override;
 
+    void visit(const DefvarExpr& defvar) override;
+
     void visit(const VarExpr& var) override;
 
 private:
@@ -38,9 +40,16 @@ private:
 
 namespace CodeGen {
 std::string emit(ExprPtr& ast);
+
+static int stackOffset{8};
+static std::unordered_map<std::string, int> stackOffsets;
+static std::unordered_map<std::string, std::string> sectionData;
 }
 
 using T = std::variant<int, double>;
 
-MAKE_VISITOR(NumberEvaluator, T, MAKE_MTHD_INT MAKE_MTHD_VAR MAKE_MTHD_BINOP MAKE_MTHD_DOUBLE)
+MAKE_VISITOR(NumberEvaluator, T, MAKE_MTHD_INT MAKE_MTHD_BINOP MAKE_MTHD_DOUBLE)
 
+MAKE_VISITOR(VarEvaluator, std::string, MAKE_MTHD_BINOP MAKE_MTHD_VAR MAKE_MTHD_STR MAKE_MTHD_INT)
+
+MAKE_VISITOR(PrintEvaluator, std::string, MAKE_MTHD_BINOP)
