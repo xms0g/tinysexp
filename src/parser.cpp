@@ -46,12 +46,6 @@ ExprPtr Parser::parseExpr() {
         case TokenType::MUL:
             expr = parseSExpr();
             break;
-        case TokenType::PRINT:
-            expr = parsePrint();
-            break;
-        case TokenType::READ:
-            expr = parseRead();
-            break;
         case TokenType::DOTIMES:
             expr = parseDotimes();
             break;
@@ -95,34 +89,6 @@ ExprPtr Parser::parseSExpr() {
     }
 
     return std::make_shared<BinOpExpr>(left, right, token);
-}
-
-ExprPtr Parser::parsePrint() {
-    ExprPtr statement;
-
-    advance();
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-        statement = parseSExpr();
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-    } else {
-        statement = parseAtom();
-        if (ExprPtr value = checkVarError(statement)) {
-            statement = std::make_shared<VarExpr>(statement, value);
-        }
-    }
-
-    return std::make_shared<PrintExpr>(statement);
-}
-
-ExprPtr Parser::parseRead() {
-    ExprPtr statement;
-    advance();
-
-    statement = std::make_shared<ReadExpr>();
-
-    return statement;
 }
 
 ExprPtr Parser::parseDotimes() {
@@ -187,15 +153,7 @@ ExprPtr Parser::parseSetq() {
     advance();
 
     name = parseAtom();
-
-    //TODO: not mandatory
-    //checkVarError(name);
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        value = parseExpr();
-    } else {
-        value = parseAtom();
-    }
+    value = parseAtom();
 
     symbolTable[StringEvaluator::getResult(name)] = value;
 

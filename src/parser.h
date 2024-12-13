@@ -76,20 +76,6 @@ struct DotimesExpr : IExpr {
     MAKE_VISITABLE
 };
 
-struct PrintExpr : IExpr {
-    ExprPtr sexpr;
-
-    explicit PrintExpr(ExprPtr& expr) : sexpr(std::move(expr)) {}
-
-    MAKE_VISITABLE
-};
-
-struct ReadExpr : IExpr {
-    ReadExpr() = default;
-
-    MAKE_VISITABLE
-};
-
 struct LetExpr : IExpr {
     std::vector<ExprPtr> sexprs;
     std::vector<ExprPtr> variables;

@@ -11,12 +11,6 @@ void Lexer::process() {
     while (mCurrentChar) {
         if (mCurrentChar[0] == '\t' || mCurrentChar[0] == '\n' || std::isspace(mCurrentChar[0])) {
             advance();
-        } else if (!std::strncmp("print", mCurrentChar, 5)) {
-            mTokens.emplace_back(TokenType::PRINT);
-            advance(5);
-        } else if (!std::strncmp("read", mCurrentChar, 4)) {
-            mTokens.emplace_back(TokenType::READ);
-            advance(4);
         } else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
             mTokens.emplace_back(TokenType::DOTIMES);
             advance(7);
@@ -26,10 +20,13 @@ void Lexer::process() {
         } else if (!std::strncmp("setq", mCurrentChar, 4)) {
             mTokens.emplace_back(TokenType::SETQ);
             advance(4);
-        }else if (!std::strncmp("defvar", mCurrentChar, 4)) {
+        } else if (!std::strncmp("if", mCurrentChar, 2)) {
+            mTokens.emplace_back(TokenType::IF);
+            advance(2);
+        } else if (!std::strncmp("defvar", mCurrentChar, 4)) {
             mTokens.emplace_back(TokenType::DEFVAR);
             advance(6);
-        }else if (std::isalpha(mCurrentChar[0])) {
+        } else if (std::isalpha(mCurrentChar[0])) {
             std::string token;
 
             while (mCurrentChar && std::isalnum(mCurrentChar[0])) {
@@ -53,8 +50,7 @@ void Lexer::process() {
             }
 
             mTokens.emplace_back(isDouble ? TokenType::DOUBLE : TokenType::INT, token);
-        }
-        else if (mCurrentChar[0] == '+') {
+        } else if (mCurrentChar[0] == '+') {
             mTokens.emplace_back(TokenType::PLUS);
             advance();
         } else if (mCurrentChar[0] == '-') {
