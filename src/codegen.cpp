@@ -85,14 +85,6 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
 
 }
 
-void ASTVisitor::visit(const PrintExpr& print) {
-
-}
-
-void ASTVisitor::visit(const ReadExpr&) {
-
-}
-
 void ASTVisitor::visit(const LetExpr& let) {
     for (auto& var: let.variables) {
         std::string vs = VarEvaluator::getResult(var);
@@ -117,10 +109,6 @@ void ASTVisitor::visit(const DefvarExpr& defvar) {
     CodeGen::sectionData.emplace(StringEvaluator::getResult(defvar.var), VarEvaluator::getResult(defvar.var));
 }
 
-void ASTVisitor::visit(const VarExpr& var) {
-
-}
-
 void NumberEvaluator::visit(const IntExpr& num) {
     store(num.n);
 }
@@ -129,12 +117,43 @@ void NumberEvaluator::visit(const DoubleExpr& num) {
     store(num.n);
 }
 
+void NumberEvaluator::visit(const BinOpExpr& binop) {
+    std::variant<int, double> lhs, rhs;
+
+    lhs = NumberEvaluator::getResult(binop.lhs);
+    rhs = NumberEvaluator::getResult(binop.rhs);
+
+    switch (binop.opToken.type) {
+        case TokenType::PLUS:
+            VISIT(lhs, rhs,
+                  store(var1 + var2);
+            );
+            break;
+        case TokenType::MINUS:
+            VISIT(lhs, rhs,
+                  store(var1 - var2);
+            );
+            break;
+        case TokenType::DIV:
+            VISIT(lhs, rhs,
+                  store(var1 / var2);
+            );
+            break;
+        case TokenType::MUL:
+            VISIT(lhs, rhs,
+                  store(var1 * var2);
+            );
+            break;
+    }
+}
+
 void VarEvaluator::visit(const BinOpExpr& binop) {
     std::string lhs, rhs, code;
 
     lhs = VarEvaluator::getResult(binop.lhs);
     rhs = VarEvaluator::getResult(binop.rhs);
 
+    //TODO: remove then
     auto isNumber = [&](std::string& s) {
         char* p;
         strtol(s.c_str(), &p, 10);
@@ -283,36 +302,6 @@ void VarEvaluator::visit(const IntExpr& num) {
 
 void VarEvaluator::visit(const StringExpr& str) {
     store(str.data);
-}
-
-void NumberEvaluator::visit(const BinOpExpr& binop) {
-    std::variant<int, double> lhs, rhs;
-
-    lhs = NumberEvaluator::getResult(binop.lhs);
-    rhs = NumberEvaluator::getResult(binop.rhs);
-
-    switch (binop.opToken.type) {
-        case TokenType::PLUS:
-            VISIT(lhs, rhs,
-                  store(var1 + var2);
-            );
-            break;
-        case TokenType::MINUS:
-            VISIT(lhs, rhs,
-                  store(var1 - var2);
-            );
-            break;
-        case TokenType::DIV:
-            VISIT(lhs, rhs,
-                  store(var1 / var2);
-            );
-            break;
-        case TokenType::MUL:
-            VISIT(lhs, rhs,
-                  store(var1 * var2);
-            );
-            break;
-    }
 }
 
 void StringEvaluator::visit(const StringExpr& str) {

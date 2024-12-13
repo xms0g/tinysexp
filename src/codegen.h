@@ -21,17 +21,11 @@ public:
 
     void visit(const DotimesExpr& dotimes) override;
 
-    void visit(const PrintExpr& print) override;
-
-    void visit(const ReadExpr&) override;
-
     void visit(const LetExpr& let) override;
 
     void visit(const SetqExpr& setq) override;
 
     void visit(const DefvarExpr& defvar) override;
-
-    void visit(const VarExpr& var) override;
 
 private:
     std::string code;

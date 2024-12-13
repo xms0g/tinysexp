@@ -6,8 +6,6 @@ struct StringExpr;
 struct NILExpr;
 struct BinOpExpr;
 struct DotimesExpr;
-struct PrintExpr;
-struct ReadExpr;
 struct LetExpr;
 struct SetqExpr;
 struct DefvarExpr;
@@ -30,10 +28,6 @@ public:
     virtual void visit(const BinOpExpr&) {}
 
     virtual void visit(const DotimesExpr&) {}
-
-    virtual void visit(const PrintExpr&) {}
-
-    virtual void visit(const ReadExpr&) {}
 
     virtual void visit(const LetExpr&) {}
 
@@ -73,8 +67,6 @@ private:
 #define MAKE_MTHD_BINOP void visit(const BinOpExpr& binop) override;
 #define MAKE_MTHD_BINOP_PARAM void visit(const BinOpExpr& binop, int param) override;
 #define MAKE_MTHD_DOTIMES void visit(const DotimesExpr& dotimes) override;
-#define MAKE_MTHD_PRINT void visit(const PrintExpr& print) override;
-#define MAKE_MTHD_READ void visit(const ReadExpr& print) override;
 #define MAKE_MTHD_LET void visit(const LetExpr& let) override;
 #define MAKE_MTHD_VAR void visit(const VarExpr& var) override;
 
