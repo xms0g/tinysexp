@@ -76,5 +76,3 @@ private:
 #define MAKE_MTHD_LET void visit(const LetExpr& let) override;
 #define MAKE_MTHD_VAR void visit(const VarExpr& var) override;
 
-MAKE_VISITOR(StringEvaluator, std::string, MAKE_MTHD_VAR MAKE_MTHD_STR)
-
