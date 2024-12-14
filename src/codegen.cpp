@@ -32,7 +32,7 @@ std::string CodeGen::emit(ExprPtr& ast) {
             "\tmov rbp, rsp\n";
 
     while (ast != nullptr) {
-        generatedCode += ASTVisitor::getResult(ast);
+        generatedCode += ASTVisitor::get(ast);
         ast = ast->child;
     }
     generatedCode += "\tpop rbp\n"
@@ -50,8 +50,8 @@ void ASTVisitor::visit(const BinOpExpr& binop) {
     std::variant<int, double> lhs, rhs;
     std::string reg;
 
-    lhs = NumberEvaluator::getResult(binop.lhs);
-    rhs = NumberEvaluator::getResult(binop.rhs);
+    lhs = NumberEvaluator::get(binop.lhs);
+    rhs = NumberEvaluator::get(binop.rhs);
 
     // unsigned long long l = *((unsigned long long*)&dToUse);
 
@@ -60,22 +60,22 @@ void ASTVisitor::visit(const BinOpExpr& binop) {
     switch (binop.opToken.type) {
         case TokenType::PLUS:
             VISIT(lhs, rhs,
-                  store(code += std::format("\tmov {}, {}\n", reg, var1 + var2));
+                  set(code += std::format("\tmov {}, {}\n", reg, var1 + var2));
             );
             break;
         case TokenType::MINUS:
             VISIT(lhs, rhs,
-                  store(code += std::format("\tmov {}, {}\n", reg, var1 - var2));
+                  set(code += std::format("\tmov {}, {}\n", reg, var1 - var2));
             );
             break;
         case TokenType::DIV:
             VISIT(lhs, rhs,
-                  store(code += std::format("\tmov {}, {}\n", reg, var1 / var2));
+                  set(code += std::format("\tmov {}, {}\n", reg, var1 / var2));
             );
             break;
         case TokenType::MUL:
             VISIT(lhs, rhs,
-                  store(code += std::format("\tmov {}, {}\n", reg, var1 * var2));
+                  set(code += std::format("\tmov {}, {}\n", reg, var1 * var2));
             );
             break;
     }
@@ -87,16 +87,16 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
 
 void ASTVisitor::visit(const LetExpr& let) {
     for (auto& var: let.variables) {
-        std::string vs = VarEvaluator::getResult(var);
-        store(code += std::format("\tmov qword [rbp - {}], {}\n",
-                                  CodeGen::stackOffset, vs));
+        std::string vs = VarEvaluator::get(var);
+        set(code += std::format("\tmov qword [rbp - {}], {}\n",
+                                CodeGen::stackOffset, vs));
 
         CodeGen::stackOffsets.emplace(vs, CodeGen::stackOffset);
         CodeGen::stackOffset += 8;
     }
 
     for (auto& sexpr: let.sexprs) {
-        store(code += VarEvaluator::getResult(sexpr));
+        set(code += VarEvaluator::get(sexpr));
     }
 
 }
@@ -106,42 +106,42 @@ void ASTVisitor::visit(const SetqExpr& setq) {
 }
 
 void ASTVisitor::visit(const DefvarExpr& defvar) {
-    CodeGen::sectionData.emplace(StringEvaluator::getResult(defvar.var), VarEvaluator::getResult(defvar.var));
+    CodeGen::sectionData.emplace(StringEvaluator::get(defvar.var), VarEvaluator::get(defvar.var));
 }
 
 void NumberEvaluator::visit(const IntExpr& num) {
-    store(num.n);
+    set(num.n);
 }
 
 void NumberEvaluator::visit(const DoubleExpr& num) {
-    store(num.n);
+    set(num.n);
 }
 
 void NumberEvaluator::visit(const BinOpExpr& binop) {
     std::variant<int, double> lhs, rhs;
 
-    lhs = NumberEvaluator::getResult(binop.lhs);
-    rhs = NumberEvaluator::getResult(binop.rhs);
+    lhs = NumberEvaluator::get(binop.lhs);
+    rhs = NumberEvaluator::get(binop.rhs);
 
     switch (binop.opToken.type) {
         case TokenType::PLUS:
             VISIT(lhs, rhs,
-                  store(var1 + var2);
+                  set(var1 + var2);
             );
             break;
         case TokenType::MINUS:
             VISIT(lhs, rhs,
-                  store(var1 - var2);
+                  set(var1 - var2);
             );
             break;
         case TokenType::DIV:
             VISIT(lhs, rhs,
-                  store(var1 / var2);
+                  set(var1 / var2);
             );
             break;
         case TokenType::MUL:
             VISIT(lhs, rhs,
-                  store(var1 * var2);
+                  set(var1 * var2);
             );
             break;
     }
@@ -150,8 +150,8 @@ void NumberEvaluator::visit(const BinOpExpr& binop) {
 void VarEvaluator::visit(const BinOpExpr& binop) {
     std::string lhs, rhs, code;
 
-    lhs = VarEvaluator::getResult(binop.lhs);
-    rhs = VarEvaluator::getResult(binop.rhs);
+    lhs = VarEvaluator::get(binop.lhs);
+    rhs = VarEvaluator::get(binop.rhs);
 
     //TODO: remove then
     auto isNumber = [&](std::string& s) {
@@ -162,48 +162,49 @@ void VarEvaluator::visit(const BinOpExpr& binop) {
 
     int loffset, roffset;
 
+    //TODO: do in semantic analyse
     bool isRHSNum = isNumber(rhs);
-    bool isLHSGlobal = CodeGen::sectionData.contains(StringEvaluator::getResult(binop.lhs));
-    bool isRHSGlobal = CodeGen::sectionData.contains(StringEvaluator::getResult(binop.rhs));
+    bool isLHSGlobal = CodeGen::sectionData.contains(StringEvaluator::get(binop.lhs));
+    bool isRHSGlobal = CodeGen::sectionData.contains(StringEvaluator::get(binop.rhs));
 
     switch (binop.opToken.type) {
         case TokenType::PLUS: {
             if (!isRHSNum) {
-                store(code += rhs);
+                set(code += rhs);
 
                 if (isLHSGlobal) {
-                    std::string name = StringEvaluator::getResult(binop.lhs);
-                    store(code += std::format("\tadd rax, qword [rip + {}]\n", name));
+                    std::string name = StringEvaluator::get(binop.lhs);
+                    set(code += std::format("\tadd rax, qword [rip + {}]\n", name));
                 } else {
                     if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                         loffset = itr->second;
-                        store(code += std::format("\tadd rax, qword [rbp - {}]\n", loffset));
+                        set(code += std::format("\tadd rax, qword [rbp - {}]\n", loffset));
                     } else {
-                        store(code += std::format("\tadd rax, {}\n", lhs));
+                        set(code += std::format("\tadd rax, {}\n", lhs));
                     }
                 }
             } else {
                 if (isLHSGlobal) {
-                    std::string name = StringEvaluator::getResult(binop.lhs);
-                    store(code += std::format("\tmov rax, qword [rip + {}]\n", name));
+                    std::string name = StringEvaluator::get(binop.lhs);
+                    set(code += std::format("\tmov rax, qword [rip + {}]\n", name));
                 } else {
                     if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                         loffset = itr->second;
-                        store(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
+                        set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
                     } else {
-                        store(code += std::format("\tmov rax, {}\n", lhs));
+                        set(code += std::format("\tmov rax, {}\n", lhs));
                     }
                 }
 
                 if (isRHSGlobal) {
-                    std::string name = StringEvaluator::getResult(binop.rhs);
-                    store(code += std::format("\tadd rax, qword [rip + {}]\n", name));
+                    std::string name = StringEvaluator::get(binop.rhs);
+                    set(code += std::format("\tadd rax, qword [rip + {}]\n", name));
                 } else {
                     if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
                         roffset = itr->second;
-                        store(code += std::format("\tadd rax, qword [rbp - {}]\n", roffset));
+                        set(code += std::format("\tadd rax, qword [rbp - {}]\n", roffset));
                     } else {
-                        store(code += std::format("\tadd rax, {}\n", rhs));
+                        set(code += std::format("\tadd rax, {}\n", rhs));
                     }
                 }
 
@@ -213,78 +214,78 @@ void VarEvaluator::visit(const BinOpExpr& binop) {
         }
         case TokenType::MINUS: {
             if (!isRHSNum) {
-                store(code += rhs);
+                set(code += rhs);
                 if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                     loffset = itr->second;
-                    store(code += std::format("\tsub rax, qword [rbp - {}]\n", loffset));
+                    set(code += std::format("\tsub rax, qword [rbp - {}]\n", loffset));
                 } else {
-                    store(code += std::format("\tsub rax, {}\n", lhs));
+                    set(code += std::format("\tsub rax, {}\n", lhs));
                 }
             } else {
                 if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                     loffset = itr->second;
-                    store(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
+                    set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
                 } else {
-                    store(code += std::format("\tmov rax, {}\n", lhs));
+                    set(code += std::format("\tmov rax, {}\n", lhs));
                 }
 
                 if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
                     roffset = itr->second;
-                    store(code += std::format("\tsub rax, qword [rbp - {}]\n", roffset));
+                    set(code += std::format("\tsub rax, qword [rbp - {}]\n", roffset));
                 } else {
-                    store(code += std::format("\tsub rax, {}\n", rhs));
+                    set(code += std::format("\tsub rax, {}\n", rhs));
                 }
             }
             break;
         }
         case TokenType::DIV: {
             if (!isRHSNum) {
-                store(code += rhs);
+                set(code += rhs);
                 if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                     loffset = itr->second;
-                    store(code += std::format("\tidiv rax, qword [rbp - {}]\n", loffset));
+                    set(code += std::format("\tidiv rax, qword [rbp - {}]\n", loffset));
                 } else {
-                    store(code += std::format("\tidiv rax, {}\n", lhs));
+                    set(code += std::format("\tidiv rax, {}\n", lhs));
                 }
             } else {
                 if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                     loffset = itr->second;
-                    store(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
+                    set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
                 } else {
-                    store(code += std::format("\tmov rax, {}\n", lhs));
+                    set(code += std::format("\tmov rax, {}\n", lhs));
                 }
 
                 if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
                     roffset = itr->second;
-                    store(code += std::format("\tidiv rax, qword [rbp - {}]\n", roffset));
+                    set(code += std::format("\tidiv rax, qword [rbp - {}]\n", roffset));
                 } else {
-                    store(code += std::format("\tidiv rax, {}\n", rhs));
+                    set(code += std::format("\tidiv rax, {}\n", rhs));
                 }
             }
             break;
         }
         case TokenType::MUL: {
             if (!isRHSNum) {
-                store(code += rhs);
+                set(code += rhs);
                 if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                     loffset = itr->second;
-                    store(code += std::format("\timul rax, qword [rbp - {}]\n", loffset));
+                    set(code += std::format("\timul rax, qword [rbp - {}]\n", loffset));
                 } else {
-                    store(code += std::format("\timul rax, {}\n", lhs));
+                    set(code += std::format("\timul rax, {}\n", lhs));
                 }
             } else {
                 if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
                     loffset = itr->second;
-                    store(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
+                    set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
                 } else {
-                    store(code += std::format("\tmov rax, {}\n", lhs));
+                    set(code += std::format("\tmov rax, {}\n", lhs));
                 }
 
                 if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
                     roffset = itr->second;
-                    store(code += std::format("\timul rax, qword [rbp - {}]\n", roffset));
+                    set(code += std::format("\timul rax, qword [rbp - {}]\n", roffset));
                 } else {
-                    store(code += std::format("\timul rax, {}\n", rhs));
+                    set(code += std::format("\timul rax, {}\n", rhs));
                 }
             }
             break;
@@ -293,22 +294,22 @@ void VarEvaluator::visit(const BinOpExpr& binop) {
 }
 
 void VarEvaluator::visit(const VarExpr& var) {
-    store(VarEvaluator::getResult(var.value));
+    set(VarEvaluator::get(var.value));
 }
 
 void VarEvaluator::visit(const IntExpr& num) {
-    store(std::to_string(num.n));
+    set(std::to_string(num.n));
 }
 
 void VarEvaluator::visit(const StringExpr& str) {
-    store(str.data);
+    set(str.data);
 }
 
 void StringEvaluator::visit(const StringExpr& str) {
-    store(str.data);
+    set(str.data);
 }
 
 void StringEvaluator::visit(const VarExpr& var) {
-    store(StringEvaluator::getResult(var.name));
+    set(StringEvaluator::get(var.name));
 }
 

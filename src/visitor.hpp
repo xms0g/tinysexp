@@ -39,15 +39,15 @@ public:
 };
 
 template<typename VisitorImpl, typename VisitablePtr, typename RType>
-class ValueGetter {
+class Getter {
 public:
-    static RType getResult(const VisitablePtr& n) {
+    static RType get(const VisitablePtr& expr) {
         VisitorImpl visitor;
-        n->accept(visitor);
+        expr->accept(visitor);
         return visitor.mValue;
     }
 
-    void store(RType value) {
+    void set(RType value) {
         mValue = value;
     }
 
@@ -56,7 +56,7 @@ private:
 };
 
 #define MAKE_VISITOR(NAME, RVALUE, ...) \
-        class NAME : public ValueGetter<NAME, ExprPtr, RVALUE>, public ExprVisitor { \
+        class NAME : public Getter<NAME, ExprPtr, RVALUE>, public ExprVisitor { \
         public:         \
             __VA_ARGS__ \
         };

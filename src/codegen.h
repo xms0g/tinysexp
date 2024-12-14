@@ -9,13 +9,13 @@
 
 enum class Register {
     RAX, RBX, RCX,
-    RDX, RBP, RDI,
-    RSI, R8, R9, R10,
+    RDX, RDI, RSI,
+    R8, R9, R10,
     R11, R12, R13,
     R14, R15
 };
 
-class ASTVisitor : public ValueGetter<ASTVisitor, ExprPtr, std::string>, public ExprVisitor {
+class ASTVisitor : public Getter<ASTVisitor, ExprPtr, std::string>, public ExprVisitor {
 public:
     void visit(const BinOpExpr& binop) override;
 
