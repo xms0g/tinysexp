@@ -85,10 +85,6 @@ ExprPtr Parser::parseSExpr() {
     advance();
 
     left = parseAtom();
-    //TODO: do in semantic analyse
-    if (ExprPtr value = checkVarError(left)) {
-        left = std::make_shared<VarExpr>(left, value);
-    }
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
@@ -96,10 +92,6 @@ ExprPtr Parser::parseSExpr() {
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         right = parseAtom();
-        //TODO: do in semantic analyse
-        if (ExprPtr value = checkVarError(right)) {
-            right = std::make_shared<VarExpr>(right, value);
-        }
     }
 
     return std::make_shared<BinOpExpr>(left, right, token);
@@ -115,8 +107,6 @@ ExprPtr Parser::parseDotimes() {
     name = parseAtom();
     value = parseAtom();
 
-    //TODO: do in semantic analyse
-    symbolTable.emplace(StringEvaluator::get(name), value);
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -139,7 +129,7 @@ ExprPtr Parser::parseLet() {
     while (mCurrentToken.type == TokenType::VAR) {
         name = parseAtom();
         value = std::make_shared<NILExpr>();
-        symbolTable.emplace(StringEvaluator::get(name), value);
+
         variables.emplace_back(std::make_shared<VarExpr>(name, value));
     }
 
@@ -147,8 +137,6 @@ ExprPtr Parser::parseLet() {
         consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         name = parseAtom();
         value = parseAtom();
-
-        symbolTable.emplace(StringEvaluator::get(name), value);
 
         variables.emplace_back(std::make_shared<VarExpr>(name, value));
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
@@ -170,8 +158,6 @@ ExprPtr Parser::parseSetq() {
     name = parseAtom();
     value = parseAtom();
 
-    symbolTable[StringEvaluator::get(name)] = value;
-
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<SetqExpr>(var);
 }
@@ -183,8 +169,6 @@ ExprPtr Parser::parseDefvar() {
     name = parseAtom();
     value = parseAtom();
 
-    symbolTable[StringEvaluator::get(name)] = value;
-
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<DefvarExpr>(var);
 }
@@ -195,8 +179,6 @@ ExprPtr Parser::parseDefconst() {
 
     name = parseAtom();
     value = parseAtom();
-
-    symbolTable[StringEvaluator::get(name)] = value;
 
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<DefconstExpr>(var);
@@ -236,16 +218,16 @@ void Parser::consume(TokenType expected, const char* errorStr) {
 }
 
 ExprPtr Parser::checkVarError(ExprPtr& var) {
-    std::string strvar = StringEvaluator::get(var);
-
-    if (!strvar.empty()) {
-        auto found = symbolTable.find(strvar);
-        if (found == symbolTable.end()) {
-            throw InvalidSyntaxError(mFileName, (strvar + VAR_NOT_DEFINED).c_str(), 0);
-        }
-        return found->second;
-    }
-
-    return nullptr;
+//    std::string strvar = StringEvaluator::get(var);
+//
+//    if (!strvar.empty()) {
+//        auto found = symbolTable.find(strvar);
+//        if (found == symbolTable.end()) {
+//            throw InvalidSyntaxError(mFileName, (strvar + VAR_NOT_DEFINED).c_str(), 0);
+//        }
+//        return found->second;
+//    }
+//
+//    return nullptr;
 
 }
