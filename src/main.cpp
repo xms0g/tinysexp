@@ -2,6 +2,7 @@
 #include <fstream>
 #include "lexer.h"
 #include "parser.h"
+#include "semantic.h"
 #include "codegen.h"
 #include "exceptions.hpp"
 
@@ -23,6 +24,8 @@ void compile(const char* fn, std::string& program) {
 
         lexer.process();
         ExprPtr ast = parser.parse();
+
+        SemanticAnalyzer::analyze(ast);
 
         std::cout << CodeGen::emit(ast) << '\n';
 
