@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TINYSEXP_CODEGEN_H
+#define TINYSEXP_CODEGEN_H
 
 #include <string>
 #include <unordered_set>
@@ -47,3 +48,5 @@ MAKE_VISITOR(NumberEvaluator, T, MAKE_MTHD_INT MAKE_MTHD_BINOP MAKE_MTHD_DOUBLE)
 MAKE_VISITOR(VarEvaluator, std::string, MAKE_MTHD_BINOP MAKE_MTHD_VAR MAKE_MTHD_STR MAKE_MTHD_INT)
 
 MAKE_VISITOR(PrintEvaluator, std::string, MAKE_MTHD_BINOP)
+
+#endif

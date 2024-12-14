@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TINYSEXP_PARSER_H
+#define TINYSEXP_PARSER_H
 
 #include <unordered_map>
 #include <utility>
@@ -149,3 +150,5 @@ private:
     const char* mFileName;
     std::unordered_map<std::string, ExprPtr> symbolTable;
 };
+
+#endif

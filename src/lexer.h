@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TINYSEXP_LEXER_H
+#define TINYSEXP_LEXER_H
 
 #include <string>
 #include <vector>
@@ -67,3 +68,5 @@ private:
     char* mCurrentChar{};
     const char* mFileName;
 };
+
+#endif

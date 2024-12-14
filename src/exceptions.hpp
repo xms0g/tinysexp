@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TINYSEXP_EXCEPTIONS_HPP
+#define TINYSEXP_EXCEPTIONS_HPP
 
 #include <exception>
 #include <string>
@@ -30,3 +31,5 @@ public:
     explicit InvalidSyntaxError(const char* fn, const char* detail, int ln) :
             IError("Invalid Syntax: ", fn, detail, ln) {}
 };
+
+#endif
