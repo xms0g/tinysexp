@@ -202,6 +202,10 @@ ExprPtr Parser::parseDefconst() {
     return std::make_shared<DefconstExpr>(var);
 }
 
+ExprPtr Parser::parseDefun() {
+
+}
+
 ExprPtr Parser::parseAtom() {
     if (mCurrentToken.type == TokenType::VAR) {
         Token token = mCurrentToken;

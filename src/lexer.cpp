@@ -28,7 +28,10 @@ void Lexer::process() {
         } else if (!std::strncmp("defconstant", mCurrentChar, 11)) {
             mTokens.emplace_back(TokenType::DEFCONST);
             advance(11);
-        }  else if (!std::strncmp("and", mCurrentChar, 3)) {
+        } else if (!std::strncmp("defun", mCurrentChar, 5)) {
+            mTokens.emplace_back(TokenType::DEFUN);
+            advance(5);
+        } else if (!std::strncmp("and", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::AND);
             advance(3);
         }  else if (!std::strncmp("or", mCurrentChar, 2)) {
