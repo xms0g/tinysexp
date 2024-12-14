@@ -95,7 +95,7 @@ void ASTVisitor::visit(const LetExpr& let) {
         CodeGen::stackOffset += 8;
     }
 
-    for (auto& sexpr: let.sexprs) {
+    for (auto& sexpr: let.body) {
         set(code += VarEvaluator::get(sexpr));
     }
 

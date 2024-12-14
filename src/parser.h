@@ -57,9 +57,9 @@ struct BinOpExpr : IExpr {
     ExprPtr rhs;
     Token opToken;
 
-    BinOpExpr(ExprPtr& ln, ExprPtr& rn, Token opTok) :
-            lhs(std::move(ln)),
-            rhs(std::move(rn)),
+    BinOpExpr(ExprPtr& lhs_, ExprPtr& rhs_, Token opTok) :
+            lhs(std::move(lhs_)),
+            rhs(std::move(rhs_)),
             opToken(std::move(opTok)) {}
 
     MAKE_VISITABLE
@@ -69,20 +69,20 @@ struct DotimesExpr : IExpr {
     ExprPtr iterationCount;
     std::vector<ExprPtr> statements;
 
-    DotimesExpr(ExprPtr& iterCount, std::vector<ExprPtr>& statements) :
-            iterationCount(std::move(iterCount)),
-            statements(std::move(statements)) {}
+    DotimesExpr(ExprPtr& iterationCount_, std::vector<ExprPtr>& statements_) :
+            iterationCount(std::move(iterationCount_)),
+            statements(std::move(statements_)) {}
 
     MAKE_VISITABLE
 };
 
 struct LetExpr : IExpr {
-    std::vector<ExprPtr> sexprs;
     std::vector<ExprPtr> variables;
+    std::vector<ExprPtr> body;
 
-    LetExpr(std::vector<ExprPtr>& sexprs, std::vector<ExprPtr>& variables) :
-            sexprs(std::move(sexprs)),
-            variables(std::move(variables)) {}
+    LetExpr(std::vector<ExprPtr>& variables_, std::vector<ExprPtr>& body_) :
+            body(std::move(body_)),
+            variables(std::move(variables_)) {}
 
     MAKE_VISITABLE
 };
@@ -90,8 +90,8 @@ struct LetExpr : IExpr {
 struct SetqExpr : IExpr {
     ExprPtr var;
 
-    explicit SetqExpr(ExprPtr& var) :
-            var(std::move(var)) {}
+    explicit SetqExpr(ExprPtr& var_) :
+            var(std::move(var_)) {}
 
     MAKE_VISITABLE
 };
@@ -99,8 +99,8 @@ struct SetqExpr : IExpr {
 struct DefvarExpr : IExpr {
     ExprPtr var;
 
-    explicit DefvarExpr(ExprPtr& var) :
-            var(std::move(var)) {}
+    explicit DefvarExpr(ExprPtr& var_) :
+            var(std::move(var_)) {}
 
     MAKE_VISITABLE
 };
@@ -109,7 +109,7 @@ struct VarExpr : IExpr {
     ExprPtr name;
     ExprPtr value;
 
-    VarExpr(ExprPtr& name, ExprPtr& value) : name(std::move(name)), value(std::move(value)) {}
+    VarExpr(ExprPtr& name_, ExprPtr& value_) : name(std::move(name_)), value(std::move(value_)) {}
 
     MAKE_VISITABLE
 };
@@ -126,10 +126,6 @@ private:
     ExprPtr parseExpr();
 
     ExprPtr parseSExpr();
-
-    ExprPtr parsePrint();
-
-    ExprPtr parseRead();
 
     ExprPtr parseDotimes();
 
