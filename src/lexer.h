@@ -7,8 +7,12 @@
 enum class TokenType {
     // Type
     INT, DOUBLE, VAR,
-    // Operators
+    // Arithmetic Operators
     PLUS, MINUS, DIV, MUL,
+    // Comparison Operators
+    EQUAL, NEQUAL, GREATER_THEN, LESS_THEN, GREATER_THEN_EQ, LESS_THEN_EQ,
+    // Logical Operators
+    AND, OR, NOT,
     // Loop
     DOTIMES,
     // Condition
@@ -26,7 +30,7 @@ struct Token {
 
     Token() = default;
 
-    Token(TokenType type, std::string value = "") : type(type), value(std::move(value)) {}
+    explicit Token(TokenType type, std::string value = "") : type(type), value(std::move(value)) {}
 };
 
 struct Position {
