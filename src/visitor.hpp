@@ -9,6 +9,7 @@ struct DotimesExpr;
 struct LetExpr;
 struct SetqExpr;
 struct DefvarExpr;
+struct DefconstExpr;
 struct VarExpr;
 
 class ExprVisitor {
@@ -34,6 +35,8 @@ public:
     virtual void visit(const SetqExpr&) {}
 
     virtual void visit(const DefvarExpr&) {}
+
+    virtual void visit(const DefconstExpr&) {}
 
     virtual void visit(const VarExpr&) {}
 };

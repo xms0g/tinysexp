@@ -1,6 +1,5 @@
 #include "lexer.h"
 #include <cstring>
-#include <algorithm>
 #include "exceptions.hpp"
 
 Lexer::Lexer(const char* fn, std::string text) : mFileName(fn), mText(std::move(text)), mPos(-1, 0, -1) {
@@ -26,6 +25,18 @@ void Lexer::process() {
         } else if (!std::strncmp("defvar", mCurrentChar, 4)) {
             mTokens.emplace_back(TokenType::DEFVAR);
             advance(6);
+        } else if (!std::strncmp("defconstant", mCurrentChar, 11)) {
+            mTokens.emplace_back(TokenType::DEFCONST);
+            advance(11);
+        }  else if (!std::strncmp("and", mCurrentChar, 3)) {
+            mTokens.emplace_back(TokenType::AND);
+            advance(3);
+        }  else if (!std::strncmp("or", mCurrentChar, 2)) {
+            mTokens.emplace_back(TokenType::OR);
+            advance(2);
+        }  else if (!std::strncmp("not", mCurrentChar, 3)) {
+            mTokens.emplace_back(TokenType::NOT);
+            advance(3);
         } else if (std::isalpha(mCurrentChar[0])) {
             std::string token;
 
@@ -62,6 +73,24 @@ void Lexer::process() {
         } else if (mCurrentChar[0] == '/') {
             mTokens.emplace_back(TokenType::DIV);
             advance();
+        } else if (mCurrentChar[0] == '=') {
+            mTokens.emplace_back(TokenType::EQUAL);
+            advance();
+        } else if (!std::strncmp("/=", mCurrentChar, 2)) {
+            mTokens.emplace_back(TokenType::NEQUAL);
+            advance(2);
+        } else if (mCurrentChar[0] == '>') {
+            mTokens.emplace_back(TokenType::GREATER_THEN);
+            advance();
+        } else if (!std::strncmp(">=", mCurrentChar, 2)) {
+            mTokens.emplace_back(TokenType::GREATER_THEN_EQ);
+            advance(2);
+        } else if (mCurrentChar[0] == '<') {
+            mTokens.emplace_back(TokenType::LESS_THEN);
+            advance();
+        }  else if (!std::strncmp("<=", mCurrentChar, 2)) {
+            mTokens.emplace_back(TokenType::LESS_THEN_EQ);
+            advance(2);
         } else if (mCurrentChar[0] == '(') {
             mTokens.emplace_back(TokenType::LPAREN);
             advance();

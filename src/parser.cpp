@@ -44,6 +44,15 @@ ExprPtr Parser::parseExpr() {
         case TokenType::MINUS:
         case TokenType::DIV:
         case TokenType::MUL:
+        case TokenType::EQUAL:
+        case TokenType::NEQUAL:
+        case TokenType::GREATER_THEN:
+        case TokenType::LESS_THEN:
+        case TokenType::GREATER_THEN_EQ:
+        case TokenType::LESS_THEN_EQ:
+        case TokenType::AND:
+        case TokenType::OR:
+        case TokenType::NOT:
             expr = parseSExpr();
             break;
         case TokenType::DOTIMES:
@@ -57,6 +66,9 @@ ExprPtr Parser::parseExpr() {
             break;
         case TokenType::DEFVAR:
             expr = parseDefvar();
+            break;
+        case TokenType::DEFCONST:
+            expr = parseDefconst();
             break;
         default:
             throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
@@ -175,6 +187,19 @@ ExprPtr Parser::parseDefvar() {
 
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<DefvarExpr>(var);
+}
+
+ExprPtr Parser::parseDefconst() {
+    ExprPtr var, name, value;
+    advance();
+
+    name = parseAtom();
+    value = parseAtom();
+
+    symbolTable[StringEvaluator::get(name)] = value;
+
+    var = std::make_shared<VarExpr>(name, value);
+    return std::make_shared<DefconstExpr>(var);
 }
 
 ExprPtr Parser::parseAtom() {
