@@ -25,7 +25,7 @@ void compile(const char* fn, std::string& program) {
         lexer.process();
         ExprPtr ast = parser.parse();
 
-        SemanticAnalyzer::analyze(ast);
+        SemanticAnalyzer::analyze(fn, ast);
 
         //std::cout << CodeGen::emit(ast) << '\n';
 
@@ -34,6 +34,8 @@ void compile(const char* fn, std::string& program) {
     } catch (InvalidSyntaxError& e) {
         std::cerr << ERROR_COLOR << e.what();
     } catch (MultipleDeclarationError& e) {
+        std::cerr << ERROR_COLOR << e.what();
+    } catch (UnboundVariableError& e) {
         std::cerr << ERROR_COLOR << e.what();
     }
 }

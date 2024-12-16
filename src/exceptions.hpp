@@ -38,4 +38,10 @@ public:
             IError("Multiple Declaration: ", fn, detail, ln) {}
 };
 
+class UnboundVariableError : public IError {
+public:
+    explicit UnboundVariableError(const char* fn, const char* detail, int ln) :
+            IError("Unhandled UNBOUND-VARIABLE: ", fn, detail, ln) {}
+};
+
 #endif
