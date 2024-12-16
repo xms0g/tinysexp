@@ -22,6 +22,12 @@ void Lexer::process() {
         } else if (!std::strncmp("if", mCurrentChar, 2)) {
             mTokens.emplace_back(TokenType::IF);
             advance(2);
+        } else if (!std::strncmp("when", mCurrentChar, 4)) {
+            mTokens.emplace_back(TokenType::WHEN);
+            advance(4);
+        }  else if (!std::strncmp("cond", mCurrentChar, 4)) {
+            mTokens.emplace_back(TokenType::COND);
+            advance(4);
         } else if (!std::strncmp("defvar", mCurrentChar, 4)) {
             mTokens.emplace_back(TokenType::DEFVAR);
             advance(6);

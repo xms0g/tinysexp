@@ -16,7 +16,7 @@ enum class TokenType {
     // Loop
     DOTIMES,
     // Condition
-    IF,
+    IF, WHEN, COND,
     // Assignment
     LET, SETQ, DEFVAR, DEFCONST,
     // Function
