@@ -1,22 +1,27 @@
-# lbf
-**lbf** is a lisp to brainfuck compiler, enabling you to write programs in a Lisp-like language and compile them into the minimalist Brainfuck programming language.
+# tinysexp
+`tinysexp` is a lisp  compiler
 ## Features
 A subset of Lisp, including:
-- `Arithmetic operations:` Basic operations (`+`, `-`, `*`, `/`).
-- `Conditionals:` Basic branching with `if`.
-- `Looping:` Iterates with `dotimes`.
-<!--
-- Functions: Define reusable functions using defun.
--->
-- `Variables:` Simple variable assignments and scopes with `let` and `setq`.
-- `Input/Output:` Support for `print` and `read`.
-
+### Operators
+- Arithmetic Operators: `+`, `-`, `*`, `/`.
+- Comparison Operators: `=`, `/=`, `>`, `<`, `>=`, `<=`.
+- Logical Operators: `and`, `or`, `not`
+### Condition
+- `if`,`when` and `cond`
+### Loop
+- `dotimes`
+### Functions
+- `defun`
+### Variables
+- Local Variables: with `let` and `setq`.
+- Global Variables: with `defvar`.
+- Constant Variables: with `defconstant`.
 ## Calling Conventions
 - Result value is always in the first cell.
 ## Usage
 
 ## Example
-```lisp
+```scheme
 (* 3 4)
 (dotimes (i 5) (+ 3 4))
 (print (* 2 (+ 3 (/ 9 3))))

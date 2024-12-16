@@ -1,10 +1,11 @@
 #include "parser.h"
+#include <format>
 #include "exceptions.hpp"
 
 namespace {
-constexpr const char* MISSING_PAREN_ERROR = "missing parenthesis";
-constexpr const char* EXPECTED_NUMBER_ERROR = "expected int or float";
-}
+constexpr const char* MISSING_PAREN_ERROR = "Missing parenthesis";
+constexpr const char* EXPECTED_NUMBER_ERROR = "Expected int or double";
+};
 
 Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
 
@@ -71,6 +72,15 @@ ExprPtr Parser::parseExpr() {
             break;
         case TokenType::DEFUN:
             expr = parseDefun();
+            break;
+        case TokenType::IF:
+            expr = parseIf();
+            break;
+        case TokenType::WHEN:
+            expr = parseWhen();
+            break;
+        case TokenType::COND:
+            expr = parseCond();
             break;
         case TokenType::VAR:
             expr = parseFuncCall();
@@ -245,6 +255,55 @@ ExprPtr Parser::parseFuncCall() {
     }
 
     return std::make_shared<FuncCallExpr>(name, params);
+}
+
+ExprPtr Parser::parseIf() {
+    ExprPtr cond;
+    std::vector<ExprPtr> body;
+
+    advance();
+
+    cond = parseExpr();
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        body.emplace_back(parseExpr());
+    }
+
+    return std::make_shared<IfExpr>(cond, body);
+}
+
+ExprPtr Parser::parseWhen() {
+    ExprPtr cond;
+    std::vector<ExprPtr> body;
+
+    advance();
+
+    cond = parseExpr();
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        body.emplace_back(parseExpr());
+    }
+
+    return std::make_shared<WhenExpr>(cond, body);
+}
+
+ExprPtr Parser::parseCond() {
+    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> body;
+
+    advance();
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+        std::vector<ExprPtr> statements;
+
+        auto cond = parseExpr();
+        statements.push_back(parseExpr());
+
+        body.emplace_back(cond, statements);
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+    }
+
+    return std::make_shared<CondExpr>(body);
 }
 
 ExprPtr Parser::parseAtom() {

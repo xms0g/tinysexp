@@ -84,12 +84,12 @@ struct DotimesExpr : IExpr {
 };
 
 struct LetExpr : IExpr {
-    std::vector<ExprPtr> variables;
+    std::vector<ExprPtr> bindings;
     std::vector<ExprPtr> body;
 
-    LetExpr(std::vector<ExprPtr>& variables_, std::vector<ExprPtr>& body_) :
+    LetExpr(std::vector<ExprPtr>& bindings_, std::vector<ExprPtr>& body_) :
             body(std::move(body_)),
-            variables(std::move(variables_)) {}
+            bindings(std::move(bindings_)) {}
 
     MAKE_VISITABLE
 };
@@ -126,7 +126,7 @@ struct DefunExpr : IExpr {
     std::vector<ExprPtr> params;
     std::vector<ExprPtr> body;
 
-    DefunExpr(ExprPtr& name_, std::vector<ExprPtr> params_, std::vector<ExprPtr> body_) :
+    DefunExpr(ExprPtr& name_, std::vector<ExprPtr>& params_, std::vector<ExprPtr>& body_) :
             name(std::move(name_)),
             params(std::move(params_)),
             body(std::move(body_)) {}
@@ -138,9 +138,33 @@ struct FuncCallExpr : IExpr {
     ExprPtr name;
     std::vector<ExprPtr> params;
 
-    FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr> params_) :
+    FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr>& params_) :
             name(std::move(name_)),
             params(std::move(params_)) {}
+
+    MAKE_VISITABLE
+};
+
+struct IfExpr : IExpr {
+    ExprPtr cond;
+    std::vector<ExprPtr> body;
+
+    IfExpr(ExprPtr& cond_, std::vector<ExprPtr>& body_) :
+            cond(std::move(cond_)),
+            body(std::move(body_)) {}
+
+    MAKE_VISITABLE
+};
+
+struct WhenExpr : IfExpr {
+    WhenExpr(ExprPtr& cond_, std::vector<ExprPtr>& body_) : IfExpr(cond_, body_) {}
+};
+
+struct CondExpr : IExpr {
+    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> body;
+
+    explicit CondExpr(std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> body_) :
+            body(std::move(body_)) {}
 
     MAKE_VISITABLE
 };
@@ -183,6 +207,12 @@ private:
     ExprPtr parseDefun();
 
     ExprPtr parseFuncCall();
+
+    ExprPtr parseIf();
+
+    ExprPtr parseWhen();
+
+    ExprPtr parseCond();
 
     ExprPtr parseAtom();
 
