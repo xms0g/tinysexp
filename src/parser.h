@@ -163,7 +163,7 @@ struct WhenExpr : IfExpr {
 struct CondExpr : IExpr {
     std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> body;
 
-    explicit CondExpr(std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> body_) :
+    explicit CondExpr(std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>>& body_) :
             body(std::move(body_)) {}
 
     MAKE_VISITABLE

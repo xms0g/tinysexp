@@ -1,11 +1,10 @@
 #include "parser.h"
-#include <format>
 #include "exceptions.hpp"
 
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "Missing parenthesis";
 constexpr const char* EXPECTED_NUMBER_ERROR = "Expected int or double";
-};
+}
 
 Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
 

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TINYSEXP_VISITOR_H
+#define TINYSEXP_VISITOR_H
 
 struct IntExpr;
 struct DoubleExpr;
@@ -88,3 +89,4 @@ private:
 #define MAKE_MTHD_LET void visit(const LetExpr& let) override;
 #define MAKE_MTHD_VAR void visit(const VarExpr& var) override;
 
+#endif
