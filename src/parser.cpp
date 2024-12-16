@@ -156,7 +156,14 @@ ExprPtr Parser::parseSetq() {
     advance();
 
     name = parseAtom();
-    value = parseAtom();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+        value = parseSExpr();
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+    } else {
+        value = parseAtom();
+    }
 
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<SetqExpr>(var);
@@ -167,7 +174,14 @@ ExprPtr Parser::parseDefvar() {
     advance();
 
     name = parseAtom();
-    value = parseAtom();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+        value = parseSExpr();
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+    } else {
+        value = parseAtom();
+    }
 
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<DefvarExpr>(var);
@@ -178,14 +192,24 @@ ExprPtr Parser::parseDefconst() {
     advance();
 
     name = parseAtom();
-    value = parseAtom();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+        value = parseSExpr();
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+    } else {
+        value = parseAtom();
+    }
 
     var = std::make_shared<VarExpr>(name, value);
     return std::make_shared<DefconstExpr>(var);
 }
 
 ExprPtr Parser::parseDefun() {
+    std::vector<ExprPtr> params;
+    std::vector<ExprPtr> body;
 
+    advance();
 }
 
 ExprPtr Parser::parseAtom() {
