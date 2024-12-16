@@ -8,6 +8,10 @@ void NumberEvaluator::visit(const DoubleExpr& num) {
     set(num.n);
 }
 
+void NumberEvaluator::visit(const VarExpr& var) {
+    set(NumberEvaluator::get(var.value));
+}
+
 void NumberEvaluator::visit(const BinOpExpr& binop) {
     std::variant<int, double> lhs, rhs;
 

@@ -10,9 +10,9 @@
         OP \
     }, L, R)
 
-using T = std::variant<int, double>;
+using IntDoubleT = std::variant<int, double>;
 
-MAKE_VISITOR(NumberEvaluator, T, MAKE_MTHD_INT MAKE_MTHD_BINOP MAKE_MTHD_DOUBLE)
+MAKE_VISITOR(NumberEvaluator, IntDoubleT, MAKE_MTHD_INT MAKE_MTHD_BINOP MAKE_MTHD_DOUBLE MAKE_MTHD_VAR)
 
 MAKE_VISITOR(StringEvaluator, std::string, MAKE_MTHD_VAR MAKE_MTHD_STR)
 
