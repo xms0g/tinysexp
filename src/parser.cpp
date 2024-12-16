@@ -167,56 +167,17 @@ ExprPtr Parser::parseLet() {
 }
 
 ExprPtr Parser::parseSetq() {
-    ExprPtr var, name, value;
-    advance();
-
-    name = parseAtom();
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-        value = parseSExpr();
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-    } else {
-        value = parseAtom();
-    }
-
-    var = std::make_shared<VarExpr>(name, value);
+    ExprPtr var = createVar();
     return std::make_shared<SetqExpr>(var);
 }
 
 ExprPtr Parser::parseDefvar() {
-    ExprPtr var, name, value;
-    advance();
-
-    name = parseAtom();
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-        value = parseSExpr();
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-    } else {
-        value = parseAtom();
-    }
-
-    var = std::make_shared<VarExpr>(name, value);
+    ExprPtr var = createVar();
     return std::make_shared<DefvarExpr>(var);
 }
 
 ExprPtr Parser::parseDefconst() {
-    ExprPtr var, name, value;
-    advance();
-
-    name = parseAtom();
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-        value = parseSExpr();
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-    } else {
-        value = parseAtom();
-    }
-
-    var = std::make_shared<VarExpr>(name, value);
+    ExprPtr var = createVar();
     return std::make_shared<DefconstExpr>(var);
 }
 
@@ -258,33 +219,13 @@ ExprPtr Parser::parseFuncCall() {
 }
 
 ExprPtr Parser::parseIf() {
-    ExprPtr cond;
-    std::vector<ExprPtr> body;
-
-    advance();
-
-    cond = parseExpr();
-
-    while (mCurrentToken.type == TokenType::LPAREN) {
-        body.emplace_back(parseExpr());
-    }
-
-    return std::make_shared<IfExpr>(cond, body);
+    auto condState = createCond();
+    return std::make_shared<IfExpr>(condState.first, condState.second);
 }
 
 ExprPtr Parser::parseWhen() {
-    ExprPtr cond;
-    std::vector<ExprPtr> body;
-
-    advance();
-
-    cond = parseExpr();
-
-    while (mCurrentToken.type == TokenType::LPAREN) {
-        body.emplace_back(parseExpr());
-    }
-
-    return std::make_shared<WhenExpr>(cond, body);
+    auto condState = createCond();
+    return std::make_shared<WhenExpr>(condState.first, condState.second);
 }
 
 ExprPtr Parser::parseCond() {
@@ -329,23 +270,40 @@ ExprPtr Parser::parseNumber() {
     throw InvalidSyntaxError(mFileName, EXPECTED_NUMBER_ERROR, 0);
 }
 
+ExprPtr Parser::createVar() {
+    ExprPtr name, value;
+    advance();
+
+    name = parseAtom();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+        value = parseExpr();
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+    } else {
+        value = parseAtom();
+    }
+
+    return std::make_shared<VarExpr>(name, value);
+}
+
+std::pair<ExprPtr, std::vector<ExprPtr>> Parser::createCond() {
+    ExprPtr cond;
+    std::vector<ExprPtr> body;
+
+    advance();
+
+    cond = parseExpr();
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        body.emplace_back(parseExpr());
+    }
+
+    return std::make_pair(cond, body);
+}
+
 void Parser::consume(TokenType expected, const char* errorStr) {
     if (mCurrentToken.type != expected) {
         throw InvalidSyntaxError(mFileName, errorStr, 0);
     } else advance();
-}
-
-ExprPtr Parser::checkVarError(ExprPtr& var) {
-//    std::string strvar = StringEvaluator::get(var);
-//
-//    if (!strvar.empty()) {
-//        auto found = symbolTable.find(strvar);
-//        if (found == symbolTable.end()) {
-//            throw InvalidSyntaxError(mFileName, (strvar + VAR_NOT_DEFINED).c_str(), 0);
-//        }
-//        return found->second;
-//    }
-//
-//    return nullptr;
-
 }

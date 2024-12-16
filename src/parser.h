@@ -218,15 +218,16 @@ private:
 
     ExprPtr parseNumber();
 
-    void consume(TokenType expected, const char* errorStr);
+    ExprPtr createVar();
 
-    ExprPtr checkVarError(ExprPtr& var);
+    std::pair<ExprPtr, std::vector<ExprPtr>> createCond();
+
+    void consume(TokenType expected, const char* errorStr);
 
     Lexer& mLexer;
     Token mCurrentToken{};
     int mTokenIndex;
     const char* mFileName;
-    std::unordered_map<std::string, ExprPtr> symbolTable;
 };
 
 #endif
