@@ -4,7 +4,6 @@
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "missing parenthesis";
 constexpr const char* EXPECTED_NUMBER_ERROR = "expected int or float";
-constexpr const char* VAR_NOT_DEFINED = " is not defined";
 }
 
 Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
@@ -69,6 +68,12 @@ ExprPtr Parser::parseExpr() {
             break;
         case TokenType::DEFCONST:
             expr = parseDefconst();
+            break;
+        case TokenType::DEFUN:
+            expr = parseDefun();
+            break;
+        case TokenType::VAR:
+            expr = parseFuncCall();
             break;
         default:
             throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
@@ -206,10 +211,40 @@ ExprPtr Parser::parseDefconst() {
 }
 
 ExprPtr Parser::parseDefun() {
+    ExprPtr name;
     std::vector<ExprPtr> params;
     std::vector<ExprPtr> body;
 
     advance();
+
+    name = parseAtom();
+
+    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+    while (mCurrentToken.type == TokenType::VAR) {
+        params.emplace_back(parseAtom());
+    }
+    consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        body.emplace_back(parseExpr());
+    }
+
+    return std::make_shared<DefunExpr>(name, params, body);
+}
+
+ExprPtr Parser::parseFuncCall() {
+    ExprPtr name;
+    std::vector<ExprPtr> params;
+
+    name = parseAtom();
+
+    while (mCurrentToken.type == TokenType::INT ||
+           mCurrentToken.type == TokenType::DOUBLE ||
+           mCurrentToken.type == TokenType::VAR) {
+        params.emplace_back(parseAtom());
+    }
+
+    return std::make_shared<FuncCallExpr>(name, params);
 }
 
 ExprPtr Parser::parseAtom() {

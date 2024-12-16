@@ -11,6 +11,7 @@ struct SetqExpr;
 struct DefvarExpr;
 struct DefconstExpr;
 struct DefunExpr;
+struct FuncCallExpr;
 struct VarExpr;
 
 class ExprVisitor {
@@ -40,6 +41,8 @@ public:
     virtual void visit(const DefconstExpr&) {}
 
     virtual void visit(const DefunExpr&) {}
+
+    virtual void visit(const FuncCallExpr&) {}
 
     virtual void visit(const VarExpr&) {}
 };

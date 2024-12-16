@@ -122,12 +122,25 @@ struct DefconstExpr : IExpr {
 };
 
 struct DefunExpr : IExpr {
+    ExprPtr name;
     std::vector<ExprPtr> params;
     std::vector<ExprPtr> body;
 
-    DefunExpr(std::vector<ExprPtr> params_, std::vector<ExprPtr> body_) :
+    DefunExpr(ExprPtr& name_, std::vector<ExprPtr> params_, std::vector<ExprPtr> body_) :
+            name(std::move(name_)),
             params(std::move(params_)),
             body(std::move(body_)) {}
+
+    MAKE_VISITABLE
+};
+
+struct FuncCallExpr : IExpr {
+    ExprPtr name;
+    std::vector<ExprPtr> params;
+
+    FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr> params_) :
+            name(std::move(name_)),
+            params(std::move(params_)) {}
 
     MAKE_VISITABLE
 };
@@ -168,6 +181,8 @@ private:
     ExprPtr parseDefconst();
 
     ExprPtr parseDefun();
+
+    ExprPtr parseFuncCall();
 
     ExprPtr parseAtom();
 
