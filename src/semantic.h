@@ -7,7 +7,7 @@
 
 class Resolver : public Getter<Resolver, ExprPtr, int>, public ExprVisitor {
 public:
-    void visit(const BinOpExpr& binop) override;
+    void visit(BinOpExpr& binop) override;
 
     void visit(const DotimesExpr& dotimes) override;
 
@@ -35,6 +35,7 @@ namespace SemanticAnalyzer {
 void analyze(const char* fn, ExprPtr& ast);
 }
 
+/* Scope Operations */
 void scopeEnter();
 
 void scopeExit();
@@ -44,6 +45,9 @@ void scopeBind(const std::string& name, const Symbol& symbol);
 Symbol scopeLookup(const std::string& name);
 
 Symbol scopeLookupCurrent(const std::string& name);
+
+/* Name Resolutions */
+void varResolve(ExprPtr& var);
 
 using ScopeType = std::unordered_map<std::string, Symbol>;
 static std::stack<ScopeType> symbolTable;

@@ -20,6 +20,7 @@ enum class SymbolType {
 };
 
 struct IExpr {
+    SymbolType sType;
     std::shared_ptr<IExpr> child;
 
     virtual ~IExpr() = default;
@@ -172,7 +173,6 @@ struct CondExpr : IExpr {
 struct VarExpr : IExpr {
     ExprPtr name;
     ExprPtr value;
-    SymbolType sType;
 
     VarExpr(ExprPtr& name_, ExprPtr& value_) :
             name(std::move(name_)),

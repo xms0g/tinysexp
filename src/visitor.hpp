@@ -32,7 +32,7 @@ public:
 
     virtual void visit(const NILExpr&) {}
 
-    virtual void visit(const BinOpExpr&) {}
+    virtual void visit(BinOpExpr&) {}
 
     virtual void visit(const DotimesExpr&) {}
 
@@ -83,7 +83,7 @@ private:
 #define MAKE_MTHD_INT void visit(const IntExpr& num) override;
 #define MAKE_MTHD_DOUBLE void visit(const DoubleExpr& num) override;
 #define MAKE_MTHD_STR void visit(const StringExpr& str) override;
-#define MAKE_MTHD_BINOP void visit(const BinOpExpr& binop) override;
+#define MAKE_MTHD_BINOP void visit(BinOpExpr& binop) override;
 #define MAKE_MTHD_BINOP_PARAM void visit(const BinOpExpr& binop, int param) override;
 #define MAKE_MTHD_DOTIMES void visit(const DotimesExpr& dotimes) override;
 #define MAKE_MTHD_LET void visit(const LetExpr& let) override;

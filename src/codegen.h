@@ -17,7 +17,7 @@ enum class Register {
 
 class ASTVisitor : public Getter<ASTVisitor, ExprPtr, std::string>, public ExprVisitor {
 public:
-    void visit(const BinOpExpr& binop) override;
+    void visit(BinOpExpr& binop) override;
 
     void visit(const DotimesExpr& dotimes) override;
 

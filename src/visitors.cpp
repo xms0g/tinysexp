@@ -12,7 +12,7 @@ void NumberEvaluator::visit(const VarExpr& var) {
     set(NumberEvaluator::get(var.value));
 }
 
-void NumberEvaluator::visit(const BinOpExpr& binop) {
+void NumberEvaluator::visit(BinOpExpr& binop) {
     std::variant<int, double> lhs, rhs;
 
     lhs = NumberEvaluator::get(binop.lhs);

@@ -41,7 +41,7 @@ std::string CodeGen::emit(ExprPtr& ast) {
 }
 
 
-void ASTVisitor::visit(const BinOpExpr& binop) {
+void ASTVisitor::visit(BinOpExpr& binop) {
     std::variant<int, double> lhs, rhs;
     std::string reg;
 
@@ -81,7 +81,7 @@ void ASTVisitor::visit(const DotimesExpr& dotimes) {
 }
 
 void ASTVisitor::visit(const LetExpr& let) {
-    for (auto& var: let.variables) {
+    for (auto& var: let.bindings) {
         std::string vs = VarEvaluator::get(var);
         set(code += std::format("\tmov qword [rbp - {}], {}\n",
                                 CodeGen::stackOffset, vs));
@@ -104,7 +104,7 @@ void ASTVisitor::visit(const DefvarExpr& defvar) {
     CodeGen::sectionData.emplace(StringEvaluator::get(defvar.var), VarEvaluator::get(defvar.var));
 }
 
-void VarEvaluator::visit(const BinOpExpr& binop) {
+void VarEvaluator::visit(BinOpExpr& binop) {
     std::string lhs, rhs, code;
 
     lhs = VarEvaluator::get(binop.lhs);

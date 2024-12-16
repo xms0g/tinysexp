@@ -75,29 +75,27 @@ Symbol scopeLookupCurrent(const std::string& name) {
     return {};
 }
 
-void Resolver::visit(const BinOpExpr& binop) {
-    std::variant<int, double> lhs, rhs;
+void varResolve(ExprPtr& var) {
+    std::variant<int, double> n;
 
-    lhs = NumberEvaluator::get(binop.lhs);
-    rhs = NumberEvaluator::get(binop.rhs);
+    n = NumberEvaluator::get(var);
 
-    if (!std::holds_alternative<int>(lhs) || !std::holds_alternative<double>(lhs)) {
-        std::string name = StringEvaluator::get(binop.lhs);
+    if (!std::holds_alternative<int>(n) || !std::holds_alternative<double>(n)) {
+        std::string name = StringEvaluator::get(var);
         Symbol sym = scopeLookup(name);
 
         if (!sym.value) {
             throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
+        } else {
+           var = sym.value;
+           var->sType = sym.sType;
         }
     }
+}
 
-    if (!std::holds_alternative<int>(rhs) || !std::holds_alternative<double>(rhs)) {
-        std::string name = StringEvaluator::get(binop.rhs);
-        Symbol sym = scopeLookup(name);
-
-        if (!sym.value) {
-            throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
-        }
-    }
+void Resolver::visit(BinOpExpr& binop) {
+    varResolve(binop.lhs);
+    varResolve(binop.rhs);
 }
 
 void Resolver::visit(const DotimesExpr& dotimes) {
@@ -114,8 +112,7 @@ void Resolver::visit(const LetExpr& let) {
             throw MultipleDeclarationError(fileName, std::format(MULTIPLE_DECL, name, "LET").c_str(), 0);
         }
 
-        Symbol s = {name, var, SymbolType::LOCAL};
-        scopeBind(name, s);
+        scopeBind(name, {name, var, SymbolType::LOCAL});
     }
 
     for (auto& statement: let.body) {
@@ -125,35 +122,31 @@ void Resolver::visit(const LetExpr& let) {
 }
 
 void Resolver::visit(const SetqExpr& setq) {
+    std::string name = StringEvaluator::get(setq.var);
+    Symbol sym = scopeLookup(name);
 
+    if (!sym.value) {
+        throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
+    }
 }
 
 void Resolver::visit(const DefvarExpr& defvar) {
-    Symbol s = {StringEvaluator::get(defvar.var),
-                defvar.var,
-                SymbolType::GLOBAL};
+    std::string name = StringEvaluator::get(defvar.var);
 
-    scopeBind(StringEvaluator::get(defvar.var), s);
-
+    scopeBind(name, {name, defvar.var, SymbolType::GLOBAL});
 }
 
 void Resolver::visit(const DefconstExpr& defconst) {
-    Symbol s = {StringEvaluator::get(defconst.var),
-                defconst.var,
-                SymbolType::GLOBAL};
+    std::string name = StringEvaluator::get(defconst.var);
 
-    scopeBind(StringEvaluator::get(defconst.var), s);
+    scopeBind(name, {name, defconst.var, SymbolType::GLOBAL});
 }
 
 void Resolver::visit(const DefunExpr& defun) {
     std::string name = StringEvaluator::get(defun.name);
     ExprPtr func = std::make_shared<DefunExpr>(defun);
 
-    Symbol s = {name,
-                func,
-                SymbolType::GLOBAL};
-
-    scopeBind(name, s);
+    scopeBind(name, {name, func, SymbolType::GLOBAL});
 
     scopeEnter();
     for (auto& param: defun.params) {
