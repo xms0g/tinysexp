@@ -27,11 +27,13 @@ void compile(const char* fn, std::string& program) {
 
         SemanticAnalyzer::analyze(ast);
 
-        std::cout << CodeGen::emit(ast) << '\n';
+        //std::cout << CodeGen::emit(ast) << '\n';
 
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();
     } catch (InvalidSyntaxError& e) {
+        std::cerr << ERROR_COLOR << e.what();
+    } catch (MultipleDeclarationError& e) {
         std::cerr << ERROR_COLOR << e.what();
     }
 }

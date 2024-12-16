@@ -32,4 +32,10 @@ public:
             IError("Invalid Syntax: ", fn, detail, ln) {}
 };
 
+class MultipleDeclarationError : public IError {
+public:
+    explicit MultipleDeclarationError(const char* fn, const char* detail, int ln) :
+            IError("Multiple Declaration: ", fn, detail, ln) {}
+};
+
 #endif
