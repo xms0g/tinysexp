@@ -4,7 +4,7 @@
 #include "exceptions.hpp"
 
 namespace {
-constexpr const char* UNBOUND_VAR = "The variable {} is unbound";
+constexpr const char* UNBOUND_VAR = "The variable '{}' is unbound";
 constexpr const char* MULTIPLE_DECL = "The variable '{}' occurs more than once in {}";
 constexpr const char* INVALID_NUMBER_OF_ARGS = "Invalid number of arguments: {}";
 
