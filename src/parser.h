@@ -54,7 +54,17 @@ struct StringExpr : IExpr {
 };
 
 struct NILExpr : IExpr {
+    const bool value{false};
+
     NILExpr() = default;
+
+    MAKE_VISITABLE
+};
+
+struct TExpr : IExpr {
+    const bool value{true};
+
+    TExpr() = default;
 
     MAKE_VISITABLE
 };
