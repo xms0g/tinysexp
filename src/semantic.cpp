@@ -6,9 +6,11 @@
 namespace {
 constexpr const char* UNBOUND_VAR = "The variable '{}' is unbound";
 constexpr const char* CONSTANT_VAR = "'{}' is a constant";
+constexpr const char* CONSTANT_VAR_DECL = "Constant variable '{}' is not allowed here";
+constexpr const char* GLOBAL_VAR_DECL = "Global variable '{}' is not allowed here";
 constexpr const char* MULTIPLE_DECL = "The variable '{}' occurs more than once in {}";
 constexpr const char* INVALID_NUMBER_OF_ARGS = "Invalid number of arguments: {}";
-constexpr const char* CO = "Function definition is not allowed here";
+constexpr const char* FUNC_DEF = "Function '{}' definition is not allowed here";
 
 }
 
@@ -31,6 +33,10 @@ void scopeEnter() {
 
 void scopeExit() {
     symbolTable.pop();
+}
+
+size_t scopeLevel() {
+    return symbolTable.size();
 }
 
 void scopeBind(const std::string& name, const Symbol& symbol) {
@@ -136,21 +142,30 @@ void Resolver::visit(const SetqExpr& setq) {
 void Resolver::visit(const DefvarExpr& defvar) {
     std::string name = StringEvaluator::get(defvar.var);
 
-    bool inLocal = symbolTable.size() > 1;
+    if (scopeLevel() > 1) {
+        throw ScopeError(fileName, std::format(GLOBAL_VAR_DECL, name).c_str(), 0);
+    }
+
     scopeBind(name, {name, defvar.var, SymbolType::GLOBAL});
 }
 
 void Resolver::visit(DefconstExpr& defconst) {
     std::string name = StringEvaluator::get(defconst.var);
 
-    bool inLocal = symbolTable.size() > 1;
+    if (scopeLevel() > 1) {
+        throw ScopeError(fileName, std::format(CONSTANT_VAR_DECL, name).c_str(), 0);
+    }
+
     scopeBind(name, {name, defconst.var, SymbolType::GLOBAL, true});
 }
 
 void Resolver::visit(const DefunExpr& defun) {
-    bool inLocal = symbolTable.size() > 1;
-
     std::string name = StringEvaluator::get(defun.name);
+
+    if (scopeLevel() > 1) {
+        throw ScopeError(fileName, std::format(FUNC_DEF, name).c_str(), 0);
+    }
+
     ExprPtr func = std::make_shared<DefunExpr>(defun);
 
     scopeBind(name, {name, func, SymbolType::GLOBAL});

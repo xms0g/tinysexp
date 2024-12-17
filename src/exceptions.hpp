@@ -41,13 +41,19 @@ public:
 class UnboundVariableError : public IError {
 public:
     explicit UnboundVariableError(const char* fn, const char* detail, int ln) :
-            IError("Unbound variable: ", fn, detail, ln) {}
+            IError("Unbound Variable: ", fn, detail, ln) {}
 };
 
 class TypeError : public IError {
 public:
     explicit TypeError(const char* fn, const char* detail, int ln) :
-            IError("Type error: ", fn, detail, ln) {}
+            IError("Type Error: ", fn, detail, ln) {}
+};
+
+class ScopeError : public IError {
+public:
+    explicit ScopeError(const char* fn, const char* detail, int ln) :
+            IError("Scope Error: ", fn, detail, ln) {}
 };
 
 #endif

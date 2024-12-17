@@ -46,6 +46,8 @@ void scopeEnter();
 
 void scopeExit();
 
+size_t scopeLevel();
+
 void scopeBind(const std::string& name, const Symbol& symbol);
 
 Symbol scopeLookup(const std::string& name);
