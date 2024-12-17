@@ -45,7 +45,7 @@ public:
 
     virtual void visit(const DefvarExpr&) {}
 
-    virtual void visit(DefconstExpr&) {}
+    virtual void visit(const DefconstExpr&) {}
 
     virtual void visit(const DefunExpr&) {}
 

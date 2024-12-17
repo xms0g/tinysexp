@@ -104,7 +104,14 @@ void Resolver::visit(BinOpExpr& binop) {
 }
 
 void Resolver::visit(const DotimesExpr& dotimes) {
+    scopeEnter();
+    std::string name = StringEvaluator::get(dotimes.iterationCount);
 
+    Symbol sym = scopeLookup(name);
+    if (sym.isConstant) {
+        throw TypeError(fileName, std::format(CONSTANT_VAR, name).c_str(), 0);
+    }
+    scopeExit();
 }
 
 void Resolver::visit(const LetExpr& let) {
@@ -149,7 +156,7 @@ void Resolver::visit(const DefvarExpr& defvar) {
     scopeBind(name, {name, defvar.var, SymbolType::GLOBAL});
 }
 
-void Resolver::visit(DefconstExpr& defconst) {
+void Resolver::visit(const DefconstExpr& defconst) {
     std::string name = StringEvaluator::get(defconst.var);
 
     if (scopeLevel() > 1) {

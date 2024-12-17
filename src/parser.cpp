@@ -113,14 +113,14 @@ ExprPtr Parser::parseSExpr() {
 
 ExprPtr Parser::parseDotimes() {
     std::vector<ExprPtr> statements;
-    ExprPtr name, value;
+    ExprPtr var, name, value;
 
     advance();
 
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     name = parseAtom();
     value = parseAtom();
-
+    var = std::make_shared<VarExpr>(name, value);
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -129,7 +129,7 @@ ExprPtr Parser::parseDotimes() {
         }
     }
 
-    return std::make_shared<DotimesExpr>(value, statements);
+    return std::make_shared<DotimesExpr>(var, statements);
 }
 
 ExprPtr Parser::parseLet() {

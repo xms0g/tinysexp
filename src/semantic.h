@@ -30,7 +30,7 @@ public:
 
     void visit(const DefvarExpr& defvar) override;
 
-    void visit(DefconstExpr& defconst) override;
+    void visit(const DefconstExpr& defconst) override;
 
     void visit(const DefunExpr& defun) override;
 
