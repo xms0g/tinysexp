@@ -41,7 +41,13 @@ public:
 class UnboundVariableError : public IError {
 public:
     explicit UnboundVariableError(const char* fn, const char* detail, int ln) :
-            IError("Unhandled UNBOUND-VARIABLE: ", fn, detail, ln) {}
+            IError("Unbound variable: ", fn, detail, ln) {}
+};
+
+class TypeError : public IError {
+public:
+    explicit TypeError(const char* fn, const char* detail, int ln) :
+            IError("Type error: ", fn, detail, ln) {}
 };
 
 #endif
