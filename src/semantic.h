@@ -22,7 +22,6 @@ public:
     void visit(const DefunExpr& defun) override;
 
     void visit(const FuncCallExpr& funcCall) override;
-
 };
 
 struct Symbol {

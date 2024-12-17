@@ -87,8 +87,9 @@ void varResolve(ExprPtr& var) {
         if (!sym.value) {
             throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
         } else {
-           var = sym.value;
-           var->sType = sym.sType;
+            auto v = std::dynamic_pointer_cast<VarExpr>(sym.value);
+            v->sType = sym.sType;
+            var = std::move(v);
         }
     }
 }
