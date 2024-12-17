@@ -25,7 +25,7 @@ void Lexer::process() {
         } else if (!std::strncmp("when", mCurrentChar, 4)) {
             mTokens.emplace_back(TokenType::WHEN);
             advance(4);
-        }  else if (!std::strncmp("cond", mCurrentChar, 4)) {
+        } else if (!std::strncmp("cond", mCurrentChar, 4)) {
             mTokens.emplace_back(TokenType::COND);
             advance(4);
         } else if (!std::strncmp("defvar", mCurrentChar, 4)) {
@@ -37,15 +37,24 @@ void Lexer::process() {
         } else if (!std::strncmp("defun", mCurrentChar, 5)) {
             mTokens.emplace_back(TokenType::DEFUN);
             advance(5);
+        } else if (!std::strncmp("defstruct", mCurrentChar, 9)) {
+            mTokens.emplace_back(TokenType::DEFSTRUCT);
+            advance(9);
+        } else if (!std::strncmp("nil", mCurrentChar, 3)) {
+            mTokens.emplace_back(TokenType::NIL);
+            advance(3);
         } else if (!std::strncmp("and", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::AND);
             advance(3);
-        }  else if (!std::strncmp("or", mCurrentChar, 2)) {
+        } else if (!std::strncmp("or", mCurrentChar, 2)) {
             mTokens.emplace_back(TokenType::OR);
             advance(2);
-        }  else if (!std::strncmp("not", mCurrentChar, 3)) {
+        } else if (!std::strncmp("not", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::NOT);
             advance(3);
+        } else if (mCurrentChar[0] == 't' && mCurrentChar[1] == '\n') {
+            mTokens.emplace_back(TokenType::T);
+            advance();
         } else if (std::isalpha(mCurrentChar[0])) {
             std::string token;
 
@@ -97,7 +106,7 @@ void Lexer::process() {
         } else if (mCurrentChar[0] == '<') {
             mTokens.emplace_back(TokenType::LESS_THEN);
             advance();
-        }  else if (!std::strncmp("<=", mCurrentChar, 2)) {
+        } else if (!std::strncmp("<=", mCurrentChar, 2)) {
             mTokens.emplace_back(TokenType::LESS_THEN_EQ);
             advance(2);
         } else if (mCurrentChar[0] == '(') {

@@ -13,12 +13,6 @@ using ExprPtr = std::shared_ptr<IExpr>;
 
 #define MAKE_VISITABLE virtual void accept(ExprVisitor& visitor) override { visitor.visit(*this); }
 
-enum class SymbolType {
-    LOCAL,
-    PARAM,
-    GLOBAL
-};
-
 struct IExpr {
     std::shared_ptr<IExpr> child;
 
@@ -183,7 +177,6 @@ struct CondExpr : IExpr {
 struct VarExpr : IExpr {
     ExprPtr name;
     ExprPtr value;
-    SymbolType sType;
 
     VarExpr(ExprPtr& name_, ExprPtr& value_) :
             name(std::move(name_)),

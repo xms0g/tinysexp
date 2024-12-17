@@ -6,7 +6,7 @@
 
 enum class TokenType {
     // Type
-    INT, DOUBLE, VAR,
+    INT, DOUBLE, VAR, NIL, T,
     // Arithmetic Operators
     PLUS, MINUS, DIV, MUL,
     // Comparison Operators
@@ -19,6 +19,8 @@ enum class TokenType {
     IF, WHEN, COND,
     // Assignment
     LET, SETQ, DEFVAR, DEFCONST,
+    // Struct
+    DEFSTRUCT,
     // Function
     DEFUN,
     // Others
