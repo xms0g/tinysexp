@@ -210,7 +210,9 @@ ExprPtr Parser::parseFuncCall() {
 
     while (mCurrentToken.type == TokenType::INT ||
            mCurrentToken.type == TokenType::DOUBLE ||
-           mCurrentToken.type == TokenType::VAR) {
+           mCurrentToken.type == TokenType::VAR ||
+           mCurrentToken.type == TokenType::T ||
+           mCurrentToken.type == TokenType::NIL) {
         params.emplace_back(parseAtom());
     }
 
@@ -251,6 +253,12 @@ ExprPtr Parser::parseAtom() {
         Token token = mCurrentToken;
         advance();
         return std::make_shared<StringExpr>(token.value);
+    } else if (mCurrentToken.type == TokenType::NIL) {
+        advance();
+        return std::make_shared<NILExpr>();
+    } else if (mCurrentToken.type == TokenType::T) {
+        advance();
+        return std::make_shared<TExpr>();
     } else {
         return parseNumber();
     }
