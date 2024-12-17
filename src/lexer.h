@@ -19,8 +19,6 @@ enum class TokenType {
     IF, WHEN, COND,
     // Assignment
     LET, SETQ, DEFVAR, DEFCONST,
-    // Struct
-    DEFSTRUCT,
     // Function
     DEFUN,
     // Others

@@ -5,8 +5,10 @@
 
 namespace {
 constexpr const char* UNBOUND_VAR = "The variable '{}' is unbound";
+constexpr const char* CONSTANT_VAR = "'{}' is a constant";
 constexpr const char* MULTIPLE_DECL = "The variable '{}' occurs more than once in {}";
 constexpr const char* INVALID_NUMBER_OF_ARGS = "Invalid number of arguments: {}";
+constexpr const char* CO = "Function definition is not allowed here";
 
 }
 
@@ -86,10 +88,6 @@ void varResolve(ExprPtr& var) {
 
         if (!sym.value) {
             throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
-        } else {
-            auto v = std::dynamic_pointer_cast<VarExpr>(sym.value);
-            v->sType = sym.sType;
-            var = std::move(v);
         }
     }
 }
@@ -128,22 +126,30 @@ void Resolver::visit(const SetqExpr& setq) {
 
     if (!sym.value) {
         throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
+    } else {
+        if (sym.isConstant) {
+            throw TypeError(fileName, std::format(CONSTANT_VAR, name).c_str(), 0);
+        }
     }
 }
 
 void Resolver::visit(const DefvarExpr& defvar) {
     std::string name = StringEvaluator::get(defvar.var);
 
+    bool inLocal = symbolTable.size() > 1;
     scopeBind(name, {name, defvar.var, SymbolType::GLOBAL});
 }
 
-void Resolver::visit(const DefconstExpr& defconst) {
+void Resolver::visit(DefconstExpr& defconst) {
     std::string name = StringEvaluator::get(defconst.var);
 
-    scopeBind(name, {name, defconst.var, SymbolType::GLOBAL});
+    bool inLocal = symbolTable.size() > 1;
+    scopeBind(name, {name, defconst.var, SymbolType::GLOBAL, true});
 }
 
 void Resolver::visit(const DefunExpr& defun) {
+    bool inLocal = symbolTable.size() > 1;
+
     std::string name = StringEvaluator::get(defun.name);
     ExprPtr func = std::make_shared<DefunExpr>(defun);
 

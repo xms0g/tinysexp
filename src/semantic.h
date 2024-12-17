@@ -5,6 +5,19 @@
 #include <unordered_map>
 #include "parser.h"
 
+enum class SymbolType {
+    LOCAL,
+    PARAM,
+    GLOBAL
+};
+
+struct Symbol {
+    std::string name;
+    ExprPtr value;
+    SymbolType sType;
+    bool isConstant{};
+};
+
 class Resolver : public Getter<Resolver, ExprPtr, int>, public ExprVisitor {
 public:
     void visit(BinOpExpr& binop) override;
@@ -17,17 +30,11 @@ public:
 
     void visit(const DefvarExpr& defvar) override;
 
-    void visit(const DefconstExpr& defconst) override;
+    void visit(DefconstExpr& defconst) override;
 
     void visit(const DefunExpr& defun) override;
 
     void visit(const FuncCallExpr& funcCall) override;
-};
-
-struct Symbol {
-    std::string name;
-    ExprPtr value;
-    SymbolType sType;
 };
 
 namespace SemanticAnalyzer {
@@ -50,6 +57,7 @@ void varResolve(ExprPtr& var);
 
 using ScopeType = std::unordered_map<std::string, Symbol>;
 static std::stack<ScopeType> symbolTable;
+
 static const char* fileName;
 
 #endif //TINYSEXP_SEMANTIC_H
