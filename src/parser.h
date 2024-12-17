@@ -146,18 +146,19 @@ struct FuncCallExpr : IExpr {
 };
 
 struct IfExpr : IExpr {
-    ExprPtr cond;
-    std::vector<ExprPtr> body;
+    ExprPtr cond, true_, false_;
 
-    IfExpr(ExprPtr& cond_, std::vector<ExprPtr>& body_) :
+    IfExpr(ExprPtr& cond_, ExprPtr& t, ExprPtr& f) :
             cond(std::move(cond_)),
-            body(std::move(body_)) {}
+            true_(std::move(t)),
+            false_(std::move(f)) {}
 
     MAKE_VISITABLE
 };
 
 struct WhenExpr : IfExpr {
-    WhenExpr(ExprPtr& cond_, std::vector<ExprPtr>& body_) : IfExpr(cond_, body_) {}
+    WhenExpr(ExprPtr& cond, ExprPtr& t, ExprPtr& f) :
+            IfExpr(cond, t, f) {}
 };
 
 struct CondExpr : IExpr {
@@ -220,7 +221,7 @@ private:
 
     ExprPtr createVar();
 
-    std::pair<ExprPtr, std::vector<ExprPtr>> createCond();
+    std::tuple<ExprPtr, ExprPtr, ExprPtr> createCond();
 
     void consume(TokenType expected, const char* errorStr);
 

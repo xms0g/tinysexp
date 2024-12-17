@@ -219,12 +219,12 @@ ExprPtr Parser::parseFuncCall() {
 
 ExprPtr Parser::parseIf() {
     auto condState = createCond();
-    return std::make_shared<IfExpr>(condState.first, condState.second);
+    return std::make_shared<IfExpr>(std::get<0>(condState), std::get<1>(condState), std::get<2>(condState));
 }
 
 ExprPtr Parser::parseWhen() {
     auto condState = createCond();
-    return std::make_shared<WhenExpr>(condState.first, condState.second);
+    return std::make_shared<WhenExpr>(std::get<0>(condState), std::get<1>(condState), std::get<2>(condState));
 }
 
 ExprPtr Parser::parseCond() {
@@ -286,19 +286,9 @@ ExprPtr Parser::createVar() {
     return std::make_shared<VarExpr>(name, value);
 }
 
-std::pair<ExprPtr, std::vector<ExprPtr>> Parser::createCond() {
-    ExprPtr cond;
-    std::vector<ExprPtr> body;
-
+std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
     advance();
-
-    cond = parseExpr();
-
-    while (mCurrentToken.type == TokenType::LPAREN) {
-        body.emplace_back(parseExpr());
-    }
-
-    return std::make_pair(cond, body);
+    return std::make_tuple(parseExpr(), parseExpr(), parseExpr());
 }
 
 void Parser::consume(TokenType expected, const char* errorStr) {
