@@ -9,6 +9,8 @@ constexpr const char* CONSTANT_VAR = "'{}' is a constant";
 constexpr const char* CONSTANT_VAR_DECL = "Constant variable '{}' is not allowed here";
 constexpr const char* GLOBAL_VAR_DECL = "Global variable '{}' is not allowed here";
 constexpr const char* MULTIPLE_DECL = "The variable '{}' occurs more than once in {}";
+constexpr const char* T_VAR = "The value 't' is not of type number";
+constexpr const char* NIL_VAR = "The value 'nil' is not of type number";
 constexpr const char* INVALID_NUMBER_OF_ARGS = "Invalid number of arguments: {}";
 constexpr const char* FUNC_DEF = "Function '{}' definition is not allowed here";
 
@@ -84,11 +86,24 @@ Symbol scopeLookupCurrent(const std::string& name) {
 }
 
 void varResolve(ExprPtr& var) {
+    bool isT = TEval::get(var);
+    bool isNil = NILEval::get(var);
+
+    if (isT || isNil) {
+        if (isT) {
+            throw TypeError(fileName, T_VAR, 0);
+        }
+
+        if (isNil) {
+            throw TypeError(fileName, NIL_VAR, 0);
+        }
+    }
+
     std::variant<int, double> n;
 
     n = NumberEvaluator::get(var);
 
-    if (!std::holds_alternative<int>(n) || !std::holds_alternative<double>(n)) {
+    if (!std::holds_alternative<int>(n) && !std::holds_alternative<double>(n)) {
         std::string name = StringEvaluator::get(var);
         Symbol sym = scopeLookup(name);
 
@@ -189,5 +204,17 @@ void Resolver::visit(const DefunExpr& defun) {
 }
 
 void Resolver::visit(const FuncCallExpr& funcCall) {
+
+}
+
+void Resolver::visit(const IfExpr& ifExpr) {
+
+}
+
+void Resolver::visit(const WhenExpr& when) {
+
+}
+
+void Resolver::visit(const CondExpr& cond) {
 
 }

@@ -91,5 +91,7 @@ private:
 #define MAKE_MTHD_DOTIMES void visit(const DotimesExpr& dotimes) override;
 #define MAKE_MTHD_LET void visit(const LetExpr& let) override;
 #define MAKE_MTHD_VAR void visit(const VarExpr& var) override;
+#define MAKE_MTHD_T void visit(const TExpr& t) override;
+#define MAKE_MTHD_NIL void visit(const NILExpr& nil) override;
 
 #endif
