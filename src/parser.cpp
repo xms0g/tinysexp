@@ -295,8 +295,18 @@ ExprPtr Parser::createVar() {
 }
 
 std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
+    ExprPtr cond, true_, false_;
+
     advance();
-    return std::make_tuple(parseExpr(), parseExpr(), parseExpr());
+
+    cond = parseExpr();
+    true_ = parseExpr();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        false_ = parseExpr();
+    }
+
+    return std::make_tuple(cond, true_, false_);
 }
 
 void Parser::consume(TokenType expected, const char* errorStr) {
