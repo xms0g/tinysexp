@@ -14,7 +14,7 @@ enum class TokenType {
     // Logical Operators
     AND, OR, NOT,
     // Loop
-    DOTIMES,
+    DOTIMES, LOOP, LOOP_FOR,
     // Condition
     IF, WHEN, COND,
     // Assignment

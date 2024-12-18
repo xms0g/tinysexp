@@ -87,6 +87,14 @@ struct DotimesExpr : IExpr {
     MAKE_VISITABLE
 };
 
+struct LoopExpr : IExpr {
+    std::vector<ExprPtr> sexprs;
+
+    LoopExpr(std::vector<ExprPtr>& sexprs_): sexprs(std::move(sexprs_)) {}
+
+    MAKE_VISITABLE
+};
+
 struct LetExpr : IExpr {
     std::vector<ExprPtr> bindings;
     std::vector<ExprPtr> body;
@@ -152,7 +160,7 @@ struct FuncCallExpr : IExpr {
 struct IfExpr : IExpr {
     ExprPtr cond, true_, false_;
 
-    IfExpr(ExprPtr& cond_, ExprPtr& t, ExprPtr& f) :
+    IfExpr(ExprPtr& cond_, ExprPtr& t, ExprPtr f = nullptr) :
             cond(std::move(cond_)),
             true_(std::move(t)),
             false_(std::move(f)) {}
@@ -161,7 +169,7 @@ struct IfExpr : IExpr {
 };
 
 struct WhenExpr : IfExpr {
-    WhenExpr(ExprPtr& cond, ExprPtr& t, ExprPtr& f) :
+    WhenExpr(ExprPtr& cond, ExprPtr& t, ExprPtr f = nullptr) :
             IfExpr(cond, t, f) {}
 };
 
@@ -199,6 +207,8 @@ private:
     ExprPtr parseSExpr();
 
     ExprPtr parseDotimes();
+
+    ExprPtr parseLoop();
 
     ExprPtr parseLet();
 

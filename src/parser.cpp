@@ -57,6 +57,9 @@ ExprPtr Parser::parseExpr() {
         case TokenType::DOTIMES:
             expr = parseDotimes();
             break;
+        case TokenType::LOOP:
+            expr = parseLoop();
+            break;
         case TokenType::LET:
             expr = parseLet();
             break;
@@ -123,13 +126,24 @@ ExprPtr Parser::parseDotimes() {
     var = std::make_shared<VarExpr>(name, value);
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        while (mCurrentToken.type == TokenType::LPAREN) {
-            statements.emplace_back(parseExpr());
-        }
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        statements.emplace_back(parseExpr());
     }
 
     return std::make_shared<DotimesExpr>(var, statements);
+}
+
+ExprPtr Parser::parseLoop() {
+    std::vector<ExprPtr> sexprs;
+
+    advance();
+
+    while (mCurrentToken.type == TokenType::LPAREN) {
+        sexprs.emplace_back(parseExpr());
+    }
+
+    return std::make_shared<LoopExpr>(sexprs);
 }
 
 ExprPtr Parser::parseLet() {
@@ -235,14 +249,12 @@ ExprPtr Parser::parseCond() {
     advance();
 
     while (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         std::vector<ExprPtr> statements;
 
         auto cond = parseExpr();
         statements.push_back(parseExpr());
 
         body.emplace_back(cond, statements);
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     }
 
     return std::make_shared<CondExpr>(body);
@@ -284,9 +296,7 @@ ExprPtr Parser::createVar() {
     name = parseAtom();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         value = parseExpr();
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     } else {
         value = parseAtom();
     }

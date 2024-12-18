@@ -8,6 +8,7 @@ struct NILExpr;
 struct TExpr;
 struct BinOpExpr;
 struct DotimesExpr;
+struct LoopExpr;
 struct LetExpr;
 struct SetqExpr;
 struct DefvarExpr;
@@ -38,6 +39,8 @@ public:
     virtual void visit(BinOpExpr&) {}
 
     virtual void visit(const DotimesExpr&) {}
+
+    virtual void visit(const LoopExpr&) {}
 
     virtual void visit(const LetExpr&) {}
 
