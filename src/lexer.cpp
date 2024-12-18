@@ -49,7 +49,8 @@ void Lexer::process() {
         } else if (!std::strncmp("not", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::NOT);
             advance(3);
-        } else if (mCurrentChar[0] == 't' && mCurrentChar[1] == ' ') {
+        } else if ((mCurrentChar[0] == 't' && mCurrentChar[1] == ' ') ||
+                   (mCurrentChar[0] == 't' && mCurrentChar[1] == ')')) {
             mTokens.emplace_back(TokenType::T);
             advance();
         } else if (std::isalpha(mCurrentChar[0])) {
