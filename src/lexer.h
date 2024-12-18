@@ -14,13 +14,15 @@ enum class TokenType {
     // Logical Operators
     AND, OR, NOT,
     // Loop
-    DOTIMES, LOOP, LOOP_FOR,
+    DOTIMES, LOOP,
     // Condition
     IF, WHEN, COND,
     // Assignment
     LET, SETQ, DEFVAR, DEFCONST,
     // Function
     DEFUN,
+    // Struct
+    DEFSTRUCT,
     // Others
     LPAREN, RPAREN,
     EOF_

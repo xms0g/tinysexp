@@ -35,6 +35,12 @@ public:
     void visit(const DefunExpr& defun) override;
 
     void visit(const FuncCallExpr& funcCall) override;
+
+    void visit(const IfExpr& ifExpr) override;
+
+    void visit(const WhenExpr& when) override;
+
+    void visit(const CondExpr& cond) override;
 };
 
 namespace SemanticAnalyzer {

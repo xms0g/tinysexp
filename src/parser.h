@@ -238,6 +238,8 @@ private:
 
     void consume(TokenType expected, const char* errorStr);
 
+    void expect(TokenType expected, const char* errorStr);
+
     Lexer& mLexer;
     Token mCurrentToken{};
     int mTokenIndex;

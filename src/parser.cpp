@@ -1,9 +1,11 @@
 #include "parser.h"
+#include <format>
 #include "exceptions.hpp"
 
 namespace {
 constexpr const char* MISSING_PAREN_ERROR = "Missing parenthesis";
 constexpr const char* EXPECTED_NUMBER_ERROR = "Expected int or double";
+constexpr const char* EXPECTED_ELEMS_NUMBER_ERROR = "Too few elements in '{}'";
 }
 
 Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
@@ -120,7 +122,7 @@ ExprPtr Parser::parseDotimes() {
 
     advance();
 
-    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+    consume(TokenType::LPAREN, std::format(EXPECTED_ELEMS_NUMBER_ERROR, "DOTIMES").c_str());
     name = parseAtom();
     value = parseAtom();
     var = std::make_shared<VarExpr>(name, value);
@@ -153,7 +155,7 @@ ExprPtr Parser::parseLet() {
 
     advance();
 
-    consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+    consume(TokenType::LPAREN, std::format(EXPECTED_ELEMS_NUMBER_ERROR, "LET").c_str());
     while (mCurrentToken.type == TokenType::VAR) {
         name = parseAtom();
         value = std::make_shared<NILExpr>();
@@ -309,7 +311,11 @@ std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
 
     advance();
 
+    expect(TokenType::LPAREN, std::format(EXPECTED_ELEMS_NUMBER_ERROR, "IF").c_str());
     cond = parseExpr();
+
+
+    expect(TokenType::LPAREN, std::format(EXPECTED_ELEMS_NUMBER_ERROR, "IF").c_str());
     true_ = parseExpr();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
@@ -320,7 +326,11 @@ std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
 }
 
 void Parser::consume(TokenType expected, const char* errorStr) {
-    if (mCurrentToken.type != expected) {
+    expect(expected, errorStr);
+    advance();
+}
+
+void Parser::expect(TokenType expected, const char* errorStr) {
+    if (mCurrentToken.type != expected)
         throw InvalidSyntaxError(mFileName, errorStr, 0);
-    } else advance();
 }
