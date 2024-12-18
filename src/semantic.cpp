@@ -101,10 +101,10 @@ void varResolve(ExprPtr& var) {
 
     std::variant<int, double> n;
 
-    n = NumberEvaluator::get(var);
+    n = NumberEval::get(var);
 
     if (!std::holds_alternative<int>(n) && !std::holds_alternative<double>(n)) {
-        std::string name = StringEvaluator::get(var);
+        std::string name = StringEval::get(var);
         Symbol sym = scopeLookup(name);
 
         if (!sym.value) {
@@ -120,7 +120,7 @@ void Resolver::visit(BinOpExpr& binop) {
 
 void Resolver::visit(const DotimesExpr& dotimes) {
     scopeEnter();
-    std::string name = StringEvaluator::get(dotimes.iterationCount);
+    std::string name = StringEval::get(dotimes.iterationCount);
 
     Symbol sym = scopeLookup(name);
     if (sym.isConstant) {
@@ -132,7 +132,7 @@ void Resolver::visit(const DotimesExpr& dotimes) {
 void Resolver::visit(const LetExpr& let) {
     scopeEnter();
     for (auto& var: let.bindings) {
-        std::string name = StringEvaluator::get(var);
+        std::string name = StringEval::get(var);
 
         Symbol sym = scopeLookupCurrent(name);
         if (sym.value) {
@@ -149,7 +149,7 @@ void Resolver::visit(const LetExpr& let) {
 }
 
 void Resolver::visit(const SetqExpr& setq) {
-    std::string name = StringEvaluator::get(setq.var);
+    std::string name = StringEval::get(setq.var);
     Symbol sym = scopeLookup(name);
 
     if (!sym.value) {
@@ -162,7 +162,7 @@ void Resolver::visit(const SetqExpr& setq) {
 }
 
 void Resolver::visit(const DefvarExpr& defvar) {
-    std::string name = StringEvaluator::get(defvar.var);
+    std::string name = StringEval::get(defvar.var);
 
     if (scopeLevel() > 1) {
         throw ScopeError(fileName, std::format(GLOBAL_VAR_DECL, name).c_str(), 0);
@@ -172,7 +172,7 @@ void Resolver::visit(const DefvarExpr& defvar) {
 }
 
 void Resolver::visit(const DefconstExpr& defconst) {
-    std::string name = StringEvaluator::get(defconst.var);
+    std::string name = StringEval::get(defconst.var);
 
     if (scopeLevel() > 1) {
         throw ScopeError(fileName, std::format(CONSTANT_VAR_DECL, name).c_str(), 0);
@@ -182,7 +182,7 @@ void Resolver::visit(const DefconstExpr& defconst) {
 }
 
 void Resolver::visit(const DefunExpr& defun) {
-    std::string name = StringEvaluator::get(defun.name);
+    std::string name = StringEval::get(defun.name);
 
     if (scopeLevel() > 1) {
         throw ScopeError(fileName, std::format(FUNC_DEF, name).c_str(), 0);

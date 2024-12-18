@@ -45,8 +45,8 @@ void ASTVisitor::visit(BinOpExpr& binop) {
     std::variant<int, double> lhs, rhs;
     std::string reg;
 
-    lhs = NumberEvaluator::get(binop.lhs);
-    rhs = NumberEvaluator::get(binop.rhs);
+    lhs = NumberEval::get(binop.lhs);
+    rhs = NumberEval::get(binop.rhs);
 
     // unsigned long long l = *((unsigned long long*)&dToUse);
 
@@ -101,7 +101,7 @@ void ASTVisitor::visit(const SetqExpr& setq) {
 }
 
 void ASTVisitor::visit(const DefvarExpr& defvar) {
-    CodeGen::sectionData.emplace(StringEvaluator::get(defvar.var), VarEvaluator::get(defvar.var));
+    CodeGen::sectionData.emplace(StringEval::get(defvar.var), VarEvaluator::get(defvar.var));
 }
 
 void VarEvaluator::visit(BinOpExpr& binop) {
@@ -121,8 +121,8 @@ void VarEvaluator::visit(BinOpExpr& binop) {
 
     //TODO: do in semantic analyse
     bool isRHSNum = isNumber(rhs);
-    bool isLHSGlobal = CodeGen::sectionData.contains(StringEvaluator::get(binop.lhs));
-    bool isRHSGlobal = CodeGen::sectionData.contains(StringEvaluator::get(binop.rhs));
+    bool isLHSGlobal = CodeGen::sectionData.contains(StringEval::get(binop.lhs));
+    bool isRHSGlobal = CodeGen::sectionData.contains(StringEval::get(binop.rhs));
 
     switch (binop.opToken.type) {
         case TokenType::PLUS: {
@@ -130,7 +130,7 @@ void VarEvaluator::visit(BinOpExpr& binop) {
                 set(code += rhs);
 
                 if (isLHSGlobal) {
-                    std::string name = StringEvaluator::get(binop.lhs);
+                    std::string name = StringEval::get(binop.lhs);
                     set(code += std::format("\tadd rax, qword [rip + {}]\n", name));
                 } else {
                     if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
@@ -142,7 +142,7 @@ void VarEvaluator::visit(BinOpExpr& binop) {
                 }
             } else {
                 if (isLHSGlobal) {
-                    std::string name = StringEvaluator::get(binop.lhs);
+                    std::string name = StringEval::get(binop.lhs);
                     set(code += std::format("\tmov rax, qword [rip + {}]\n", name));
                 } else {
                     if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
@@ -154,7 +154,7 @@ void VarEvaluator::visit(BinOpExpr& binop) {
                 }
 
                 if (isRHSGlobal) {
-                    std::string name = StringEvaluator::get(binop.rhs);
+                    std::string name = StringEval::get(binop.rhs);
                     set(code += std::format("\tadd rax, qword [rip + {}]\n", name));
                 } else {
                     if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {

@@ -1,22 +1,22 @@
 #include "visitors.h"
 
-void NumberEvaluator::visit(const IntExpr& num) {
+void NumberEval::visit(const IntExpr& num) {
     set(num.n);
 }
 
-void NumberEvaluator::visit(const DoubleExpr& num) {
+void NumberEval::visit(const DoubleExpr& num) {
     set(num.n);
 }
 
-void NumberEvaluator::visit(const VarExpr& var) {
-    set(NumberEvaluator::get(var.value));
+void NumberEval::visit(const VarExpr& var) {
+    set(NumberEval::get(var.value));
 }
 
-void NumberEvaluator::visit(BinOpExpr& binop) {
+void NumberEval::visit(BinOpExpr& binop) {
     std::variant<int, double> lhs, rhs;
 
-    lhs = NumberEvaluator::get(binop.lhs);
-    rhs = NumberEvaluator::get(binop.rhs);
+    lhs = NumberEval::get(binop.lhs);
+    rhs = NumberEval::get(binop.rhs);
 
     switch (binop.opToken.type) {
         case TokenType::PLUS:
@@ -42,12 +42,12 @@ void NumberEvaluator::visit(BinOpExpr& binop) {
     }
 }
 
-void StringEvaluator::visit(const StringExpr& str) {
+void StringEval::visit(const StringExpr& str) {
     set(str.data);
 }
 
-void StringEvaluator::visit(const VarExpr& var) {
-    set(StringEvaluator::get(var.name));
+void StringEval::visit(const VarExpr& var) {
+    set(StringEval::get(var.name));
 }
 
 void NILEval::visit(const NILExpr& nil) {
