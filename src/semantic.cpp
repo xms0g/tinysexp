@@ -46,17 +46,12 @@ void SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 }
 
 void SemanticAnalyzer::varResolve(ExprPtr& var) {
-    auto isT = cast::toT(var);
-    auto isNil = cast::toNIL(var);
+    if (cast::toT(var)) {
+        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
+    }
 
-    if (isT || isNil) {
-        if (isT) {
-            throw SemanticError(mFileName, T_VAR_ERROR, 0);
-        }
-
-        if (isNil) {
-            throw SemanticError(mFileName, NIL_VAR_ERROR, 0);
-        }
+    if (cast::toNIL(var)) {
+        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
     }
 
     if (!cast::toInt(var) && !cast::toDouble(var)) {
@@ -171,9 +166,21 @@ void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
     if (funcCall.params.size() != func->params.size()) {
         throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName), 0);
     }
+
+    for (auto& param: funcCall.params) {
+        if (cast::toT(param)) {
+            throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
+        }
+
+        if (cast::toNIL(param)) {
+            throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
+        }
+    }
 }
 
-void SemanticAnalyzer::ifResolve(const IfExpr& ifExpr) {}
+void SemanticAnalyzer::ifResolve(const IfExpr& ifExpr) {
+
+}
 
 void SemanticAnalyzer::whenResolve(const WhenExpr& when) {}
 
