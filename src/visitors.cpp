@@ -49,19 +49,3 @@ void StringEval::visit(const StringExpr& str) {
 void StringEval::visit(const VarExpr& var) {
     set(StringEval::get(var.name));
 }
-
-void NILEval::visit(const NILExpr& nil) {
-    set(true);
-}
-
-void NILEval::visit(const TExpr& t) {
-    set(false);
-}
-
-void TEval::visit(const TExpr& t) {
-    set(true);
-}
-
-void TEval::visit(const NILExpr& nil) {
-    set(false);
-}
