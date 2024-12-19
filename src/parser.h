@@ -246,4 +246,74 @@ private:
     const char* mFileName;
 };
 
+namespace cast {
+inline std::shared_ptr<BinOpExpr> toBinop(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<BinOpExpr>(expr);
+}
+
+inline std::shared_ptr<DotimesExpr> toDotimes(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<DotimesExpr>(expr);
+}
+
+inline std::shared_ptr<LetExpr> toLet(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<LetExpr>(expr);
+}
+
+inline std::shared_ptr<SetqExpr> toSetq(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<SetqExpr>(expr);
+}
+
+inline std::shared_ptr<DefvarExpr> toDefvar(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<DefvarExpr>(expr);
+}
+
+inline std::shared_ptr<DefconstExpr> toDefconstant(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<DefconstExpr>(expr);
+}
+
+inline std::shared_ptr<DefunExpr> toDefun(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<DefunExpr>(expr);
+}
+
+inline std::shared_ptr<FuncCallExpr> toFuncCall(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<FuncCallExpr>(expr);
+}
+
+inline std::shared_ptr<IfExpr> toIf(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<IfExpr>(expr);
+}
+
+inline std::shared_ptr<WhenExpr> toWhen(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<WhenExpr>(expr);
+}
+
+inline std::shared_ptr<CondExpr> toCond(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<CondExpr>(expr);
+}
+
+inline std::shared_ptr<VarExpr> toVar(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<VarExpr>(expr);
+}
+
+inline std::shared_ptr<StringExpr> toString(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<StringExpr>(expr);
+}
+
+inline std::shared_ptr<IntExpr> toInt(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<IntExpr>(expr);
+}
+
+inline std::shared_ptr<DoubleExpr> toDouble(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<DoubleExpr>(expr);
+}
+
+inline std::shared_ptr<TExpr> toT(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<TExpr>(expr);
+}
+
+inline std::shared_ptr<NILExpr> toNIL(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<NILExpr>(expr);
+}
+}
+
 #endif

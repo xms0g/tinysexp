@@ -21,11 +21,11 @@ void compile(const char* fn, std::string& program) {
     try {
         Lexer lexer{fn, program};
         Parser parser{fn, lexer};
+        SemanticAnalyzer analyzer{fn};
 
         lexer.process();
         ExprPtr ast = parser.parse();
-
-        SemanticAnalyzer::analyze(fn, ast);
+        analyzer.analyze(ast);
 
         //std::cout << CodeGen::emit(ast) << '\n';
 

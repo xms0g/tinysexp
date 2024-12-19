@@ -18,54 +18,57 @@ struct Symbol {
     bool isConstant{};
 };
 
-class Resolver : public Getter<Resolver, ExprPtr, int>, public ExprVisitor {
+class SemanticAnalyzer {
 public:
-    void visit(BinOpExpr& binop) override;
+    SemanticAnalyzer(const char* fn);
 
-    void visit(const DotimesExpr& dotimes) override;
+    void analyze(ExprPtr& ast);
+private:
+    /* Name Resolutions */
 
-    void visit(const LetExpr& let) override;
+    void exprResolve(const ExprPtr& ast);
 
-    void visit(const SetqExpr& setq) override;
+    void binopResolve(BinOpExpr& binop);
 
-    void visit(const DefvarExpr& defvar) override;
+    void varResolve(ExprPtr& var);
 
-    void visit(const DefconstExpr& defconst) override;
+    void dotimesResolve(const DotimesExpr& dotimes);
 
-    void visit(const DefunExpr& defun) override;
+    void letResolve(const LetExpr& let);
 
-    void visit(const FuncCallExpr& funcCall) override;
+    void setqResolve(const SetqExpr& setq);
 
-    void visit(const IfExpr& ifExpr) override;
+    void defvarResolve(const DefvarExpr& defvar);
 
-    void visit(const WhenExpr& when) override;
+    void defconstResolve(const DefconstExpr& defconst);
 
-    void visit(const CondExpr& cond) override;
+    void defunResolve(const DefunExpr& defun);
+
+    void funcCallResolve(const FuncCallExpr& funcCall);
+
+    void ifResolve(const IfExpr& ifExpr);
+
+    void whenResolve(const WhenExpr& when);
+
+    void condResolve(const CondExpr& cond);
+
+    /* Scope Operations */
+    void scopeEnter();
+
+    void scopeExit();
+
+    size_t scopeLevel();
+
+    void scopeBind(const std::string& name, const Symbol& symbol);
+
+    Symbol scopeLookup(const std::string& name);
+
+    Symbol scopeLookupCurrent(const std::string& name);
+
+    using ScopeType = std::unordered_map<std::string, Symbol>;
+    std::stack<ScopeType> mSymbolTable;
+
+    const char* mFileName;
 };
-
-namespace SemanticAnalyzer {
-void analyze(const char* fn, ExprPtr& ast);
-}
-
-/* Scope Operations */
-void scopeEnter();
-
-void scopeExit();
-
-size_t scopeLevel();
-
-void scopeBind(const std::string& name, const Symbol& symbol);
-
-Symbol scopeLookup(const std::string& name);
-
-Symbol scopeLookupCurrent(const std::string& name);
-
-/* Name Resolutions */
-void varResolve(ExprPtr& var);
-
-using ScopeType = std::unordered_map<std::string, Symbol>;
-static std::stack<ScopeType> symbolTable;
-
-static const char* fileName;
 
 #endif //TINYSEXP_SEMANTIC_H
