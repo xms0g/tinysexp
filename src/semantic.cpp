@@ -1,20 +1,8 @@
 #include "semantic.h"
 #include <format>
 #include "visitors.h"
+#include "error.hpp"
 #include "exceptions.hpp"
-
-namespace {
-constexpr const char* UNBOUND_VAR = "The variable '{}' is unbound";
-constexpr const char* CONSTANT_VAR = "'{}' is a constant";
-constexpr const char* CONSTANT_VAR_DECL = "Constant variable '{}' is not allowed here";
-constexpr const char* GLOBAL_VAR_DECL = "Global variable '{}' is not allowed here";
-constexpr const char* MULTIPLE_DECL = "The variable '{}' occurs more than once in {}";
-constexpr const char* T_VAR = "The value 't' is not of type number";
-constexpr const char* NIL_VAR = "The value 'nil' is not of type number";
-constexpr const char* INVALID_NUMBER_OF_ARGS = "Invalid number of arguments: {}";
-constexpr const char* FUNC_DEF = "Function '{}' definition is not allowed here";
-
-}
 
 void SemanticAnalyzer::analyze(const char* fn, ExprPtr& ast) {
     fileName = fn;
@@ -91,11 +79,11 @@ void varResolve(ExprPtr& var) {
 
     if (isT || isNil) {
         if (isT) {
-            throw TypeError(fileName, T_VAR, 0);
+            throw TypeError(fileName, T_VAR_ERROR, 0);
         }
 
         if (isNil) {
-            throw TypeError(fileName, NIL_VAR, 0);
+            throw TypeError(fileName, NIL_VAR_ERROR, 0);
         }
     }
 
@@ -108,7 +96,7 @@ void varResolve(ExprPtr& var) {
         Symbol sym = scopeLookup(name);
 
         if (!sym.value) {
-            throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
+            throw UnboundVariableError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
     }
 }
@@ -124,7 +112,7 @@ void Resolver::visit(const DotimesExpr& dotimes) {
 
     Symbol sym = scopeLookup(name);
     if (sym.isConstant) {
-        throw TypeError(fileName, std::format(CONSTANT_VAR, name).c_str(), 0);
+        throw TypeError(fileName, ERROR(CONSTANT_VAR_ERROR, name), 0);
     }
     scopeExit();
 }
@@ -136,7 +124,7 @@ void Resolver::visit(const LetExpr& let) {
 
         Symbol sym = scopeLookupCurrent(name);
         if (sym.value) {
-            throw MultipleDeclarationError(fileName, std::format(MULTIPLE_DECL, name, "LET").c_str(), 0);
+            throw MultipleDeclarationError(fileName, ERROR(MULTIPLE_DECL_ERROR, name + " in LET"), 0);
         }
 
         scopeBind(name, {name, var, SymbolType::LOCAL});
@@ -153,10 +141,10 @@ void Resolver::visit(const SetqExpr& setq) {
     Symbol sym = scopeLookup(name);
 
     if (!sym.value) {
-        throw UnboundVariableError(fileName, std::format(UNBOUND_VAR, name).c_str(), 0);
+        throw UnboundVariableError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     } else {
         if (sym.isConstant) {
-            throw TypeError(fileName, std::format(CONSTANT_VAR, name).c_str(), 0);
+            throw TypeError(fileName, ERROR(CONSTANT_VAR_ERROR, name), 0);
         }
     }
 }
@@ -165,7 +153,7 @@ void Resolver::visit(const DefvarExpr& defvar) {
     std::string name = StringEval::get(defvar.var);
 
     if (scopeLevel() > 1) {
-        throw ScopeError(fileName, std::format(GLOBAL_VAR_DECL, name).c_str(), 0);
+        throw ScopeError(fileName, ERROR(GLOBAL_VAR_DECL_ERROR, name), 0);
     }
 
     scopeBind(name, {name, defvar.var, SymbolType::GLOBAL});
@@ -175,7 +163,7 @@ void Resolver::visit(const DefconstExpr& defconst) {
     std::string name = StringEval::get(defconst.var);
 
     if (scopeLevel() > 1) {
-        throw ScopeError(fileName, std::format(CONSTANT_VAR_DECL, name).c_str(), 0);
+        throw ScopeError(fileName, ERROR(CONSTANT_VAR_DECL_ERROR, name), 0);
     }
 
     scopeBind(name, {name, defconst.var, SymbolType::GLOBAL, true});
@@ -185,7 +173,7 @@ void Resolver::visit(const DefunExpr& defun) {
     std::string name = StringEval::get(defun.name);
 
     if (scopeLevel() > 1) {
-        throw ScopeError(fileName, std::format(FUNC_DEF, name).c_str(), 0);
+        throw ScopeError(fileName, ERROR(FUNC_DEF_ERROR, name), 0);
     }
 
     ExprPtr func = std::make_shared<DefunExpr>(defun);
