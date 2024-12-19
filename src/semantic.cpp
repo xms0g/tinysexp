@@ -1,7 +1,6 @@
 #include "semantic.h"
 #include <format>
 #include "visitors.h"
-#include "error.hpp"
 #include "exceptions.hpp"
 
 void SemanticAnalyzer::analyze(const char* fn, ExprPtr& ast) {

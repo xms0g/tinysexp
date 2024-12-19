@@ -158,12 +158,12 @@ struct FuncCallExpr : IExpr {
 };
 
 struct IfExpr : IExpr {
-    ExprPtr cond, true_, false_;
+    ExprPtr test, then, else_;
 
-    IfExpr(ExprPtr& cond_, ExprPtr& t, ExprPtr f = nullptr) :
-            cond(std::move(cond_)),
-            true_(std::move(t)),
-            false_(std::move(f)) {}
+    IfExpr(ExprPtr& test_, ExprPtr& then_, ExprPtr e = nullptr) :
+            test(std::move(test_)),
+            then(std::move(then_)),
+            else_(std::move(e)) {}
 
     MAKE_VISITABLE
 };
