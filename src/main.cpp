@@ -33,13 +33,7 @@ void compile(const char* fn, std::string& program) {
         std::cerr << ERROR_COLOR << e.what();
     } catch (InvalidSyntaxError& e) {
         std::cerr << ERROR_COLOR << e.what();
-    } catch (MultipleDeclarationError& e) {
-        std::cerr << ERROR_COLOR << e.what();
-    } catch (UnboundVariableError& e) {
-        std::cerr << ERROR_COLOR << e.what();
-    } catch (TypeError& e) {
-        std::cerr << ERROR_COLOR << e.what();
-    } catch (ScopeError& e) {
+    } catch (SemanticError& e) {
         std::cerr << ERROR_COLOR << e.what();
     }
 }

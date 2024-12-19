@@ -1,5 +1,4 @@
 #include "semantic.h"
-#include <format>
 #include "exceptions.hpp"
 
 SemanticAnalyzer::SemanticAnalyzer(const char* fn): mFileName(fn) {}
@@ -52,11 +51,11 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
 
     if (isT || isNil) {
         if (isT) {
-            throw TypeError(mFileName, T_VAR_ERROR, 0);
+            throw SemanticError(mFileName, T_VAR_ERROR, 0);
         }
 
         if (isNil) {
-            throw TypeError(mFileName, NIL_VAR_ERROR, 0);
+            throw SemanticError(mFileName, NIL_VAR_ERROR, 0);
         }
     }
 
@@ -65,7 +64,7 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
         Symbol sym = scopeLookup(name);
 
         if (!sym.value) {
-            throw UnboundVariableError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
 
         var = sym.value;
@@ -78,7 +77,7 @@ void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
 
     Symbol sym = scopeLookup(iterVarName);
     if (sym.isConstant) {
-        throw TypeError(mFileName, ERROR(CONSTANT_VAR_ERROR, iterVarName), 0);
+        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, iterVarName), 0);
     }
     scopeExit();
 }
@@ -91,7 +90,7 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 
         Symbol sym = scopeLookupCurrent(varName);
         if (sym.value) {
-            throw MultipleDeclarationError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName + " in LET"), 0);
+            throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName + " in LET"), 0);
         }
 
         scopeBind(varName, {varName, var, SymbolType::LOCAL});
@@ -110,10 +109,10 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     Symbol sym = scopeLookup(varName);
 
     if (!sym.value) {
-        throw UnboundVariableError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
     } else {
         if (sym.isConstant) {
-            throw TypeError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
+            throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
         }
     }
 }
@@ -123,7 +122,7 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
     const auto varName = cast::toString(var->name)->data;
 
     if (scopeLevel() > 1) {
-        throw ScopeError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
+        throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
     }
 
     scopeBind(varName, {varName, defvar.var, SymbolType::GLOBAL});
@@ -134,7 +133,7 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
     const auto varName = cast::toString(var->name)->data;
 
     if (scopeLevel() > 1) {
-        throw ScopeError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
+        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
     }
 
     scopeBind(varName, {varName, defconst.var, SymbolType::GLOBAL, true});
@@ -144,7 +143,7 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     const auto funcName = cast::toString(defun.name)->data;
 
     if (scopeLevel() > 1) {
-        throw ScopeError(mFileName, ERROR(FUNC_DEF_ERROR, funcName), 0);
+        throw SemanticError(mFileName, ERROR(FUNC_DEF_ERROR, funcName), 0);
     }
 
     ExprPtr func = std::make_shared<DefunExpr>(defun);
@@ -152,18 +151,26 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     scopeBind(funcName, {funcName, func, SymbolType::GLOBAL});
 
     scopeEnter();
-    for (auto& param: defun.params) {
-
-    }
 
     for (auto& statement: defun.body) {
-
+        exprResolve(statement);
     }
     scopeExit();
 }
 
 void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
+    const auto funcName = cast::toString(funcCall.name)->data;
 
+    Symbol sym = scopeLookup(funcName);
+
+    if (!sym.value) {
+        throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
+    }
+
+    const auto func = cast::toDefun(sym.value);
+    if (funcCall.params.size() != func->params.size()) {
+        throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName), 0);
+    }
 }
 
 void SemanticAnalyzer::ifResolve(const IfExpr& ifExpr) {}
