@@ -175,17 +175,17 @@ ExprPtr Parser::parseLet() {
 }
 
 ExprPtr Parser::parseSetq() {
-    ExprPtr var = createVar();
+    ExprPtr var = createVar(false);
     return std::make_shared<SetqExpr>(var);
 }
 
 ExprPtr Parser::parseDefvar() {
-    ExprPtr var = createVar();
+    ExprPtr var = createVar(false);
     return std::make_shared<DefvarExpr>(var);
 }
 
 ExprPtr Parser::parseDefconst() {
-    ExprPtr var = createVar();
+    ExprPtr var = createVar(true);
     return std::make_shared<DefconstExpr>(var);
 }
 
@@ -274,8 +274,10 @@ ExprPtr Parser::parseAtom() {
         Token token = mCurrentToken;
         advance();
         return std::make_shared<StringExpr>(token.value);
-    } else if (mCurrentToken.type == TokenType::NIL) {
-        advance();
+    } else if (mCurrentToken.type == TokenType::NIL || mCurrentToken.type == TokenType::RPAREN) {
+        if (mCurrentToken.type == TokenType::NIL)
+            advance();
+
         return std::make_shared<NILExpr>();
     } else if (mCurrentToken.type == TokenType::T) {
         advance();
@@ -298,7 +300,7 @@ ExprPtr Parser::parseNumber() {
     throw InvalidSyntaxError(mFileName, EXPECTED_NUMBER_ERROR, 0);
 }
 
-ExprPtr Parser::createVar() {
+ExprPtr Parser::createVar(bool isConstant) {
     ExprPtr name, value;
     advance();
 
@@ -308,6 +310,10 @@ ExprPtr Parser::createVar() {
         value = parseExpr();
     } else {
         value = parseAtom();
+
+        if (isConstant && cast::toNIL(value)) {
+            throw InvalidSyntaxError(mFileName,  ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DEFCONSTANT"), 0);
+        }
     }
 
     return std::make_shared<VarExpr>(name, value);

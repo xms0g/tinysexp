@@ -232,7 +232,7 @@ private:
 
     ExprPtr parseNumber();
 
-    ExprPtr createVar();
+    ExprPtr createVar(bool isConstant);
 
     std::tuple<ExprPtr, ExprPtr, ExprPtr> createCond();
 
