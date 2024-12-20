@@ -239,20 +239,34 @@ ExprPtr Parser::parseWhen() {
 }
 
 ExprPtr Parser::parseCond() {
-    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> body;
+    ExprPtr test;
+    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> variants;
 
     advance();
 
     while (mCurrentToken.type == TokenType::LPAREN) {
+        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+
+        if (mCurrentToken.type == TokenType::LPAREN) {
+            test = parseExpr();
+        } else {
+            test = parseAtom();
+        }
+
         std::vector<ExprPtr> statements;
+        if (mCurrentToken.type != TokenType::LPAREN) {
+            statements.push_back(parseAtom());
+        }
 
-        auto cond = parseExpr();
-        statements.push_back(parseExpr());
+        while (mCurrentToken.type == TokenType::LPAREN) {
+            statements.push_back(parseExpr());
+        }
 
-        body.emplace_back(cond, statements);
+        variants.emplace_back(test, statements);
+        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     }
 
-    return std::make_shared<CondExpr>(body);
+    return std::make_shared<CondExpr>(variants);
 }
 
 ExprPtr Parser::parseAtom() {
@@ -304,15 +318,22 @@ std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
 
     advance();
 
-    expect(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "IF"));
-    test = parseExpr();
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        test = parseExpr();
+    } else {
+        test = parseAtom();
+    }
 
-
-    expect(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "IF"));
-    then = parseExpr();
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        then = parseExpr();
+    } else {
+        then = parseAtom();
+    }
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         else_ = parseExpr();
+    } else {
+        else_ = parseAtom();
     }
 
     return std::make_tuple(test, then, else_);
