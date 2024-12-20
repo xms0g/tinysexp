@@ -1,7 +1,7 @@
 #include "semantic.h"
 #include "exceptions.hpp"
 
-SemanticAnalyzer::SemanticAnalyzer(const char* fn): mFileName(fn) {}
+SemanticAnalyzer::SemanticAnalyzer(const char* fn) : mFileName(fn) {}
 
 void SemanticAnalyzer::analyze(ExprPtr& ast) {
     auto next = ast;
@@ -31,6 +31,12 @@ void SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
         defunResolve(*defun);
     } else if (auto funcCall = cast::toFuncCall(ast)) {
         funcCallResolve(*funcCall);
+    } else if (auto if_ = cast::toIf(ast)) {
+        ifResolve(*if_);
+    } else if (auto when = cast::toWhen(ast)) {
+        whenResolve(*when);
+    } else if (auto cond = cast::toCond(ast)) {
+        condResolve(*cond);
     }
 }
 
@@ -62,12 +68,7 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
 
 void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     scopeEnter();
-    const auto iterVarName = cast::toString(dotimes.iterationCount)->data;
-
-    Symbol sym = scopeLookup(iterVarName);
-    if (sym.isConstant) {
-        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, iterVarName), 0);
-    }
+    checkConstantVar(dotimes.iterationCount);
     scopeExit();
 }
 
@@ -75,11 +76,11 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
     scopeEnter();
     for (auto& var: let.bindings) {
         const auto varExpr = cast::toVar(var);
-        auto varName = cast::toString(varExpr->name)->data;
+        const auto varName = cast::toString(varExpr->name)->data;
 
         Symbol sym = scopeLookupCurrent(varName);
         if (sym.value) {
-            throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName + " in LET"), 0);
+            throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
         }
 
         scopeBind(varName, {varName, var, SymbolType::LOCAL});
@@ -92,18 +93,8 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 }
 
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
-    const auto var = cast::toVar(setq.pair);
-    const auto varName = cast::toString(var->name)->data;
-
-    Symbol sym = scopeLookup(varName);
-
-    if (!sym.value) {
-        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
-    } else {
-        if (sym.isConstant) {
-            throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
-        }
-    }
+    checkUnbindingVar(setq.pair);
+    checkConstantVar(setq.pair);
 }
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
@@ -140,6 +131,11 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     scopeBind(funcName, {funcName, func, SymbolType::GLOBAL});
 
     scopeEnter();
+    for (auto& arg: defun.args) {
+        const auto sarg = cast::toString(arg)->data;
+
+        scopeBind(sarg, {sarg, arg, SymbolType::LOCAL});
+    }
 
     for (auto& statement: defun.forms) {
         exprResolve(statement);
@@ -159,6 +155,82 @@ void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
     const auto func = cast::toDefun(sym.value);
     if (funcCall.args.size() != func->args.size()) {
         throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName), 0);
+    }
+}
+
+void SemanticAnalyzer::ifResolve(const IfExpr& if_) {
+    if (const auto test = cast::toString(if_.test)) {
+        Symbol sym = scopeLookup(test->data);
+
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
+        }
+    } else {
+        exprResolve(if_.test);
+    }
+
+    exprResolve(if_.then);
+
+    if (if_.else_) {
+        exprResolve(if_.else_);
+    }
+}
+
+void SemanticAnalyzer::whenResolve(const WhenExpr& when) {
+    if (const auto test = cast::toString(when.test)) {
+        Symbol sym = scopeLookup(test->data);
+
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
+        }
+    } else {
+        exprResolve(when.test);
+    }
+
+    exprResolve(when.then);
+
+    if (when.else_) {
+        exprResolve(when.else_);
+    }
+}
+
+void SemanticAnalyzer::condResolve(const CondExpr& cond) {
+    for (auto& variant: cond.variants) {
+        if (auto test = cast::toString(variant.first)) {
+            Symbol sym = scopeLookup(test->data);
+
+            if (!sym.value) {
+                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
+            }
+        } else {
+            exprResolve(variant.first);
+        }
+
+        for (auto& statement: variant.second) {
+            exprResolve(statement);
+        }
+    }
+}
+
+void SemanticAnalyzer::checkUnbindingVar(const ExprPtr& var) {
+    const auto var_ = cast::toVar(var);
+    const auto name = cast::toString(var_->name)->data;
+
+    Symbol sym = scopeLookup(name);
+
+    if (!sym.value) {
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+    }
+}
+
+void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
+    const auto var_ = cast::toVar(var);
+    const auto varName = cast::toString(var_->name)->data;
+
+    Symbol sym = scopeLookup(varName);
+
+    if (sym.isConstant) {
+        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
     }
 }
 

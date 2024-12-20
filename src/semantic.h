@@ -46,6 +46,16 @@ private:
 
     void funcCallResolve(const FuncCallExpr& funcCall);
 
+    void ifResolve(const IfExpr& if_);
+
+    void whenResolve(const WhenExpr& when);
+
+    void condResolve(const CondExpr& cond);
+
+    void checkUnbindingVar(const ExprPtr& var);
+
+    void checkConstantVar(const ExprPtr& var);
+
     /* Scope Operations */
     void scopeEnter();
 
