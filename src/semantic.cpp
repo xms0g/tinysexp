@@ -19,6 +19,8 @@ void SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
         binopResolve(*binop);
     } else if (auto dotimes = cast::toDotimes(ast)) {
         dotimesResolve(*dotimes);
+    } else if (auto loop = cast::toLoop(ast)) {
+        loopResolve(*loop);
     } else if (auto let = cast::toLet(ast)) {
         letResolve(*let);
     } else if (auto setq = cast::toSetq(ast)) {
@@ -72,6 +74,12 @@ void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     scopeExit();
 }
 
+void SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
+    for (auto& sexpr: loop.sexprs) {
+        exprResolve(sexpr);
+    }
+}
+
 void SemanticAnalyzer::letResolve(const LetExpr& let) {
     scopeEnter();
     for (auto& var: let.bindings) {
@@ -93,8 +101,29 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 }
 
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
-    checkUnbindingVar(setq.pair);
+    const auto var_ = cast::toVar(setq.pair);
+    const auto name = cast::toString(var_->name)->data;
+
+    Symbol sym = scopeLookup(name);
+
+    if (!sym.value) {
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+    }
+
     checkConstantVar(setq.pair);
+
+    if (const auto value = cast::toString(var_->value)) {
+        sym = scopeLookup(value->data);
+
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
+        }
+    } else {
+        bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
+        if (isExpr) {
+            exprResolve(var_->value);
+        }
+    }
 }
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
@@ -209,17 +238,6 @@ void SemanticAnalyzer::condResolve(const CondExpr& cond) {
         for (auto& statement: variant.second) {
             exprResolve(statement);
         }
-    }
-}
-
-void SemanticAnalyzer::checkUnbindingVar(const ExprPtr& var) {
-    const auto var_ = cast::toVar(var);
-    const auto name = cast::toString(var_->name)->data;
-
-    Symbol sym = scopeLookup(name);
-
-    if (!sym.value) {
-        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
 }
 

@@ -34,6 +34,8 @@ private:
 
     void dotimesResolve(const DotimesExpr& dotimes);
 
+    void loopResolve(const LoopExpr& loop);
+
     void letResolve(const LetExpr& let);
 
     void setqResolve(const SetqExpr& setq);
@@ -51,8 +53,6 @@ private:
     void whenResolve(const WhenExpr& when);
 
     void condResolve(const CondExpr& cond);
-
-    void checkUnbindingVar(const ExprPtr& var);
 
     void checkConstantVar(const ExprPtr& var);
 
