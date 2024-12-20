@@ -300,22 +300,22 @@ ExprPtr Parser::createVar() {
 }
 
 std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
-    ExprPtr cond, true_, false_;
+    ExprPtr test, then, else_;
 
     advance();
 
     expect(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "IF"));
-    cond = parseExpr();
+    test = parseExpr();
 
 
     expect(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "IF"));
-    true_ = parseExpr();
+    then = parseExpr();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
-        false_ = parseExpr();
+        else_ = parseExpr();
     }
 
-    return std::make_tuple(cond, true_, false_);
+    return std::make_tuple(test, then, else_);
 }
 
 void Parser::consume(TokenType expected, const char* errorStr) {

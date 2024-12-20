@@ -107,52 +107,52 @@ struct LetExpr : IExpr {
 };
 
 struct SetqExpr : IExpr {
-    ExprPtr var;
+    ExprPtr pair;
 
-    explicit SetqExpr(ExprPtr& var_) :
-            var(std::move(var_)) {}
+    explicit SetqExpr(ExprPtr& pair_) :
+            pair(std::move(pair_)) {}
 
     MAKE_VISITABLE
 };
 
 struct DefvarExpr : IExpr {
-    ExprPtr var;
+    ExprPtr pair;
 
-    explicit DefvarExpr(ExprPtr& var_) :
-            var(std::move(var_)) {}
+    explicit DefvarExpr(ExprPtr& pair_) :
+            pair(std::move(pair_)) {}
 
     MAKE_VISITABLE
 };
 
 struct DefconstExpr : IExpr {
-    ExprPtr var;
+    ExprPtr pair;
 
-    explicit DefconstExpr(ExprPtr& var_) :
-            var(std::move(var_)) {}
+    explicit DefconstExpr(ExprPtr& pair_) :
+            pair(std::move(pair_)) {}
 
     MAKE_VISITABLE
 };
 
 struct DefunExpr : IExpr {
     ExprPtr name;
-    std::vector<ExprPtr> params;
-    std::vector<ExprPtr> body;
+    std::vector<ExprPtr> args;
+    std::vector<ExprPtr> forms;
 
     DefunExpr(ExprPtr& name_, std::vector<ExprPtr>& params_, std::vector<ExprPtr>& body_) :
             name(std::move(name_)),
-            params(std::move(params_)),
-            body(std::move(body_)) {}
+            args(std::move(params_)),
+            forms(std::move(body_)) {}
 
     MAKE_VISITABLE
 };
 
 struct FuncCallExpr : IExpr {
     ExprPtr name;
-    std::vector<ExprPtr> params;
+    std::vector<ExprPtr> args;
 
     FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr>& params_) :
             name(std::move(name_)),
-            params(std::move(params_)) {}
+            args(std::move(params_)) {}
 
     MAKE_VISITABLE
 };
@@ -169,15 +169,15 @@ struct IfExpr : IExpr {
 };
 
 struct WhenExpr : IfExpr {
-    WhenExpr(ExprPtr& cond, ExprPtr& t, ExprPtr f = nullptr) :
-            IfExpr(cond, t, f) {}
+    WhenExpr(ExprPtr& test, ExprPtr& then, ExprPtr else_ = nullptr) :
+            IfExpr(test, then, std::move(else_)) {}
 };
 
 struct CondExpr : IExpr {
-    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> body;
+    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> variants;
 
     explicit CondExpr(std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>>& body_) :
-            body(std::move(body_)) {}
+            variants(std::move(body_)) {}
 
     MAKE_VISITABLE
 };

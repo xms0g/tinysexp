@@ -31,12 +31,6 @@ void SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
         defunResolve(*defun);
     } else if (auto funcCall = cast::toFuncCall(ast)) {
         funcCallResolve(*funcCall);
-    } else if (auto if_ = cast::toIf(ast)) {
-        ifResolve(*if_);
-    } else if (auto when = cast::toWhen(ast)) {
-        whenResolve(*when);
-    } else if (auto cond = cast::toCond(ast)) {
-        condResolve(*cond);
     }
 }
 
@@ -98,7 +92,7 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 }
 
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
-    const auto var = cast::toVar(setq.var);
+    const auto var = cast::toVar(setq.pair);
     const auto varName = cast::toString(var->name)->data;
 
     Symbol sym = scopeLookup(varName);
@@ -113,25 +107,25 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 }
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
-    const auto var = cast::toVar(defvar.var);
+    const auto var = cast::toVar(defvar.pair);
     const auto varName = cast::toString(var->name)->data;
 
     if (scopeLevel() > 1) {
         throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
     }
 
-    scopeBind(varName, {varName, defvar.var, SymbolType::GLOBAL});
+    scopeBind(varName, {varName, defvar.pair, SymbolType::GLOBAL});
 }
 
 void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
-    const auto var = cast::toVar(defconst.var);
+    const auto var = cast::toVar(defconst.pair);
     const auto varName = cast::toString(var->name)->data;
 
     if (scopeLevel() > 1) {
         throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
     }
 
-    scopeBind(varName, {varName, defconst.var, SymbolType::GLOBAL, true});
+    scopeBind(varName, {varName, defconst.pair, SymbolType::GLOBAL, true});
 }
 
 void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
@@ -147,7 +141,7 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
 
     scopeEnter();
 
-    for (auto& statement: defun.body) {
+    for (auto& statement: defun.forms) {
         exprResolve(statement);
     }
     scopeExit();
@@ -163,28 +157,10 @@ void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
     }
 
     const auto func = cast::toDefun(sym.value);
-    if (funcCall.params.size() != func->params.size()) {
+    if (funcCall.args.size() != func->args.size()) {
         throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName), 0);
     }
-
-    for (auto& param: funcCall.params) {
-        if (cast::toT(param)) {
-            throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
-        }
-
-        if (cast::toNIL(param)) {
-            throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
-        }
-    }
 }
-
-void SemanticAnalyzer::ifResolve(const IfExpr& ifExpr) {
-
-}
-
-void SemanticAnalyzer::whenResolve(const WhenExpr& when) {}
-
-void SemanticAnalyzer::condResolve(const CondExpr& cond) {}
 
 void SemanticAnalyzer::scopeEnter() {
     std::unordered_map<std::string, Symbol> scope;

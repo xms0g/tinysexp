@@ -101,7 +101,7 @@ void ASTVisitor::visit(const SetqExpr& setq) {
 }
 
 void ASTVisitor::visit(const DefvarExpr& defvar) {
-    CodeGen::sectionData.emplace(StringEval::get(defvar.var), VarEvaluator::get(defvar.var));
+    CodeGen::sectionData.emplace(StringEval::get(defvar.pair), VarEvaluator::get(defvar.pair));
 }
 
 void VarEvaluator::visit(BinOpExpr& binop) {

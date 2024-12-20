@@ -46,12 +46,6 @@ private:
 
     void funcCallResolve(const FuncCallExpr& funcCall);
 
-    void ifResolve(const IfExpr& ifExpr);
-
-    void whenResolve(const WhenExpr& when);
-
-    void condResolve(const CondExpr& cond);
-
     /* Scope Operations */
     void scopeEnter();
 
@@ -65,9 +59,10 @@ private:
 
     Symbol scopeLookupCurrent(const std::string& name);
 
+    /* Symbol Table */
     using ScopeType = std::unordered_map<std::string, Symbol>;
     std::stack<ScopeType> mSymbolTable;
-
+    /* File Name */
     const char* mFileName;
 };
 
