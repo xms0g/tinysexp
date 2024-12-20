@@ -255,6 +255,10 @@ inline std::shared_ptr<DotimesExpr> toDotimes(const ExprPtr& expr) {
     return std::dynamic_pointer_cast<DotimesExpr>(expr);
 }
 
+inline std::shared_ptr<LoopExpr> toLoop(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<LoopExpr>(expr);
+}
+
 inline std::shared_ptr<LetExpr> toLet(const ExprPtr& expr) {
     return std::dynamic_pointer_cast<LetExpr>(expr);
 }
