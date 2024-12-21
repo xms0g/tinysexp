@@ -143,7 +143,7 @@ ExprPtr Parser::parseLoop() {
 
 ExprPtr Parser::parseLet() {
     ExprPtr name, value;
-    std::vector<ExprPtr> variables;
+    std::vector<ExprPtr> bindings;
     std::vector<ExprPtr> body;
 
     advance();
@@ -153,7 +153,7 @@ ExprPtr Parser::parseLet() {
         name = parseAtom();
         value = std::make_shared<NILExpr>();
 
-        variables.emplace_back(std::make_shared<VarExpr>(name, value));
+        bindings.emplace_back(std::make_shared<VarExpr>(name, value));
     }
 
     while (mCurrentToken.type == TokenType::LPAREN) {
@@ -166,7 +166,7 @@ ExprPtr Parser::parseLet() {
             value = parseAtom();
         }
 
-        variables.emplace_back(std::make_shared<VarExpr>(name, value));
+        bindings.emplace_back(std::make_shared<VarExpr>(name, value));
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
@@ -176,7 +176,7 @@ ExprPtr Parser::parseLet() {
         body.emplace_back(parseExpr());
     }
 
-    return std::make_shared<LetExpr>(variables, body);
+    return std::make_shared<LetExpr>(bindings, body);
 }
 
 ExprPtr Parser::parseSetq() {
@@ -196,8 +196,8 @@ ExprPtr Parser::parseDefconst() {
 
 ExprPtr Parser::parseDefun() {
     ExprPtr name;
-    std::vector<ExprPtr> params;
-    std::vector<ExprPtr> body;
+    std::vector<ExprPtr> args;
+    std::vector<ExprPtr> forms;
 
     advance();
 
@@ -205,20 +205,20 @@ ExprPtr Parser::parseDefun() {
 
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     while (mCurrentToken.type == TokenType::VAR) {
-        params.emplace_back(parseAtom());
+        args.emplace_back(parseAtom());
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     while (mCurrentToken.type == TokenType::LPAREN) {
-        body.emplace_back(parseExpr());
+        forms.emplace_back(parseExpr());
     }
 
-    return std::make_shared<DefunExpr>(name, params, body);
+    return std::make_shared<DefunExpr>(name, args, forms);
 }
 
 ExprPtr Parser::parseFuncCall() {
     ExprPtr name;
-    std::vector<ExprPtr> params;
+    std::vector<ExprPtr> args;
 
     name = parseAtom();
 
@@ -227,10 +227,10 @@ ExprPtr Parser::parseFuncCall() {
            mCurrentToken.type == TokenType::VAR ||
            mCurrentToken.type == TokenType::T ||
            mCurrentToken.type == TokenType::NIL) {
-        params.emplace_back(parseAtom());
+        args.emplace_back(parseAtom());
     }
 
-    return std::make_shared<FuncCallExpr>(name, params);
+    return std::make_shared<FuncCallExpr>(name, args);
 }
 
 ExprPtr Parser::parseIf() {
