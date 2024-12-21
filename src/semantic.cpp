@@ -83,12 +83,28 @@ void SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
 void SemanticAnalyzer::letResolve(const LetExpr& let) {
     scopeEnter();
     for (auto& var: let.bindings) {
-        const auto varExpr = cast::toVar(var);
-        const auto varName = cast::toString(varExpr->name)->data;
+        const auto var_ = cast::toVar(var);
+        const auto varName = cast::toString(var_->name)->data;
 
+        // Check out the var in the current scope, if it's already defined, raise error
         Symbol sym = scopeLookupCurrent(varName);
         if (sym.value) {
             throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
+        }
+
+        // Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
+        // If it's expr, resolve it.
+        if (const auto value = cast::toString(var_->value)) {
+            sym = scopeLookup(value->data);
+
+            if (!sym.value) {
+                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
+            }
+        } else {
+            bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
+            if (isExpr) {
+                exprResolve(var_->value);
+            }
         }
 
         scopeBind(varName, {varName, var, SymbolType::LOCAL});
@@ -104,6 +120,7 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     const auto var_ = cast::toVar(setq.pair);
     const auto name = cast::toString(var_->name)->data;
 
+    // Check out the var.If it's not defined, raise error.
     Symbol sym = scopeLookup(name);
 
     if (!sym.value) {
@@ -112,6 +129,8 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 
     checkConstantVar(setq.pair);
 
+    // Check the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
+    // If it's expr, resolve it.
     if (const auto value = cast::toString(var_->value)) {
         sym = scopeLookup(value->data);
 
@@ -162,7 +181,6 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     scopeEnter();
     for (auto& arg: defun.args) {
         const auto sarg = cast::toString(arg)->data;
-
         scopeBind(sarg, {sarg, arg, SymbolType::LOCAL});
     }
 
@@ -206,21 +224,7 @@ void SemanticAnalyzer::ifResolve(const IfExpr& if_) {
 }
 
 void SemanticAnalyzer::whenResolve(const WhenExpr& when) {
-    if (const auto test = cast::toString(when.test)) {
-        Symbol sym = scopeLookup(test->data);
-
-        if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
-        }
-    } else {
-        exprResolve(when.test);
-    }
-
-    exprResolve(when.then);
-
-    if (when.else_) {
-        exprResolve(when.else_);
-    }
+    ifResolve(when);
 }
 
 void SemanticAnalyzer::condResolve(const CondExpr& cond) {

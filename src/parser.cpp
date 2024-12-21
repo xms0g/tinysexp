@@ -159,7 +159,12 @@ ExprPtr Parser::parseLet() {
     while (mCurrentToken.type == TokenType::LPAREN) {
         consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
         name = parseAtom();
-        value = parseAtom();
+
+        if (mCurrentToken.type == TokenType::LPAREN) {
+            value = parseExpr();
+        } else {
+            value = parseAtom();
+        }
 
         variables.emplace_back(std::make_shared<VarExpr>(name, value));
         consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
