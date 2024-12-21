@@ -181,7 +181,7 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     scopeEnter();
     for (auto& arg: defun.args) {
         const auto sarg = cast::toString(arg)->data;
-        scopeBind(sarg, {sarg, arg, SymbolType::LOCAL});
+        scopeBind(sarg, {sarg, arg, SymbolType::PARAM});
     }
 
     for (auto& statement: defun.forms) {
