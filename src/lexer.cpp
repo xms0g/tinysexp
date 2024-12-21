@@ -40,6 +40,9 @@ void Lexer::process() {
         } else if (!std::strncmp("defun", mCurrentChar, 5)) {
             mTokens.emplace_back(TokenType::DEFUN);
             advance(5);
+        } else if (!std::strncmp("defstruct", mCurrentChar, 9)) {
+            mTokens.emplace_back(TokenType::DEFSTRUCT);
+            advance(9);
         } else if (!std::strncmp("nil", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::NIL);
             advance(3);
@@ -80,6 +83,16 @@ void Lexer::process() {
             }
 
             mTokens.emplace_back(isDouble ? TokenType::DOUBLE : TokenType::INT, token);
+        } else if (mCurrentChar[0] == '"') {
+            std::string data;
+
+            advance();
+            while (mCurrentChar && mCurrentChar[0] != '"') {
+                data += mCurrentChar[0];
+                advance();
+            }
+            advance();
+            mTokens.emplace_back(TokenType::STRING, data);
         } else if (mCurrentChar[0] == '+') {
             mTokens.emplace_back(TokenType::PLUS);
             advance();

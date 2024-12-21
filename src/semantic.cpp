@@ -129,7 +129,7 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 
     checkConstantVar(setq.pair);
 
-    // Check the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
+    // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
     // If it's expr, resolve it.
     if (const auto value = cast::toString(var_->value)) {
         sym = scopeLookup(value->data);

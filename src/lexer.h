@@ -6,7 +6,7 @@
 
 enum class TokenType {
     // Type
-    INT, DOUBLE, VAR, NIL, T,
+    INT, DOUBLE, STRING, VAR, NIL, T,
     // Arithmetic Operators
     PLUS, MINUS, DIV, MUL,
     // Comparison Operators

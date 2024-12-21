@@ -275,14 +275,14 @@ ExprPtr Parser::parseCond() {
 }
 
 ExprPtr Parser::parseAtom() {
-    if (mCurrentToken.type == TokenType::VAR) {
+    if (mCurrentToken.type == TokenType::VAR || mCurrentToken.type == TokenType::STRING) {
         Token token = mCurrentToken;
         advance();
         return std::make_shared<StringExpr>(token.value);
     } else if (mCurrentToken.type == TokenType::NIL || mCurrentToken.type == TokenType::RPAREN) {
+        // If it's not nil, do not consume. It will be done at the outer scope
         if (mCurrentToken.type == TokenType::NIL)
             advance();
-
         return std::make_shared<NILExpr>();
     } else if (mCurrentToken.type == TokenType::T) {
         advance();
@@ -317,7 +317,7 @@ ExprPtr Parser::createVar(bool isConstant) {
         value = parseAtom();
 
         if (isConstant && cast::toNIL(value)) {
-            throw InvalidSyntaxError(mFileName,  ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DEFCONSTANT"), 0);
+            throw InvalidSyntaxError(mFileName, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DEFCONSTANT"), 0);
         }
     }
 
