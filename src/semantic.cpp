@@ -201,7 +201,7 @@ void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
 
     const auto func = cast::toDefun(sym.value);
     if (funcCall.args.size() != func->args.size()) {
-        throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName), 0);
+        throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
     }
 }
 
