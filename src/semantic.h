@@ -20,7 +20,7 @@ struct Symbol {
 
 class SemanticAnalyzer {
 public:
-    SemanticAnalyzer(const char* fn);
+    explicit SemanticAnalyzer(const char* fn);
 
     void analyze(ExprPtr& ast);
 private:
