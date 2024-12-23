@@ -59,7 +59,7 @@ void Lexer::process() {
         } else if (std::isalpha(mCurrentChar[0])) {
             std::string token;
 
-            while (mCurrentChar && std::isalnum(mCurrentChar[0])) {
+            while (mCurrentChar && (!std::isspace(mCurrentChar[0]) && mCurrentChar[0] != ')')) {
                 token += mCurrentChar[0];
                 advance();
             }
