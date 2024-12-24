@@ -57,14 +57,17 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
     }
 
     if (!cast::toInt(var) && !cast::toDouble(var)) {
-        const auto name = cast::toString(var)->data;
-        Symbol sym = scopeLookup(name);
+        if (auto binop = cast::toBinop(var)) {
+            binopResolve(*binop);
+        } else {
+            const auto name = cast::toString(var)->data;
+            Symbol sym = scopeLookup(name);
 
-        if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            if (!sym.value) {
+                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            }
+            var = sym.value;
         }
-
-        var = sym.value;
     }
 }
 

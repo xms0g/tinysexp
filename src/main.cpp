@@ -8,7 +8,7 @@
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 7
-#define VERSION_PATCH 8
+#define VERSION_PATCH 9
 
 #define STRINGIFY0(s) # s
 #define STRINGIFY(s) STRINGIFY0(s)
@@ -22,12 +22,13 @@ void compile(const char* fn, std::string& program) {
         Lexer lexer{fn, program};
         Parser parser{fn, lexer};
         SemanticAnalyzer analyzer{fn};
+        CodeGen cgen;
 
         lexer.process();
         ExprPtr ast = parser.parse();
         analyzer.analyze(ast);
 
-        //std::cout << CodeGen::emit(ast) << '\n';
+        std::cout << cgen.emit(ast) << '\n';
 
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();
