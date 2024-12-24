@@ -5,44 +5,79 @@
 #include <unordered_set>
 #include <unordered_map>
 #include "parser.h"
-#include "visitors.h"
 
-enum class Register {
+enum Register {
     RAX, RBX, RCX,
     RDX, RDI, RSI,
     R8, R9, R10,
     R11, R12, R13,
-    R14, R15
+    R14, R15, EOF_R
 };
 
-class ASTVisitor : public Getter<ASTVisitor, ExprPtr, std::string>, public ExprVisitor {
+struct RegisterPair {
+    Register reg;
+    const char* sreg;
+};
+
+class RegisterTracker {
 public:
-    void visit(BinOpExpr& binop) override;
+    RegisterPair alloc();
 
-    void visit(const DotimesExpr& dotimes) override;
-
-    void visit(const LetExpr& let) override;
-
-    void visit(const SetqExpr& setq) override;
-
-    void visit(const DefvarExpr& defvar) override;
+    void free(Register reg);
 
 private:
-    std::string code;
     std::unordered_set<Register> registersInUse;
+    static constexpr char* stringRepFromReg[14] = {
+            "rax", "rbx", "rcx",
+            "rdx", "rdi", "rsi",
+            "r8",  "r9",  "r10",
+            "r11", "r12", "r13",
+            "r14", "r15"
+    };
 };
 
-namespace CodeGen {
-std::string emit(ExprPtr& ast);
+class CodeGen {
+public:
+    std::string emit(const ExprPtr& ast);
 
-static int stackOffset{8};
-static std::unordered_map<std::string, int> stackOffsets;
-static std::unordered_map<std::string, std::string> sectionData;
-}
+private:
+    void emitAST(const ExprPtr& ast);
+
+    void emitNumb(const ExprPtr& n, RegisterPair& rp);
+
+    void emitExpr(const char* op, const ExprPtr& lhs, const ExprPtr& rhs, RegisterPair& rp);
+
+    void emitBinop(const BinOpExpr& binop, RegisterPair& rp);
+
+    void emitDotimes(const DotimesExpr& dotimes);
+
+    void emitLoop(const LoopExpr& loop);
+
+    void emitLet(const LetExpr& let);
+
+    void emitSetq(const SetqExpr& setq);
+
+    void emitDefvar(const DefvarExpr& defvar);
+
+    void emitDefconst(const DefconstExpr& defconst);
+
+    void emitDefun(const DefunExpr& defun);
+
+    void emitFuncCall(const FuncCallExpr& funcCall);
+
+    void emitIf(const IfExpr& if_);
+
+    void emitWhen(const WhenExpr& when);
+
+    void emitCond(const CondExpr& cond);
 
 
-MAKE_VISITOR(VarEvaluator, std::string, MAKE_MTHD_BINOP MAKE_MTHD_VAR MAKE_MTHD_STR MAKE_MTHD_INT)
+    RegisterTracker rtracker;
+    int stackOffset{8};
+    std::string generatedCode;
+    std::unordered_map<std::string, int> stackOffsets;
+    std::unordered_map<std::string, std::string> sectionData;
+};
 
-MAKE_VISITOR(PrintEvaluator, std::string, MAKE_MTHD_BINOP)
 
 #endif

@@ -1,40 +1,28 @@
 #ifndef TINYSEXP_PARSER_H
 #define TINYSEXP_PARSER_H
 
-#include <unordered_map>
 #include <utility>
 #include <memory>
 #include "lexer.h"
-
-struct IExpr;
-using ExprPtr = std::shared_ptr<IExpr>;
-
-#include "visitor.hpp"
-
-#define MAKE_VISITABLE virtual void accept(ExprVisitor& visitor) override { visitor.visit(*this); }
 
 struct IExpr {
     std::shared_ptr<IExpr> child;
 
     virtual ~IExpr() = default;
-
-    virtual void accept(ExprVisitor& visitor) = 0;
 };
+
+using ExprPtr = std::shared_ptr<IExpr>;
 
 struct IntExpr : IExpr {
     int n;
 
     explicit IntExpr(int n_) : n(n_) {}
-
-    MAKE_VISITABLE
 };
 
 struct DoubleExpr : IExpr {
     double n;
 
     explicit DoubleExpr(double n_) : n(n_) {}
-
-    MAKE_VISITABLE
 };
 
 struct StringExpr : IExpr {
@@ -43,24 +31,18 @@ struct StringExpr : IExpr {
     StringExpr() = default;
 
     explicit StringExpr(std::string& str) : data(str) {}
-
-    MAKE_VISITABLE
 };
 
 struct NILExpr : IExpr {
     const bool value{false};
 
     NILExpr() = default;
-
-    MAKE_VISITABLE
 };
 
 struct TExpr : IExpr {
     const bool value{true};
 
     TExpr() = default;
-
-    MAKE_VISITABLE
 };
 
 struct BinOpExpr : IExpr {
@@ -72,8 +54,6 @@ struct BinOpExpr : IExpr {
             lhs(std::move(lhs_)),
             rhs(std::move(rhs_)),
             opToken(std::move(opTok)) {}
-
-    MAKE_VISITABLE
 };
 
 struct DotimesExpr : IExpr {
@@ -83,16 +63,12 @@ struct DotimesExpr : IExpr {
     DotimesExpr(ExprPtr& iterationCount_, std::vector<ExprPtr>& statements_) :
             iterationCount(std::move(iterationCount_)),
             statements(std::move(statements_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct LoopExpr : IExpr {
     std::vector<ExprPtr> sexprs;
 
     LoopExpr(std::vector<ExprPtr>& sexprs_): sexprs(std::move(sexprs_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct LetExpr : IExpr {
@@ -102,8 +78,6 @@ struct LetExpr : IExpr {
     LetExpr(std::vector<ExprPtr>& bindings_, std::vector<ExprPtr>& body_) :
             body(std::move(body_)),
             bindings(std::move(bindings_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct SetqExpr : IExpr {
@@ -111,8 +85,6 @@ struct SetqExpr : IExpr {
 
     explicit SetqExpr(ExprPtr& pair_) :
             pair(std::move(pair_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct DefvarExpr : IExpr {
@@ -120,8 +92,6 @@ struct DefvarExpr : IExpr {
 
     explicit DefvarExpr(ExprPtr& pair_) :
             pair(std::move(pair_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct DefconstExpr : IExpr {
@@ -129,8 +99,6 @@ struct DefconstExpr : IExpr {
 
     explicit DefconstExpr(ExprPtr& pair_) :
             pair(std::move(pair_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct DefunExpr : IExpr {
@@ -142,8 +110,6 @@ struct DefunExpr : IExpr {
             name(std::move(name_)),
             args(std::move(params_)),
             forms(std::move(body_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct FuncCallExpr : IExpr {
@@ -153,8 +119,6 @@ struct FuncCallExpr : IExpr {
     FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr>& params_) :
             name(std::move(name_)),
             args(std::move(params_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct IfExpr : IExpr {
@@ -164,8 +128,6 @@ struct IfExpr : IExpr {
             test(std::move(test_)),
             then(std::move(then_)),
             else_(std::move(e)) {}
-
-    MAKE_VISITABLE
 };
 
 struct WhenExpr : IfExpr {
@@ -178,8 +140,6 @@ struct CondExpr : IExpr {
 
     explicit CondExpr(std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>>& variants_) :
             variants(std::move(variants_)) {}
-
-    MAKE_VISITABLE
 };
 
 struct VarExpr : IExpr {
@@ -189,8 +149,6 @@ struct VarExpr : IExpr {
     VarExpr(ExprPtr& name_, ExprPtr& value_) :
             name(std::move(name_)),
             value(std::move(value_)) {}
-
-    MAKE_VISITABLE
 };
 
 class Parser {
