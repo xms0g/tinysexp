@@ -2,7 +2,7 @@
 #include <format>
 
 RegisterPair RegisterTracker::alloc() {
-    for (int i = 0; i < EOF_R; ++i) {
+    for (int i = 0; i < EOR; ++i) {
         if (!registersInUse.contains((Register)i)) {
             registersInUse.emplace((Register)i);
             return {(Register)i, stringRepFromReg[i]};
@@ -113,10 +113,10 @@ void CodeGen::emitBinop(const BinOpExpr& binop, RegisterPair& rp) {
             emitExpr("sub", binop.lhs, binop.rhs, rp);
             break;
         case TokenType::DIV:
-            emitExpr("div", binop.lhs, binop.rhs, rp);
+            emitExpr("idiv", binop.lhs, binop.rhs, rp);
             break;
         case TokenType::MUL:
-            emitExpr("mul", binop.lhs, binop.rhs, rp);
+            emitExpr("imul", binop.lhs, binop.rhs, rp);
             break;
         case TokenType::EQUAL:
             break;
