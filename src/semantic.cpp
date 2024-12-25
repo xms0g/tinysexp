@@ -1,17 +1,74 @@
 #include "semantic.h"
 #include "exceptions.hpp"
 
+void ScopeTracker::enter() {
+    std::unordered_map<std::string, Symbol> scope;
+    mSymbolTable.push(scope);
+}
+
+void ScopeTracker::exit() {
+    mSymbolTable.pop();
+}
+
+size_t ScopeTracker::level() {
+    return mSymbolTable.size();
+}
+
+void ScopeTracker::bind(const std::string& name, const Symbol& symbol) {
+    auto scope = mSymbolTable.top();
+    mSymbolTable.pop();
+    scope.emplace(name, symbol);
+    mSymbolTable.push(scope);
+}
+
+Symbol ScopeTracker::lookup(const std::string& name) {
+    Symbol sym;
+    std::stack<ScopeType> scopes;
+    size_t level = mSymbolTable.size();
+
+    for (int i = 0; i < level; ++i) {
+        ScopeType scope = mSymbolTable.top();
+        mSymbolTable.pop();
+        scopes.push(scope);
+
+        if (auto elem = scope.find(name);elem != scope.end()) {
+            sym = elem->second;
+            break;
+        }
+    }
+
+    // reconstruct the scopes
+    size_t currentLevel = scopes.size();
+    for (int i = 0; i < currentLevel; ++i) {
+        ScopeType scope = scopes.top();
+        scopes.pop();
+        mSymbolTable.push(scope);
+    }
+
+    return sym;
+}
+
+Symbol ScopeTracker::lookupCurrent(const std::string& name) {
+    ScopeType currentScope = mSymbolTable.top();
+
+    if (auto elem = currentScope.find(name);elem != currentScope.end()) {
+        return elem->second;
+    }
+
+    return {};
+}
+
 SemanticAnalyzer::SemanticAnalyzer(const char* fn) : mFileName(fn) {}
 
 void SemanticAnalyzer::analyze(ExprPtr& ast) {
     auto next = ast;
 
-    scopeEnter();
+    stracker.enter();
     while (next != nullptr) {
         exprResolve(next);
         next = next->child;
     }
-    scopeExit();
+    stracker.exit();
 }
 
 void SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
@@ -61,7 +118,7 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
             binopResolve(*binop);
         } else {
             const auto name = cast::toString(var)->data;
-            Symbol sym = scopeLookup(name);
+            Symbol sym = stracker.lookup(name);
 
             if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
@@ -72,9 +129,9 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
 }
 
 void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
-    scopeEnter();
+    stracker.enter();
     checkConstantVar(dotimes.iterationCount);
-    scopeExit();
+    stracker.exit();
 }
 
 void SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
@@ -84,13 +141,13 @@ void SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
 }
 
 void SemanticAnalyzer::letResolve(const LetExpr& let) {
-    scopeEnter();
+    stracker.enter();
     for (auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
         const auto varName = cast::toString(var_->name)->data;
 
         // Check out the var in the current scope, if it's already defined, raise error
-        Symbol sym = scopeLookupCurrent(varName);
+        Symbol sym = stracker.lookupCurrent(varName);
         if (sym.value) {
             throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
         }
@@ -98,7 +155,7 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
         // Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
         // If it's expr, resolve it.
         if (const auto value = cast::toString(var_->value)) {
-            sym = scopeLookup(value->data);
+            sym = stracker.lookup(value->data);
 
             if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
@@ -110,13 +167,13 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
             }
         }
 
-        scopeBind(varName, {varName, var, SymbolType::LOCAL});
+        stracker.bind(varName, {varName, var, SymbolType::LOCAL});
     }
 
     for (auto& statement: let.body) {
         exprResolve(statement);
     }
-    scopeExit();
+    stracker.exit();
 }
 
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
@@ -124,7 +181,7 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     const auto name = cast::toString(var_->name)->data;
 
     // Check out the var.If it's not defined, raise error.
-    Symbol sym = scopeLookup(name);
+    Symbol sym = stracker.lookup(name);
 
     if (!sym.value) {
         throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
@@ -135,7 +192,7 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
     // If it's expr, resolve it.
     if (const auto value = cast::toString(var_->value)) {
-        sym = scopeLookup(value->data);
+        sym = stracker.lookup(value->data);
 
         if (!sym.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
@@ -152,51 +209,51 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
     const auto var = cast::toVar(defvar.pair);
     const auto varName = cast::toString(var->name)->data;
 
-    if (scopeLevel() > 1) {
+    if (stracker.level() > 1) {
         throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
     }
 
-    scopeBind(varName, {varName, defvar.pair, SymbolType::GLOBAL});
+    stracker.bind(varName, {varName, defvar.pair, SymbolType::GLOBAL});
 }
 
 void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
     const auto var = cast::toVar(defconst.pair);
     const auto varName = cast::toString(var->name)->data;
 
-    if (scopeLevel() > 1) {
+    if (stracker.level() > 1) {
         throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
     }
 
-    scopeBind(varName, {varName, defconst.pair, SymbolType::GLOBAL, true});
+    stracker.bind(varName, {varName, defconst.pair, SymbolType::GLOBAL, true});
 }
 
 void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     const auto funcName = cast::toString(defun.name)->data;
 
-    if (scopeLevel() > 1) {
+    if (stracker.level() > 1) {
         throw SemanticError(mFileName, ERROR(FUNC_DEF_ERROR, funcName), 0);
     }
 
     ExprPtr func = std::make_shared<DefunExpr>(defun);
 
-    scopeBind(funcName, {funcName, func, SymbolType::GLOBAL});
+    stracker.bind(funcName, {funcName, func, SymbolType::GLOBAL});
 
-    scopeEnter();
+    stracker.enter();
     for (auto& arg: defun.args) {
         const auto sarg = cast::toString(arg)->data;
-        scopeBind(sarg, {sarg, arg, SymbolType::PARAM});
+        stracker.bind(sarg, {sarg, arg, SymbolType::PARAM});
     }
 
     for (auto& statement: defun.forms) {
         exprResolve(statement);
     }
-    scopeExit();
+    stracker.exit();
 }
 
 void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
     const auto funcName = cast::toString(funcCall.name)->data;
 
-    Symbol sym = scopeLookup(funcName);
+    Symbol sym = stracker.lookup(funcName);
 
     if (!sym.value) {
         throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
@@ -210,7 +267,7 @@ void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
 
 void SemanticAnalyzer::ifResolve(const IfExpr& if_) {
     if (const auto test = cast::toString(if_.test)) {
-        Symbol sym = scopeLookup(test->data);
+        Symbol sym = stracker.lookup(test->data);
 
         if (!sym.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
@@ -233,7 +290,7 @@ void SemanticAnalyzer::whenResolve(const WhenExpr& when) {
 void SemanticAnalyzer::condResolve(const CondExpr& cond) {
     for (auto& variant: cond.variants) {
         if (auto test = cast::toString(variant.first)) {
-            Symbol sym = scopeLookup(test->data);
+            Symbol sym = stracker.lookup(test->data);
 
             if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
@@ -252,66 +309,9 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     const auto var_ = cast::toVar(var);
     const auto varName = cast::toString(var_->name)->data;
 
-    Symbol sym = scopeLookup(varName);
+    Symbol sym = stracker.lookup(varName);
 
     if (sym.isConstant) {
         throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
     }
-}
-
-void SemanticAnalyzer::scopeEnter() {
-    std::unordered_map<std::string, Symbol> scope;
-    mSymbolTable.push(scope);
-}
-
-void SemanticAnalyzer::scopeExit() {
-    mSymbolTable.pop();
-}
-
-size_t SemanticAnalyzer::scopeLevel() {
-    return mSymbolTable.size();
-}
-
-void SemanticAnalyzer::scopeBind(const std::string& name, const Symbol& symbol) {
-    auto scope = mSymbolTable.top();
-    mSymbolTable.pop();
-    scope.emplace(name, symbol);
-    mSymbolTable.push(scope);
-}
-
-Symbol SemanticAnalyzer::scopeLookup(const std::string& name) {
-    Symbol sym;
-    std::stack<ScopeType> scopes;
-    size_t level = mSymbolTable.size();
-
-    for (int i = 0; i < level; ++i) {
-        ScopeType scope = mSymbolTable.top();
-        mSymbolTable.pop();
-        scopes.push(scope);
-
-        if (auto elem = scope.find(name);elem != scope.end()) {
-            sym = elem->second;
-            break;
-        }
-    }
-
-    // reconstruct the scopes
-    size_t currentLevel = scopes.size();
-    for (int i = 0; i < currentLevel; ++i) {
-        ScopeType scope = scopes.top();
-        scopes.pop();
-        mSymbolTable.push(scope);
-    }
-
-    return sym;
-}
-
-Symbol SemanticAnalyzer::scopeLookupCurrent(const std::string& name) {
-    ScopeType currentScope = mSymbolTable.top();
-
-    if (auto elem = currentScope.find(name);elem != currentScope.end()) {
-        return elem->second;
-    }
-
-    return {};
 }

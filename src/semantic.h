@@ -18,11 +18,31 @@ struct Symbol {
     bool isConstant{};
 };
 
+class ScopeTracker {
+public:
+    void enter();
+
+    void exit();
+
+    size_t level();
+
+    void bind(const std::string& name, const Symbol& symbol);
+
+    Symbol lookup(const std::string& name);
+
+    Symbol lookupCurrent(const std::string& name);
+
+private:
+    using ScopeType = std::unordered_map<std::string, Symbol>;
+    std::stack<ScopeType> mSymbolTable;
+};
+
 class SemanticAnalyzer {
 public:
     explicit SemanticAnalyzer(const char* fn);
 
     void analyze(ExprPtr& ast);
+
 private:
     /* Name Resolutions */
 
@@ -56,22 +76,7 @@ private:
 
     void checkConstantVar(const ExprPtr& var);
 
-    /* Scope Operations */
-    void scopeEnter();
-
-    void scopeExit();
-
-    size_t scopeLevel();
-
-    void scopeBind(const std::string& name, const Symbol& symbol);
-
-    Symbol scopeLookup(const std::string& name);
-
-    Symbol scopeLookupCurrent(const std::string& name);
-
-    /* Symbol Table */
-    using ScopeType = std::unordered_map<std::string, Symbol>;
-    std::stack<ScopeType> mSymbolTable;
+    ScopeTracker stracker;
     /* File Name */
     const char* mFileName;
 };
