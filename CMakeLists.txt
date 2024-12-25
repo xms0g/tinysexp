@@ -11,7 +11,6 @@ set(SOURCES
         src/lexer.cpp src/lexer.h
         src/parser.cpp src/parser.h
         src/semantic.cpp src/semantic.h
-        src/codegen.cpp src/codegen.h
-        src/visitors.cpp src/visitors.h)
+        src/codegen.cpp src/codegen.h)
 
 add_executable(${PROJECT_NAME} src/main.cpp ${SOURCES})
