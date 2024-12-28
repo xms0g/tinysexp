@@ -11,28 +11,39 @@ enum Register {
     RDX, RDI, RSI,
     R8, R9, R10,
     R11, R12, R13,
-    R14, R15, EOR
+    R14, R15,
+    xmm0, xmm1, xmm2,
+    xmm3, xmm4, xmm5,
+    xmm6, xmm7, EOR
+};
+
+enum RegisterType {
+    GP, SSE
 };
 
 struct RegisterPair {
     Register reg;
+    RegisterType rType;
     const char* sreg;
 };
 
 class RegisterTracker {
 public:
-    RegisterPair alloc();
+    RegisterPair alloc(int index = 0);
 
     void free(Register reg);
 
 private:
     std::unordered_set<Register> registersInUse;
-    static constexpr char* stringRepFromReg[14] = {
+    static constexpr char* stringRepFromReg[22] = {
             "rax", "rbx", "rcx",
             "rdx", "rdi", "rsi",
             "r8",  "r9",  "r10",
             "r11", "r12", "r13",
-            "r14", "r15"
+            "r14", "r15",
+            "xmm0", "xmm1", "xmm2",
+            "xmm3", "xmm4", "xmm5",
+            "xmm6", "xmm7"
     };
 };
 
@@ -45,7 +56,9 @@ private:
 
     void emitNumb(const ExprPtr& n, RegisterPair& rp);
 
-    void emitExpr(const char* op, const ExprPtr& lhs, const ExprPtr& rhs, RegisterPair& rp);
+    void emitRHS(const ExprPtr& rhs, RegisterPair& rp);
+
+    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs,const char* op1, const char* op2, RegisterPair& rp);
 
     void emitBinop(const BinOpExpr& binop, RegisterPair& rp);
 
