@@ -67,7 +67,7 @@ void Lexer::process() {
             mTokens.emplace_back(TokenType::VAR, token);
         } else if (std::isdigit(mCurrentChar[0])) {
             std::string token;
-            bool isDouble;
+            bool isDouble{false};
 
             while (mCurrentChar && (std::isalnum(mCurrentChar[0]) || mCurrentChar[0] == '.')) {
                 if (std::isalpha(mCurrentChar[0]))
