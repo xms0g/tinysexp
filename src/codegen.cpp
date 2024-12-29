@@ -20,8 +20,8 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     generatedCode =
             "[bits 64]\n"
             "section .text\n"
-            "\tglobal _main\n"
-            "_main:\n"
+            "\tglobal _start\n"
+            "_start:\n"
             "\tpush rbp\n"
             "\tmov rbp, rsp\n";
 
