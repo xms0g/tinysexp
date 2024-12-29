@@ -14,7 +14,10 @@ enum Register {
     R14, R15,
     xmm0, xmm1, xmm2,
     xmm3, xmm4, xmm5,
-    xmm6, xmm7, EOR
+    xmm6, xmm7, xmm8,
+    xmm9, xmm10, xmm11,
+    xmm12, xmm13, xmm14,
+    xmm15, EOR
 };
 
 enum RegisterType {
@@ -40,7 +43,7 @@ public:
 
 private:
     std::unordered_set<Register> registersInUse;
-    static constexpr char* stringRepFromReg[22] = {
+    static constexpr char* stringRepFromReg[30] = {
             "rax", "rbx", "rcx",
             "rdx", "rdi", "rsi",
             "r8", "r9", "r10",
@@ -48,7 +51,10 @@ private:
             "r14", "r15",
             "xmm0", "xmm1", "xmm2",
             "xmm3", "xmm4", "xmm5",
-            "xmm6", "xmm7"
+            "xmm6", "xmm7", "xmm8",
+            "xmm9", "xmm10", "xmm11",
+            "xmm12", "xmm13", "xmm14",
+            "xmm15"
     };
 };
 
