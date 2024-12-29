@@ -37,6 +37,11 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     for (auto& var: sectionData) {
         generatedCode += std::format("{}: dq {}", var.first, var.second);
     }
+
+    generatedCode += !sectionBSS.empty() ? "section .bss\n" : "";
+    for (auto& var: sectionBSS) {
+        generatedCode += std::format("{}: resq {}", var, 1);
+    }
     return generatedCode;
 }
 
@@ -81,11 +86,10 @@ void CodeGen::emitNumb(const ExprPtr& n, RegisterPair& rp) {
         const auto var = cast::toVar(n);
         if (auto value = cast::toInt(var->value)) {
             rp = rtracker.alloc();
-            //emit1(generatedCode, "mov", rp.sreg, value->n);
+            emit1(generatedCode, "mov", rp.sreg, std::format("qword [rip + {}]", cast::toString(var->name)->data));
         } else if (auto value_ = cast::toDouble(var->value)) {
             rp = rtracker.alloc(14);
-            uint64_t hex = *((uint64_t*) &double_->n);
-            //emit1(generatedCode, "movsd", rp.sreg, std::format("0x{:X}", hex));
+            emit1(generatedCode, "mov", rp.sreg, std::format("qword [rip + {}]", cast::toString(var->name)->data));
         }
     }
 }
@@ -133,8 +137,6 @@ void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, Re
         rtracker.free(reg2.reg);
         rp = reg1;
     }
-
-    rp = reg1;
 }
 
 
@@ -177,17 +179,6 @@ void CodeGen::emitBinop(const BinOpExpr& binop, RegisterPair& rp) {
         case TokenType::NOT:
             break;
     }
-
-
-
-
-
-
-    // unsigned long long l = *((unsigned long long*)&dToUse);
-
-    //reg = (std::holds_alternative<double>(lhs) || std::holds_alternative<double>(rhs)) ? "xmm0" : "rax";
-
-
 }
 
 void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
@@ -217,157 +208,29 @@ void CodeGen::emitSetq(const SetqExpr& setq) {
 }
 
 void CodeGen::emitDefvar(const DefvarExpr& defvar) {
-    sectionData.emplace();
+    const auto var = cast::toVar(defvar.pair);
+    if (cast::toNIL(var->value)) {
+        sectionBSS.emplace(cast::toString(var->name)->data);
+    } else {
+        if (auto int_ = cast::toInt(var->value)) {
+            sectionData.emplace(cast::toString(var->name)->data, std::to_string(int_->n));
+        } else if (auto double_ = cast::toDouble(var->value)) {
+            uint64_t hex = *((uint64_t*) &double_->n);
+            sectionData.emplace(cast::toString(var->name)->data, std::format("0x{:X}", hex));
+        }
+    }
 }
 
-//void VarEvaluator::visit(BinOpExpr& binop) {
-//    std::string lhs, rhs, code;
-//
-//    lhs = VarEvaluator::get(binop.lhs);
-//    rhs = VarEvaluator::get(binop.rhs);
-//
-//    //TODO: remove then
-//    auto isNumber = [&](std::string& s) {
-//        char* p;
-//        strtol(s.c_str(), &p, 10);
-//        return *p == 0;
-//    };
-//
-//    int loffset, roffset;
-//
-//    //TODO: do in semantic analyse
-//    bool isRHSNum = isNumber(rhs);
-//    bool isLHSGlobal = CodeGen::sectionData.contains(StringEval::get(binop.lhs));
-//    bool isRHSGlobal = CodeGen::sectionData.contains(StringEval::get(binop.rhs));
-//
-//    switch (binop.opToken.type) {
-//        case TokenType::PLUS: {
-//            if (!isRHSNum) {
-//                set(code += rhs);
-//
-//                if (isLHSGlobal) {
-//                    std::string name = StringEval::get(binop.lhs);
-//                    set(code += std::format("\tadd rax, qword [rip + {}]\n", name));
-//                } else {
-//                    if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                        loffset = itr->second;
-//                        set(code += std::format("\tadd rax, qword [rbp - {}]\n", loffset));
-//                    } else {
-//                        set(code += std::format("\tadd rax, {}\n", lhs));
-//                    }
-//                }
-//            } else {
-//                if (isLHSGlobal) {
-//                    std::string name = StringEval::get(binop.lhs);
-//                    set(code += std::format("\tmov rax, qword [rip + {}]\n", name));
-//                } else {
-//                    if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                        loffset = itr->second;
-//                        set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
-//                    } else {
-//                        set(code += std::format("\tmov rax, {}\n", lhs));
-//                    }
-//                }
-//
-//                if (isRHSGlobal) {
-//                    std::string name = StringEval::get(binop.rhs);
-//                    set(code += std::format("\tadd rax, qword [rip + {}]\n", name));
-//                } else {
-//                    if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
-//                        roffset = itr->second;
-//                        set(code += std::format("\tadd rax, qword [rbp - {}]\n", roffset));
-//                    } else {
-//                        set(code += std::format("\tadd rax, {}\n", rhs));
-//                    }
-//                }
-//
-//            }
-//
-//            break;
-//        }
-//        case TokenType::MINUS: {
-//            if (!isRHSNum) {
-//                set(code += rhs);
-//                if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                    loffset = itr->second;
-//                    set(code += std::format("\tsub rax, qword [rbp - {}]\n", loffset));
-//                } else {
-//                    set(code += std::format("\tsub rax, {}\n", lhs));
-//                }
-//            } else {
-//                if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                    loffset = itr->second;
-//                    set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
-//                } else {
-//                    set(code += std::format("\tmov rax, {}\n", lhs));
-//                }
-//
-//                if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
-//                    roffset = itr->second;
-//                    set(code += std::format("\tsub rax, qword [rbp - {}]\n", roffset));
-//                } else {
-//                    set(code += std::format("\tsub rax, {}\n", rhs));
-//                }
-//            }
-//            break;
-//        }
-//        case TokenType::DIV: {
-//            if (!isRHSNum) {
-//                set(code += rhs);
-//                if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                    loffset = itr->second;
-//                    set(code += std::format("\tidiv rax, qword [rbp - {}]\n", loffset));
-//                } else {
-//                    set(code += std::format("\tidiv rax, {}\n", lhs));
-//                }
-//            } else {
-//                if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                    loffset = itr->second;
-//                    set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
-//                } else {
-//                    set(code += std::format("\tmov rax, {}\n", lhs));
-//                }
-//
-//                if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
-//                    roffset = itr->second;
-//                    set(code += std::format("\tidiv rax, qword [rbp - {}]\n", roffset));
-//                } else {
-//                    set(code += std::format("\tidiv rax, {}\n", rhs));
-//                }
-//            }
-//            break;
-//        }
-//        case TokenType::MUL: {
-//            if (!isRHSNum) {
-//                set(code += rhs);
-//                if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                    loffset = itr->second;
-//                    set(code += std::format("\timul rax, qword [rbp - {}]\n", loffset));
-//                } else {
-//                    set(code += std::format("\timul rax, {}\n", lhs));
-//                }
-//            } else {
-//                if (auto itr = CodeGen::stackOffsets.find(lhs); itr != CodeGen::stackOffsets.end()) {
-//                    loffset = itr->second;
-//                    set(code += std::format("\tmov rax, qword [rbp - {}]\n", loffset));
-//                } else {
-//                    set(code += std::format("\tmov rax, {}\n", lhs));
-//                }
-//
-//                if (auto itr = CodeGen::stackOffsets.find(rhs); itr != CodeGen::stackOffsets.end()) {
-//                    roffset = itr->second;
-//                    set(code += std::format("\timul rax, qword [rbp - {}]\n", roffset));
-//                } else {
-//                    set(code += std::format("\timul rax, {}\n", rhs));
-//                }
-//            }
-//            break;
-//        }
-//    }
-//}
-//
+void CodeGen::emitDefconst(const DefconstExpr& defconst) {
+    const auto var = cast::toVar(defconst.pair);
 
-void CodeGen::emitDefconst(const DefconstExpr& defconst) {}
+    if (auto int_ = cast::toInt(var->value)) {
+        sectionData.emplace(cast::toString(var->name)->data, std::to_string(int_->n));
+    } else if (auto double_ = cast::toDouble(var->value)) {
+        uint64_t hex = *((uint64_t*) &double_->n);
+        sectionData.emplace(cast::toString(var->name)->data, std::format("0x{:X}", hex));
+    }
+}
 
 void CodeGen::emitDefun(const DefunExpr& defun) {}
 

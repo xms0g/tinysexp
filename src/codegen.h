@@ -43,7 +43,7 @@ private:
     static constexpr char* stringRepFromReg[22] = {
             "rax", "rbx", "rcx",
             "rdx", "rdi", "rsi",
-            "r8",  "r9",  "r10",
+            "r8", "r9", "r10",
             "r11", "r12", "r13",
             "r14", "r15",
             "xmm0", "xmm1", "xmm2",
@@ -89,12 +89,12 @@ private:
 
     void emitCond(const CondExpr& cond);
 
-
     RegisterTracker rtracker;
     int stackOffset{8};
     std::string generatedCode;
     std::unordered_map<std::string, int> stackOffsets;
     std::unordered_map<std::string, std::string> sectionData;
+    std::unordered_set<std::string> sectionBSS;
 };
 
 
