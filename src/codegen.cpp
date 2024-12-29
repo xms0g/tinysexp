@@ -89,7 +89,7 @@ void CodeGen::emitNumb(const ExprPtr& n, RegisterPair& rp) {
             emit1(generatedCode, "mov", rp.sreg, std::format("qword [rip + {}]", cast::toString(var->name)->data));
         } else if (auto value_ = cast::toDouble(var->value)) {
             rp = rtracker.alloc(14);
-            emit1(generatedCode, "mov", rp.sreg, std::format("qword [rip + {}]", cast::toString(var->name)->data));
+            emit1(generatedCode, "movsd", rp.sreg, std::format("qword [rip + {}]", cast::toString(var->name)->data));
         }
     }
 }
