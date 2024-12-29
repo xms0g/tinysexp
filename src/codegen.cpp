@@ -114,18 +114,24 @@ void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, Re
         emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
         emit1(generatedCode, op.sse, reg1.sreg, new_rp.sreg);
+        rtracker.free(new_rp.reg);
+        rp = reg1;
     } else if (reg1.rType == GP && reg2.rType == SSE) {
         RegisterPair new_rp = rtracker.alloc(14);
         emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg1.sreg);
         rtracker.free(reg1.reg);
         emit1(generatedCode, op.sse, new_rp.sreg, reg2.sreg);
         emit1(generatedCode, "mov", reg2.sreg, new_rp.sreg);
+        rtracker.free(new_rp.reg);
+        rp = reg2;
     } else if (reg1.rType == SSE && reg2.rType == SSE) {
         emit1(generatedCode, op.sse, reg1.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
+        rp = reg1;
     } else {
         emit1(generatedCode, op.gp, reg1.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
+        rp = reg1;
     }
 
     rp = reg1;
