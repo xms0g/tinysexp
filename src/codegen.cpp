@@ -1,7 +1,7 @@
 #include "codegen.h"
 #include <format>
 
-#define emit1(op, reg, n) generatedCode += std::format("\t{} {}, {}\n", op, reg, n)
+#define emit1(code, op, reg, n) code += std::format("\t{} {}, {}\n", op, reg, n)
 
 RegisterPair RegisterTracker::alloc(int index) {
     for (int i = index; i < EOR; ++i) {
@@ -18,9 +18,10 @@ void RegisterTracker::free(Register reg) {
 
 std::string CodeGen::emit(const ExprPtr& ast) {
     generatedCode =
+            "[bits 64]\n"
             "section .text\n"
-            "\tglobal _start\n"
-            "_start:\n"
+            "\tglobal _main\n"
+            "_main:\n"
             "\tpush rbp\n"
             "\tmov rbp, rsp\n";
 
@@ -71,19 +72,20 @@ void CodeGen::emitAST(const ExprPtr& ast) {
 void CodeGen::emitNumb(const ExprPtr& n, RegisterPair& rp) {
     if (auto int_ = cast::toInt(n)) {
         rp = rtracker.alloc();
-        emit1("mov", rp.sreg, int_->n);
+        emit1(generatedCode, "mov", rp.sreg, int_->n);
     } else if (auto double_ = cast::toDouble(n)) {
         rp = rtracker.alloc(14);
-        uint64_t l = *((uint64_t*) &double_->n);
-        emit1("movsd", rp.sreg, std::format("0x{:X}", l));
+        uint64_t hex = *((uint64_t*) &double_->n);
+        emit1(generatedCode, "movsd", rp.sreg, std::format("0x{:X}", hex));
     } else {
         const auto var = cast::toVar(n);
         if (auto value = cast::toInt(var->value)) {
             rp = rtracker.alloc();
-            emit1("mov", rp.sreg, value->n);
+            //emit1(generatedCode, "mov", rp.sreg, value->n);
         } else if (auto value_ = cast::toDouble(var->value)) {
             rp = rtracker.alloc(14);
-            emit1("movsd", rp.sreg, value_->n);
+            uint64_t hex = *((uint64_t*) &double_->n);
+            //emit1(generatedCode, "movsd", rp.sreg, std::format("0x{:X}", hex));
         }
     }
 }
@@ -100,29 +102,32 @@ void CodeGen::emitRHS(const ExprPtr& rhs, RegisterPair& rp) {
     rp = reg;
 }
 
-void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, const char* op1, const char* op2, RegisterPair& rp) {
+void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, RegisterPair& rp) {
     RegisterPair reg1{};
     RegisterPair reg2{};
-    const char* op = op1;
 
     emitNumb(lhs, reg1);
     emitRHS(rhs, reg2);
 
     if (reg1.rType == SSE && reg2.rType == GP) {
-        op = op2;
         RegisterPair new_rp = rtracker.alloc(14);
-        emit1("cvtsi2sd", new_rp.sreg, reg2.sreg);
-        reg2 = new_rp;
+        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg2.sreg);
+        rtracker.free(reg2.reg);
+        emit1(generatedCode, op.sse, reg1.sreg, new_rp.sreg);
     } else if (reg1.rType == GP && reg2.rType == SSE) {
-        op = op2;
         RegisterPair new_rp = rtracker.alloc(14);
-        emit1("cvtsi2sd", new_rp.sreg, reg1.sreg);
-        reg1 = new_rp;
+        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg1.sreg);
+        rtracker.free(reg1.reg);
+        emit1(generatedCode, op.sse, new_rp.sreg, reg2.sreg);
+        emit1(generatedCode, "mov", reg2.sreg, new_rp.sreg);
     } else if (reg1.rType == SSE && reg2.rType == SSE) {
-        op = op2;
+        emit1(generatedCode, op.sse, reg1.sreg, reg2.sreg);
+        rtracker.free(reg2.reg);
+    } else {
+        emit1(generatedCode, op.gp, reg1.sreg, reg2.sreg);
+        rtracker.free(reg2.reg);
     }
-    emit1(op, reg1.sreg, reg2.sreg);
-    rtracker.free(reg2.reg);
+
     rp = reg1;
 }
 
@@ -130,23 +135,23 @@ void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, const char* op1, 
 void CodeGen::emitBinop(const BinOpExpr& binop, RegisterPair& rp) {
     switch (binop.opToken.type) {
         case TokenType::PLUS: {
-            emitExpr(binop.lhs, binop.rhs, "add", "addsd", rp);
+            emitExpr(binop.lhs, binop.rhs, {"add", "addsd"}, rp);
             break;
         }
         case TokenType::MINUS: {
-            emitExpr(binop.lhs, binop.rhs, "sub", "subsd", rp);
+            emitExpr(binop.lhs, binop.rhs, {"sub", "subsd"}, rp);
             break;
         }
         case TokenType::DIV: {
-            emitExpr(binop.lhs, binop.rhs, "idiv", "divsd", rp);
+            emitExpr(binop.lhs, binop.rhs, {"idiv", "divsd"}, rp);
             break;
         }
         case TokenType::MUL: {
-            emitExpr(binop.lhs, binop.rhs, "imul", "mulsd", rp);
+            emitExpr(binop.lhs, binop.rhs, {"imul", "mulsd"}, rp);
             break;
         }
         case TokenType::EQUAL:
-            emitExpr(binop.lhs, binop.rhs, "cmp", nullptr, rp);
+            emitExpr(binop.lhs, binop.rhs, {"cmp", nullptr}, rp);
             generatedCode += "jne .L{}";
             break;
         case TokenType::NEQUAL:

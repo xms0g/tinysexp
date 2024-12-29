@@ -27,6 +27,11 @@ struct RegisterPair {
     const char* sreg;
 };
 
+struct OpcodePair {
+    const char* gp;
+    const char* sse;
+};
+
 class RegisterTracker {
 public:
     RegisterPair alloc(int index = 0);
@@ -58,7 +63,7 @@ private:
 
     void emitRHS(const ExprPtr& rhs, RegisterPair& rp);
 
-    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs,const char* op1, const char* op2, RegisterPair& rp);
+    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, RegisterPair& rp);
 
     void emitBinop(const BinOpExpr& binop, RegisterPair& rp);
 
