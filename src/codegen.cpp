@@ -27,7 +27,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
     auto next = ast;
     while (next != nullptr) {
-        emitAST(ast);
+        emitAST(next);
         next = next->child;
     }
     generatedCode += "\tpop rbp\n"
