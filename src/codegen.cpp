@@ -221,7 +221,7 @@ void CodeGen::emitLet(const LetExpr& let) {
             emit1(generatedCode, "mov",  std::format("qword [rbp - {}]", stackOffset), int_->n);
         } else if (auto double_ = cast::toDouble(var_->value)) {
             uint64_t hex = *((uint64_t*) &double_->n);
-            emit1(generatedCode, "mov",  std::format("qword [rbp - {}]", stackOffset), hex);
+            emit1(generatedCode, "movsd",  std::format("qword [rbp - {}]", stackOffset), hex);
         }
 
         stackOffsets.emplace(varName, stackOffset);
