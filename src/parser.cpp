@@ -149,28 +149,37 @@ ExprPtr Parser::parseLet() {
     advance();
 
     consume(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "LET"));
-    while (mCurrentToken.type == TokenType::VAR) {
-        name = parseAtom();
-        value = std::make_shared<NILExpr>();
+    while (true) {
+        // Check out (let (x))
+        while (mCurrentToken.type == TokenType::VAR) {
+            name = parseAtom();
+            value = std::make_shared<NILExpr>();
 
-        bindings.emplace_back(std::make_shared<VarExpr>(name, value));
-    }
-
-    while (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-        name = parseAtom();
-
-        if (mCurrentToken.type == TokenType::LPAREN) {
-            value = parseExpr();
-        } else {
-            value = parseAtom();
+            bindings.emplace_back(std::make_shared<VarExpr>(name, value));
         }
 
-        bindings.emplace_back(std::make_shared<VarExpr>(name, value));
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+        if (mCurrentToken.type == TokenType::RPAREN)
+            break;
+
+        // Check out (let ((x 11)) )
+        while (mCurrentToken.type == TokenType::LPAREN) {
+            consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+            name = parseAtom();
+
+            if (mCurrentToken.type == TokenType::LPAREN) {
+                value = parseExpr();
+            } else {
+                value = parseAtom();
+            }
+
+            bindings.emplace_back(std::make_shared<VarExpr>(name, value));
+            consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+        }
+
+        if (mCurrentToken.type == TokenType::RPAREN)
+            break;
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-
 
     while (mCurrentToken.type == TokenType::LPAREN) {
         body.emplace_back(parseExpr());
