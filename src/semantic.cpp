@@ -123,7 +123,6 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
             if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
-            var = sym.value;
         }
     }
 }
@@ -177,6 +176,8 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 }
 
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
+    checkConstantVar(setq.pair);
+
     const auto var_ = cast::toVar(setq.pair);
     const auto name = cast::toString(var_->name)->data;
 
@@ -186,8 +187,6 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     if (!sym.value) {
         throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
-
-    checkConstantVar(setq.pair);
 
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
     // If it's expr, resolve it.
