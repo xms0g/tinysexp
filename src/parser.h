@@ -5,6 +5,12 @@
 #include <memory>
 #include "lexer.h"
 
+enum class SymbolType {
+    LOCAL,
+    PARAM,
+    GLOBAL
+};
+
 struct IExpr {
     std::shared_ptr<IExpr> child;
 
@@ -145,10 +151,12 @@ struct CondExpr : IExpr {
 struct VarExpr : IExpr {
     ExprPtr name;
     ExprPtr value;
+    SymbolType sType;
 
-    VarExpr(ExprPtr& name_, ExprPtr& value_) :
+    VarExpr(ExprPtr& name_, ExprPtr& value_, SymbolType type = SymbolType::GLOBAL) :
             name(std::move(name_)),
-            value(std::move(value_)) {}
+            value(std::move(value_)),
+            sType(type) {}
 };
 
 class Parser {
