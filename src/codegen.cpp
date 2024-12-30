@@ -35,12 +35,12 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
     generatedCode += !sectionData.empty() ? "section .data\n" : "";
     for (auto& var: sectionData) {
-        generatedCode += std::format("{}: dq {}", var.first, var.second);
+        generatedCode += std::format("{}: dq {}\n", var.first, var.second);
     }
 
     generatedCode += !sectionBSS.empty() ? "section .bss\n" : "";
     for (auto& var: sectionBSS) {
-        generatedCode += std::format("{}: resq {}", var, 1);
+        generatedCode += std::format("{}: resq {}\n", var, 1);
     }
     return generatedCode;
 }
@@ -84,12 +84,35 @@ void CodeGen::emitNumb(const ExprPtr& n, RegisterPair& rp) {
         emit1(generatedCode, "movsd", rp.sreg, std::format("0x{:X}", hex));
     } else {
         const auto var = cast::toVar(n);
+        const std::string varName =  cast::toString(var->name)->data;
+
         if (auto value = cast::toInt(var->value)) {
             rp = rtracker.alloc();
-            emit1(generatedCode, "mov", rp.sreg, std::format("qword [rip + {}]", cast::toString(var->name)->data));
+
+            switch (var->sType) {
+                case SymbolType::LOCAL:
+                    emit1(generatedCode, "mov", rp.sreg, std::format("qword [rbp - {}]", stackOffsets.at(varName)));
+                    break;
+                case SymbolType::PARAM:
+                    break;
+                case SymbolType::GLOBAL:
+                    emit1(generatedCode, "mov", rp.sreg, std::format("qword [rel {}]", varName));
+                    break;
+            }
+
         } else if (auto value_ = cast::toDouble(var->value)) {
             rp = rtracker.alloc(14);
-            emit1(generatedCode, "movsd", rp.sreg, std::format("qword [rip + {}]", cast::toString(var->name)->data));
+
+            switch (var->sType) {
+                case SymbolType::LOCAL:
+                    emit1(generatedCode, "movsd", rp.sreg, std::format("qword [rbp - {}]", stackOffsets.at(varName)));
+                    break;
+                case SymbolType::PARAM:
+                    break;
+                case SymbolType::GLOBAL:
+                    emit1(generatedCode, "movsd", rp.sreg, std::format("qword [rel {}]", varName));
+                    break;
+            }
         }
     }
 }
@@ -190,23 +213,58 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 void CodeGen::emitLoop(const LoopExpr& loop) {}
 
 void CodeGen::emitLet(const LetExpr& let) {
-//    for (auto& var: let.bindings) {
-//        std::string vs = VarEvaluator::get(var);
-//        set(code += std::format("\tmov qword [rbp - {}], {}\n",
-//                                CodeGen::stackOffset, vs));
-//
-//        CodeGen::stackOffsets.emplace(vs, CodeGen::stackOffset);
-//        CodeGen::stackOffset += 8;
-//    }
-//
-//    for (auto& sexpr: let.body) {
-//        set(code += VarEvaluator::get(sexpr));
-//    }
+    for (auto& var: let.bindings) {
+        const auto var_ = cast::toVar(var);
+        const std::string varName = cast::toString(var_->name)->data;
+
+        if (auto int_ = cast::toInt(var_->value)) {
+            emit1(generatedCode, "mov",  std::format("qword [rbp - {}]", stackOffset), int_->n);
+        } else if (auto double_ = cast::toDouble(var_->value)) {
+            uint64_t hex = *((uint64_t*) &double_->n);
+            emit1(generatedCode, "mov",  std::format("qword [rbp - {}]", stackOffset), hex);
+        }
+
+        stackOffsets.emplace(varName, stackOffset);
+        stackOffset += 8;
+    }
+
+    for (auto& sexpr: let.body) {
+        emitAST(sexpr);
+    }
 
 }
 
 void CodeGen::emitSetq(const SetqExpr& setq) {
+    const auto var = cast::toVar(setq.pair);
+    const std::string varName = cast::toString(var->name)->data;
 
+    if (auto int_ = cast::toInt(var->value)) {
+        switch (var->sType) {
+            case SymbolType::LOCAL:
+                emit1(generatedCode, "mov", std::format("qword [rbp - {}]", stackOffsets.at(varName)), int_->n);
+                break;
+            case SymbolType::PARAM:
+                break;
+            case SymbolType::GLOBAL:
+                emit1(generatedCode, "mov", std::format("qword [rel {}]", varName), int_->n);
+                break;
+        }
+
+    } else if (auto double_ = cast::toDouble(var->value)) {
+        uint64_t hex = *((uint64_t*) &double_->n);
+
+        switch (var->sType) {
+            case SymbolType::LOCAL:
+                emit1(generatedCode, "movsd", std::format("qword [rbp - {}]", stackOffsets.at(varName)), hex);
+                break;
+            case SymbolType::PARAM:
+                break;
+            case SymbolType::GLOBAL:
+                emit1(generatedCode, "movsd", std::format("qword [rel {}]", varName), hex);
+                break;
+        }
+
+    }
 }
 
 void CodeGen::emitDefvar(const DefvarExpr& defvar) {
