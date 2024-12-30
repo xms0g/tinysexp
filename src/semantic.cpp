@@ -203,7 +203,8 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     if (!sym.value) {
         throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
     }
-
+    // Resolve the var scope.
+    var->sType = sym.sType;
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
     // If it's int or double, update sym->value and bind again.
     // If it's expr, resolve it.
