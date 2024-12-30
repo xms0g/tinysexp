@@ -17,7 +17,13 @@ size_t ScopeTracker::level() {
 void ScopeTracker::bind(const std::string& name, const Symbol& symbol) {
     auto scope = mSymbolTable.top();
     mSymbolTable.pop();
-    scope.emplace(name, symbol);
+
+    if (scope.contains(name)) {
+        scope[name] = symbol;
+    } else {
+        scope.emplace(name, symbol);
+    }
+
     mSymbolTable.push(scope);
 }
 
@@ -117,11 +123,23 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
         if (auto binop = cast::toBinop(var)) {
             binopResolve(*binop);
         } else {
-            const auto name = cast::toString(var)->data;
+            const std::string name = cast::toString(var)->data;
             Symbol sym = stracker.lookup(name);
 
             if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            }
+
+            auto var_ = cast::toVar(sym.value);
+            // Check out if the sym value is int or double.Update var.
+            if (cast::toInt(var_->value)) {
+                ExprPtr name_ = cast::toString(var);
+                ExprPtr value = std::make_shared<IntExpr>(0);
+                var = std::make_shared<VarExpr>(name_, value);
+            } else if (cast::toDouble(var_->value)) {
+                ExprPtr name_ = cast::toString(var);
+                ExprPtr value = std::make_shared<DoubleExpr>(0.0);
+                var = std::make_shared<VarExpr>(name_, value);
             }
         }
     }
@@ -178,8 +196,8 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     checkConstantVar(setq.pair);
 
-    const auto var_ = cast::toVar(setq.pair);
-    const auto name = cast::toString(var_->name)->data;
+    const auto var = cast::toVar(setq.pair);
+    const std::string name = cast::toString(var->name)->data;
 
     // Check out the var.If it's not defined, raise error.
     Symbol sym = stracker.lookup(name);
@@ -189,24 +207,30 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     }
 
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
+    // If it's int or double, update sym->value and bind again.
     // If it's expr, resolve it.
-    if (const auto value = cast::toString(var_->value)) {
+    if (const auto value = cast::toString(var->value)) {
         sym = stracker.lookup(value->data);
 
         if (!sym.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
         }
+    } else if (cast::toInt(var->value)) {
+        ExprPtr value_ = std::make_shared<IntExpr>(0);
+        sym.value = std::make_shared<VarExpr>(var->name, value_);
+        stracker.bind(name, sym);
+    } else if (cast::toDouble(var->value)) {
+        ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
+        sym.value = std::make_shared<VarExpr>(var->name, value_);
+        stracker.bind(name, sym);
     } else {
-        bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
-        if (isExpr) {
-            exprResolve(var_->value);
-        }
+        exprResolve(var->value);
     }
 }
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
     const auto var = cast::toVar(defvar.pair);
-    const auto varName = cast::toString(var->name)->data;
+    const std::string varName = cast::toString(var->name)->data;
 
     if (stracker.level() > 1) {
         throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
@@ -217,7 +241,7 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
 
 void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
     const auto var = cast::toVar(defconst.pair);
-    const auto varName = cast::toString(var->name)->data;
+    const std::string varName = cast::toString(var->name)->data;
 
     if (stracker.level() > 1) {
         throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
@@ -227,7 +251,7 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
 }
 
 void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
-    const auto funcName = cast::toString(defun.name)->data;
+    const std::string funcName = cast::toString(defun.name)->data;
 
     if (stracker.level() > 1) {
         throw SemanticError(mFileName, ERROR(FUNC_DEF_ERROR, funcName), 0);
@@ -250,7 +274,7 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
 }
 
 void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
-    const auto funcName = cast::toString(funcCall.name)->data;
+    const std::string funcName = cast::toString(funcCall.name)->data;
 
     Symbol sym = stracker.lookup(funcName);
 
@@ -306,7 +330,7 @@ void SemanticAnalyzer::condResolve(const CondExpr& cond) {
 
 void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     const auto var_ = cast::toVar(var);
-    const auto varName = cast::toString(var_->name)->data;
+    const std::string varName = cast::toString(var_->name)->data;
 
     Symbol sym = stracker.lookup(varName);
 
