@@ -123,10 +123,7 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
             if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
-
-            auto var_ = cast::toVar(sym.value);
-            var_->sType = sym.sType;
-            var = std::move(var_);
+            var = sym.value;
         }
     }
 }
@@ -180,10 +177,8 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 }
 
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
-    checkConstantVar(setq.pair);
-
-    const auto var = cast::toVar(setq.pair);
-    const auto name = cast::toString(var->name)->data;
+    const auto var_ = cast::toVar(setq.pair);
+    const auto name = cast::toString(var_->name)->data;
 
     // Check out the var.If it's not defined, raise error.
     Symbol sym = stracker.lookup(name);
@@ -192,29 +187,20 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
         throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
 
+    checkConstantVar(setq.pair);
 
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
     // If it's expr, resolve it.
-    if (const auto value = cast::toString(var->value)) {
+    if (const auto value = cast::toString(var_->value)) {
         sym = stracker.lookup(value->data);
 
         if (!sym.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
         }
     } else {
-        bool isExpr = (!cast::toInt(var->value) && !cast::toDouble(var->value));
+        bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
         if (isExpr) {
-            exprResolve(var->value);
-        } else if(auto ivalue = cast::toInt(var->value)) {
-            auto var_ = cast::toVar(sym.value);
-            var_->value = ivalue;
-            var_->sType = sym.sType;
-            stracker.bind(name, sym);
-        } else if (auto dvalue = cast::toDouble(var->value)) {
-            auto var_ = cast::toVar(sym.value);
-            var_->value = dvalue;
-            var_->sType = sym.sType;
-            stracker.bind(name, sym);
+            exprResolve(var_->value);
         }
     }
 }
