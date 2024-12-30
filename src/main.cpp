@@ -65,17 +65,6 @@ int main(int argc, char** argv) {
         }
 
         compile(fn, program);
-
-    } else {
-        while (true) {
-            std::cout << RESET_COLOR << "lbf> ";
-            std::getline(std::cin >> std::ws, program);
-
-            if (program == "q")
-                break;
-
-            compile("<stdin>", program);
-        }
     }
 
     return 0;
