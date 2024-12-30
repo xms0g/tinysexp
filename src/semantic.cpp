@@ -159,7 +159,7 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
     stracker.enter();
     for (auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
-        const auto varName = cast::toString(var_->name)->data;
+        const std::string varName = cast::toString(var_->name)->data;
 
         // Check out the var in the current scope, if it's already defined, raise error
         Symbol sym = stracker.lookupCurrent(varName);
@@ -195,13 +195,13 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     checkConstantVar(setq.pair);
 
     const auto var = cast::toVar(setq.pair);
-    const std::string name = cast::toString(var->name)->data;
+    const std::string varName = cast::toString(var->name)->data;
 
     // Check out the var.If it's not defined, raise error.
-    Symbol sym = stracker.lookup(name);
+    Symbol sym = stracker.lookup(varName);
 
     if (!sym.value) {
-        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
     }
 
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
@@ -217,12 +217,12 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
         ExprPtr name_ = var->name;
         ExprPtr value_ = std::make_shared<IntExpr>(0);
         sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
-        stracker.bind(name, sym);
+        stracker.bind(varName, sym);
     } else if (cast::toDouble(var->value)) {
         ExprPtr name_ = var->name;
         ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
         sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
-        stracker.bind(name, sym);
+        stracker.bind(varName, sym);
     } else {
         exprResolve(var->value);
     }
