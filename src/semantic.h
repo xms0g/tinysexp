@@ -5,12 +5,6 @@
 #include <unordered_map>
 #include "parser.h"
 
-enum class SymbolType {
-    LOCAL,
-    PARAM,
-    GLOBAL
-};
-
 struct Symbol {
     std::string name;
     ExprPtr value;
