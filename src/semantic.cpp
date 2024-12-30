@@ -133,13 +133,11 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
             auto var_ = cast::toVar(sym.value);
             // Check out if the sym value is int or double.Update var.
             if (cast::toInt(var_->value)) {
-                ExprPtr name_ = cast::toString(var);
                 ExprPtr value = std::make_shared<IntExpr>(0);
-                var = std::make_shared<VarExpr>(name_, value);
+                var = std::make_shared<VarExpr>(var, value, sym.sType);
             } else if (cast::toDouble(var_->value)) {
-                ExprPtr name_ = cast::toString(var);
                 ExprPtr value = std::make_shared<DoubleExpr>(0.0);
-                var = std::make_shared<VarExpr>(name_, value);
+                var = std::make_shared<VarExpr>(var, value, sym.sType);
             }
         }
     }
@@ -216,12 +214,14 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
         }
     } else if (cast::toInt(var->value)) {
+        ExprPtr name_ = var->name;
         ExprPtr value_ = std::make_shared<IntExpr>(0);
-        sym.value = std::make_shared<VarExpr>(var->name, value_);
+        sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
         stracker.bind(name, sym);
     } else if (cast::toDouble(var->value)) {
+        ExprPtr name_ = var->name;
         ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
-        sym.value = std::make_shared<VarExpr>(var->name, value_);
+        sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
         stracker.bind(name, sym);
     } else {
         exprResolve(var->value);
