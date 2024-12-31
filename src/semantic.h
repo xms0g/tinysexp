@@ -70,6 +70,8 @@ private:
 
     void checkConstantVar(const ExprPtr& var);
 
+    ExprPtr recursiveResolve(ExprPtr& name, ExprPtr& value, SymbolType type);
+
     ScopeTracker stracker;
     /* File Name */
     const char* mFileName;

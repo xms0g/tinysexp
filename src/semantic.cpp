@@ -130,15 +130,7 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
 
-            auto var_ = cast::toVar(sym.value);
-            // Check out if the sym value is int or double.Update var.
-            if (cast::toInt(var_->value)) {
-                ExprPtr value = std::make_shared<IntExpr>(0);
-                var = std::make_shared<VarExpr>(var, value, sym.sType);
-            } else if (cast::toDouble(var_->value)) {
-                ExprPtr value = std::make_shared<DoubleExpr>(0.0);
-                var = std::make_shared<VarExpr>(var, value, sym.sType);
-            }
+            var = recursiveResolve(var, sym.value, sym.sType);
         }
     }
 }
@@ -175,6 +167,8 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
             if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
             }
+            // Update
+            var_->value = sym.value;
         } else {
             bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
             if (isExpr) {
@@ -337,5 +331,19 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
 
     if (sym.isConstant) {
         throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
+    }
+}
+
+ExprPtr SemanticAnalyzer::recursiveResolve(ExprPtr& name, ExprPtr& value, SymbolType type) {
+    auto var_ = cast::toVar(value);
+    // Check out if the sym value is int,double or var. Update var.
+    if (cast::toInt(var_->value)) {
+        ExprPtr value_ = std::make_shared<IntExpr>(0);
+        return std::make_shared<VarExpr>(name, value_, type);
+    } else if (cast::toDouble(var_->value)) {
+        ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
+        return std::make_shared<VarExpr>(name, value_, type);
+    } else {
+        return recursiveResolve(name, var_->value, type);
     }
 }
