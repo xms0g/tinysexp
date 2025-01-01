@@ -155,7 +155,7 @@ ExprPtr Parser::parseLet() {
             name = parseAtom();
             value = std::make_shared<NILExpr>();
 
-            bindings.emplace_back(std::make_shared<VarExpr>(name, value));
+            bindings.emplace_back(std::make_shared<VarExpr>(name, value, SymbolType::LOCAL));
         }
 
         if (mCurrentToken.type == TokenType::RPAREN)
@@ -172,7 +172,7 @@ ExprPtr Parser::parseLet() {
                 value = parseAtom();
             }
 
-            bindings.emplace_back(std::make_shared<VarExpr>(name, value));
+            bindings.emplace_back(std::make_shared<VarExpr>(name, value, SymbolType::LOCAL));
             consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
         }
 
