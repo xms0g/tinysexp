@@ -111,13 +111,7 @@ void SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 }
 
 void SemanticAnalyzer::varResolve(ExprPtr& var) {
-    if (cast::toT(var)) {
-        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
-    }
-
-    if (cast::toNIL(var)) {
-        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
-    }
+    checkNotNumber(var);
 
     if (!cast::toInt(var) && !cast::toDouble(var)) {
         if (auto binop = cast::toBinop(var)) {
@@ -130,7 +124,22 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
 
-            var = recursiveResolve(var, sym.value, sym.sType);
+            auto var_ = cast::toVar(sym.value);
+            do {
+                checkNotNumber(var_);
+                // Check out if the sym value is int,double or var. Update var.
+                if (cast::toInt(var_->value)) {
+                    ExprPtr value_ = std::make_shared<IntExpr>(0);
+                    var = std::make_shared<VarExpr>(var, value_, sym.sType);
+                    break;
+                } else if (cast::toDouble(var_->value)) {
+                    ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
+                    var = std::make_shared<VarExpr>(var, value_, sym.sType);
+                    break;
+                } else {
+                    var_ = cast::toVar(var_->value);
+                }
+            } while (cast::toVar(var_));
         }
     }
 }
@@ -162,13 +171,13 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
         // Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
         // If it's expr, resolve it.
         if (const auto value = cast::toString(var_->value)) {
-            sym = stracker.lookup(value->data);
+            Symbol sym_ = stracker.lookup(value->data);
 
-            if (!sym.value) {
+            if (!sym_.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
             }
             // Update
-            var_->value = sym.value;
+            var_->value = sym_.value;
         } else {
             bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
             if (isExpr) {
@@ -203,11 +212,14 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     // If it's int or double, update sym->value and bind again.
     // If it's expr, resolve it.
     if (const auto value = cast::toString(var->value)) {
-        sym = stracker.lookup(value->data);
+        Symbol sym_ = stracker.lookup(value->data);
 
-        if (!sym.value) {
+        if (!sym_.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
         }
+        var->value = sym_.value;
+
+        stracker.bind(varName, {varName, var, var->sType});
     } else if (cast::toInt(var->value)) {
         ExprPtr name_ = var->name;
         ExprPtr value_ = std::make_shared<IntExpr>(0);
