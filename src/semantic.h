@@ -70,7 +70,7 @@ private:
 
     void checkConstantVar(const ExprPtr& var);
 
-    ExprPtr recursiveResolve(ExprPtr& name, ExprPtr& value, SymbolType type);
+    void checkNotNumber(const ExprPtr& var);
 
     ScopeTracker stracker;
     /* File Name */

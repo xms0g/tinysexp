@@ -334,16 +334,12 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     }
 }
 
-ExprPtr SemanticAnalyzer::recursiveResolve(ExprPtr& name, ExprPtr& value, SymbolType type) {
-    auto var_ = cast::toVar(value);
-    // Check out if the sym value is int,double or var. Update var.
-    if (cast::toInt(var_->value)) {
-        ExprPtr value_ = std::make_shared<IntExpr>(0);
-        return std::make_shared<VarExpr>(name, value_, type);
-    } else if (cast::toDouble(var_->value)) {
-        ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
-        return std::make_shared<VarExpr>(name, value_, type);
-    } else {
-        return recursiveResolve(name, var_->value, type);
+void SemanticAnalyzer::checkNotNumber(const ExprPtr& var) {
+    if (cast::toT(var)) {
+        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
+    }
+
+    if (cast::toNIL(var)) {
+        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
     }
 }
