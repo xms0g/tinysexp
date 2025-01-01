@@ -60,16 +60,12 @@ private:
 
 class CodeGen {
 public:
+    CodeGen() : currentStackOffset(8) {}
+
     std::string emit(const ExprPtr& ast);
 
 private:
     void emitAST(const ExprPtr& ast);
-
-    void emitNumb(const ExprPtr& n, RegisterPair& rp);
-
-    void emitRHS(const ExprPtr& rhs, RegisterPair& rp);
-
-    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, RegisterPair& rp);
 
     void emitBinop(const BinOpExpr& binop, RegisterPair& rp);
 
@@ -95,10 +91,21 @@ private:
 
     void emitCond(const CondExpr& cond);
 
-    RegisterTracker rtracker;
-    int stackOffset{8};
+    void emitNumb(const ExprPtr& n, RegisterPair& rp);
+
+    void emitRHS(const ExprPtr& rhs, RegisterPair& rp);
+
+    void emitSection(const ExprPtr& value);
+
+    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, RegisterPair& rp);
+
     std::string generatedCode;
+    // Register
+    RegisterTracker rtracker;
+    // Stack
+    int currentStackOffset;
     std::unordered_map<std::string, int> stackOffsets;
+    // Sections
     std::unordered_map<std::string, std::string> sectionData;
     std::unordered_set<std::string> sectionBSS;
 };
