@@ -128,12 +128,8 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
             do {
                 checkNotNumber(var_);
                 // Check out if the sym value is int,double or var. Update var.
-                if (cast::toInt(var_->value)) {
-                    ExprPtr value_ = std::make_shared<IntExpr>(0);
-                    var = std::make_shared<VarExpr>(var, value_, sym.sType);
-                    break;
-                } else if (cast::toDouble(var_->value)) {
-                    ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
+                if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
+                    ExprPtr value_ = var_->value;
                     var = std::make_shared<VarExpr>(var, value_, sym.sType);
                     break;
                 } else {
@@ -220,14 +216,9 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
         var->value = sym_.value;
 
         stracker.bind(varName, {varName, var, var->sType});
-    } else if (cast::toInt(var->value)) {
+    } else if (cast::toInt(var->value) || cast::toDouble(var->value)) {
         ExprPtr name_ = var->name;
-        ExprPtr value_ = std::make_shared<IntExpr>(0);
-        sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
-        stracker.bind(varName, sym);
-    } else if (cast::toDouble(var->value)) {
-        ExprPtr name_ = var->name;
-        ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
+        ExprPtr value_ = var->value;
         sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
         stracker.bind(varName, sym);
     } else {
