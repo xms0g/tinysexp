@@ -145,7 +145,8 @@ void CodeGen::emitLet(const LetExpr& let) {
 
                     switch (value->sType) {
                         case SymbolType::LOCAL:
-                            emit1(generatedCode, "mov", rp.sreg, std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
+                            emit1(generatedCode, "mov", rp.sreg,
+                                  std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
                             break;
                         case SymbolType::PARAM:
                             break;
@@ -161,7 +162,8 @@ void CodeGen::emitLet(const LetExpr& let) {
 
                     switch (value->sType) {
                         case SymbolType::LOCAL:
-                            emit1(generatedCode, "movsd", rp.sreg, std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
+                            emit1(generatedCode, "movsd", rp.sreg,
+                                  std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
                             break;
                         case SymbolType::PARAM:
                             break;
@@ -211,12 +213,13 @@ void CodeGen::emitSetq(const SetqExpr& setq) {
 
         switch (var->sType) {
             case SymbolType::LOCAL:
-                emit1(generatedCode, "movsd", std::format("qword [rbp - {}]", stackOffsets.at(varName)), hex);
+                emit1(generatedCode, "movsd", std::format("qword [rbp - {}]", stackOffsets.at(varName)),
+                      std::format("0x{:X}", hex));
                 break;
             case SymbolType::PARAM:
                 break;
             case SymbolType::GLOBAL:
-                emit1(generatedCode, "movsd", std::format("qword [rel {}]", varName), hex);
+                emit1(generatedCode, "movsd", std::format("qword [rel {}]", varName), std::format("0x{:X}", hex));
                 break;
         }
 
@@ -232,7 +235,8 @@ void CodeGen::emitSetq(const SetqExpr& setq) {
 
                 switch (value->sType) {
                     case SymbolType::LOCAL:
-                        emit1(generatedCode, "mov", rp.sreg, std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
+                        emit1(generatedCode, "mov", rp.sreg,
+                              std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
                         break;
                     case SymbolType::PARAM:
                         break;
@@ -257,7 +261,8 @@ void CodeGen::emitSetq(const SetqExpr& setq) {
 
                 switch (value->sType) {
                     case SymbolType::LOCAL:
-                        emit1(generatedCode, "movsd", rp.sreg, std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
+                        emit1(generatedCode, "movsd", rp.sreg,
+                              std::format("qword [rbp - {}]", stackOffsets.at(valueName)));
                         break;
                     case SymbolType::PARAM:
                         break;
@@ -268,7 +273,8 @@ void CodeGen::emitSetq(const SetqExpr& setq) {
 
                 switch (var->sType) {
                     case SymbolType::LOCAL:
-                        emit1(generatedCode, "movsd", std::format("qword [rbp - {}]", stackOffsets.at(varName)), rp.sreg);
+                        emit1(generatedCode, "movsd", std::format("qword [rbp - {}]", stackOffsets.at(varName)),
+                              rp.sreg);
                         break;
                     case SymbolType::PARAM:
                         break;
@@ -283,7 +289,6 @@ void CodeGen::emitSetq(const SetqExpr& setq) {
         } while (cast::toVar(value));
 
         rtracker.free(rp.reg);
-
     }
 }
 
@@ -375,7 +380,8 @@ void CodeGen::emitSection(const ExprPtr& var) {
     }
 }
 
-void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op, RegisterPair& rp) {
+void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs,
+                       std::pair<const char*, const char*> op, RegisterPair& rp) {
     RegisterPair reg1{};
     RegisterPair reg2{};
 
