@@ -7,7 +7,7 @@ RegisterPair RegisterTracker::alloc(int index) {
     for (int i = index; i < EOR; ++i) {
         if (!registersInUse.contains((Register) i)) {
             registersInUse.emplace((Register) i);
-            return {(Register) i, i < 14 ? GP : SSE, stringRepFromReg[i]};
+            return {(Register) i, stringRepFromReg[i], i < 14 ? GP : SSE};
         }
     }
 }
@@ -375,7 +375,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
     }
 }
 
-void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, RegisterPair& rp) {
+void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op, RegisterPair& rp) {
     RegisterPair reg1{};
     RegisterPair reg2{};
 
@@ -387,7 +387,7 @@ void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, Re
         emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
 
-        emit1(generatedCode, op.sse, reg1.sreg, new_rp.sreg);
+        emit1(generatedCode, op.second, reg1.sreg, new_rp.sreg);
         rtracker.free(new_rp.reg);
         rp = reg1;
     } else if (reg1.rType == GP && reg2.rType == SSE) {
@@ -395,16 +395,16 @@ void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, Re
         emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg1.sreg);
         rtracker.free(reg1.reg);
 
-        emit1(generatedCode, op.sse, new_rp.sreg, reg2.sreg);
+        emit1(generatedCode, op.second, new_rp.sreg, reg2.sreg);
         emit1(generatedCode, "movsd", reg2.sreg, new_rp.sreg);
         rtracker.free(new_rp.reg);
         rp = reg2;
     } else if (reg1.rType == SSE && reg2.rType == SSE) {
-        emit1(generatedCode, op.sse, reg1.sreg, reg2.sreg);
+        emit1(generatedCode, op.second, reg1.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
         rp = reg1;
     } else {
-        emit1(generatedCode, op.gp, reg1.sreg, reg2.sreg);
+        emit1(generatedCode, op.first, reg1.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
         rp = reg1;
     }

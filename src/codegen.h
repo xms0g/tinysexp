@@ -26,13 +26,8 @@ enum RegisterType {
 
 struct RegisterPair {
     Register reg;
-    RegisterType rType;
     const char* sreg;
-};
-
-struct OpcodePair {
-    const char* gp;
-    const char* sse;
+    RegisterType rType;
 };
 
 class RegisterTracker {
@@ -97,7 +92,7 @@ private:
 
     void emitSection(const ExprPtr& value);
 
-    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair op, RegisterPair& rp);
+    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op, RegisterPair& rp);
 
     std::string generatedCode;
     // Register
