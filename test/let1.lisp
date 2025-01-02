@@ -1,0 +1,5 @@
+(let (a b)
+    (setq a 11)
+    (setq b 12)
+    (+ a b)
+)
