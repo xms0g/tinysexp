@@ -40,11 +40,11 @@ public:
 private:
     /* Name Resolutions */
 
-    void exprResolve(const ExprPtr& ast);
+    ExprPtr exprResolve(const ExprPtr& ast);
 
-    void binopResolve(BinOpExpr& binop);
+    ExprPtr binopResolve(BinOpExpr& binop);
 
-    void varResolve(ExprPtr& var);
+    ExprPtr varResolve(ExprPtr& var);
 
     void dotimesResolve(const DotimesExpr& dotimes);
 

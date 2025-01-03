@@ -77,9 +77,9 @@ void SemanticAnalyzer::analyze(ExprPtr& ast) {
     stracker.exit();
 }
 
-void SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
+ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     if (auto binop = cast::toBinop(ast)) {
-        binopResolve(*binop);
+        return binopResolve(*binop);
     } else if (auto dotimes = cast::toDotimes(ast)) {
         dotimesResolve(*dotimes);
     } else if (auto loop = cast::toLoop(ast)) {
@@ -103,19 +103,31 @@ void SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     } else if (auto cond = cast::toCond(ast)) {
         condResolve(*cond);
     }
+    return nullptr;
 }
 
-void SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
-    varResolve(binop.lhs);
-    varResolve(binop.rhs);
+ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
+    ExprPtr lhs = varResolve(binop.lhs);
+    ExprPtr rhs = varResolve(binop.rhs);
+
+    // If one of both is double, return it.Otherwise, result is int
+    if (cast::toDouble(lhs)) {
+        return lhs;
+    }
+
+    if (cast::toDouble(rhs)) {
+        return rhs;
+    }
+
+    return lhs;
 }
 
-void SemanticAnalyzer::varResolve(ExprPtr& var) {
+ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
     checkNotNumber(var);
 
     if (!cast::toInt(var) && !cast::toDouble(var)) {
         if (auto binop = cast::toBinop(var)) {
-            binopResolve(*binop);
+            return binopResolve(*binop);
         } else {
             const std::string name = cast::toString(var)->data;
             Symbol sym = stracker.lookup(name);
@@ -131,7 +143,7 @@ void SemanticAnalyzer::varResolve(ExprPtr& var) {
                 if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
                     ExprPtr value_ = var_->value;
                     var = std::make_shared<VarExpr>(var, value_, sym.sType);
-                    break;
+                    return var;
                 } else {
                     var_ = cast::toVar(var_->value);
                 }
@@ -222,7 +234,10 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
         sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
         stracker.bind(varName, sym);
     } else {
-        exprResolve(var->value);
+        ExprPtr name_ = var->name;
+        ExprPtr value_ = exprResolve(var->value);
+        sym.value = std::make_shared<VarExpr>(name_, value_, sym.sType);
+        stracker.bind(varName, sym);
     }
 }
 
