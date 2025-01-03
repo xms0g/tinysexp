@@ -62,7 +62,7 @@ public:
 private:
     void emitAST(const ExprPtr& ast);
 
-    void emitBinop(const BinOpExpr& binop, RegisterPair& rp);
+    RegisterPair emitBinop(const BinOpExpr& binop);
 
     void emitDotimes(const DotimesExpr& dotimes);
 
@@ -78,7 +78,7 @@ private:
 
     void emitDefun(const DefunExpr& defun);
 
-    void emitFuncCall(const FuncCallExpr& funcCall);
+    RegisterPair emitFuncCall(const FuncCallExpr& funcCall);
 
     void emitIf(const IfExpr& if_);
 
@@ -90,9 +90,9 @@ private:
 
     RegisterPair emitRHS(const ExprPtr& rhs);
 
-    void emitSection(const ExprPtr& value);
+    RegisterPair emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op);
 
-    void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op, RegisterPair& rp);
+    void emitSection(const ExprPtr& value);
 
     void handleAssignment(const ExprPtr& var);
 
@@ -102,7 +102,7 @@ private:
 
     RegisterPair emitLoadInstruction(const VarExpr& value, const std::string& valueName);
 
-    void emitStoreInstruction(const std::string& varName, const ExprPtr& value, SymbolType stype, RegisterPair reg);
+    void emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair reg);
 
     std::string getAddr(SymbolType stype, const std::string& varName);
 

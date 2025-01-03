@@ -47,8 +47,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
 void CodeGen::emitAST(const ExprPtr& ast) {
     if (auto binop = cast::toBinop(ast)) {
-        RegisterPair rp{};
-        emitBinop(*binop, rp);
+        emitBinop(*binop);
     } else if (auto dotimes = cast::toDotimes(ast)) {
         emitDotimes(*dotimes);
     } else if (auto loop = cast::toLoop(ast)) {
@@ -74,28 +73,19 @@ void CodeGen::emitAST(const ExprPtr& ast) {
     }
 }
 
-void CodeGen::emitBinop(const BinOpExpr& binop, RegisterPair& rp) {
+RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
     switch (binop.opToken.type) {
-        case TokenType::PLUS: {
-            emitExpr(binop.lhs, binop.rhs, {"add", "addsd"}, rp);
-            break;
-        }
-        case TokenType::MINUS: {
-            emitExpr(binop.lhs, binop.rhs, {"sub", "subsd"}, rp);
-            break;
-        }
-        case TokenType::DIV: {
-            emitExpr(binop.lhs, binop.rhs, {"idiv", "divsd"}, rp);
-            break;
-        }
-        case TokenType::MUL: {
-            emitExpr(binop.lhs, binop.rhs, {"imul", "mulsd"}, rp);
-            break;
-        }
+        case TokenType::PLUS:
+            return emitExpr(binop.lhs, binop.rhs, {"add", "addsd"});
+        case TokenType::MINUS:
+            return emitExpr(binop.lhs, binop.rhs, {"sub", "subsd"});
+        case TokenType::DIV:
+            return emitExpr(binop.lhs, binop.rhs, {"idiv", "divsd"});
+        case TokenType::MUL:
+            return emitExpr(binop.lhs, binop.rhs, {"imul", "mulsd"});
         case TokenType::EQUAL:
-            emitExpr(binop.lhs, binop.rhs, {"cmp", nullptr}, rp);
+            emitExpr(binop.lhs, binop.rhs, {"cmp", nullptr});
             generatedCode += "jne .L{}";
-            break;
         case TokenType::NEQUAL:
             break;
         case TokenType::GREATER_THEN:
@@ -145,7 +135,9 @@ void CodeGen::emitDefconst(const DefconstExpr& defconst) {
 
 void CodeGen::emitDefun(const DefunExpr& defun) {}
 
-void CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {}
+RegisterPair CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
+
+}
 
 void CodeGen::emitIf(const IfExpr& if_) {}
 
@@ -177,12 +169,47 @@ RegisterPair CodeGen::emitRHS(const ExprPtr& rhs) {
     RegisterPair reg{};
 
     if (auto binOp = cast::toBinop(rhs)) {
-        emitBinop(*binOp, reg);
+        reg = emitBinop(*binOp);
     } else {
         reg = emitNumb(rhs);
     }
 
     return reg;
+}
+
+RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op) {
+    RegisterPair reg1{};
+    RegisterPair reg2{};
+
+    reg1 = emitNumb(lhs);
+    reg2 = emitRHS(rhs);
+
+    if (reg1.rType == SSE && reg2.rType == GP) {
+        RegisterPair new_rp = rtracker.alloc(14);
+        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg2.sreg);
+        rtracker.free(reg2.reg);
+
+        emit1(generatedCode, op.second, reg1.sreg, new_rp.sreg);
+        rtracker.free(new_rp.reg);
+        return reg1;
+    } else if (reg1.rType == GP && reg2.rType == SSE) {
+        RegisterPair new_rp = rtracker.alloc(14);
+        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg1.sreg);
+        rtracker.free(reg1.reg);
+
+        emit1(generatedCode, op.second, new_rp.sreg, reg2.sreg);
+        emit1(generatedCode, "movsd", reg2.sreg, new_rp.sreg);
+        rtracker.free(new_rp.reg);
+        return reg2;
+    } else if (reg1.rType == SSE && reg2.rType == SSE) {
+        emit1(generatedCode, op.second, reg1.sreg, reg2.sreg);
+        rtracker.free(reg2.reg);
+        return reg1;
+    } else {
+        emit1(generatedCode, op.first, reg1.sreg, reg2.sreg);
+        rtracker.free(reg2.reg);
+        return reg1;
+    }
 }
 
 void CodeGen::emitSection(const ExprPtr& var) {
@@ -200,42 +227,6 @@ void CodeGen::emitSection(const ExprPtr& var) {
     }
 }
 
-void CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs,
-                       std::pair<const char*, const char*> op, RegisterPair& rp) {
-    RegisterPair reg1{};
-    RegisterPair reg2{};
-
-    reg1 = emitNumb(lhs);
-    reg2 = emitRHS(rhs);
-
-    if (reg1.rType == SSE && reg2.rType == GP) {
-        RegisterPair new_rp = rtracker.alloc(14);
-        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg2.sreg);
-        rtracker.free(reg2.reg);
-
-        emit1(generatedCode, op.second, reg1.sreg, new_rp.sreg);
-        rtracker.free(new_rp.reg);
-        rp = reg1;
-    } else if (reg1.rType == GP && reg2.rType == SSE) {
-        RegisterPair new_rp = rtracker.alloc(14);
-        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg1.sreg);
-        rtracker.free(reg1.reg);
-
-        emit1(generatedCode, op.second, new_rp.sreg, reg2.sreg);
-        emit1(generatedCode, "movsd", reg2.sreg, new_rp.sreg);
-        rtracker.free(new_rp.reg);
-        rp = reg2;
-    } else if (reg1.rType == SSE && reg2.rType == SSE) {
-        emit1(generatedCode, op.second, reg1.sreg, reg2.sreg);
-        rtracker.free(reg2.reg);
-        rp = reg1;
-    } else {
-        emit1(generatedCode, op.first, reg1.sreg, reg2.sreg);
-        rtracker.free(reg2.reg);
-        rp = reg1;
-    }
-}
-
 void CodeGen::handleAssignment(const ExprPtr& var) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
@@ -248,7 +239,15 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
     } else if (cast::toVar(var_->value)) {
         handleVariable(*var_, varName);
     } else {
-        emitAST(var_->value);
+        RegisterPair rp{};
+
+        if (auto binop = cast::toBinop(var_->value)) {
+            rp = emitBinop(*binop);
+        } else if (auto funcCall = cast::toFuncCall(var_->value)) {
+            rp = emitFuncCall(*funcCall);
+        }
+        emitStoreInstruction(varName, var_->sType, rp);
+        rtracker.free(rp.reg);
     }
 }
 
@@ -265,7 +264,7 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
     RegisterPair rp{};
     do {
         rp = emitLoadInstruction(*value, valueName);
-        emitStoreInstruction(varName, value->value, var.sType, rp);
+        emitStoreInstruction(varName, var.sType, rp);
 
         value = cast::toVar(value->value);
     } while (cast::toVar(value));
@@ -286,13 +285,9 @@ RegisterPair CodeGen::emitLoadInstruction(const VarExpr& value, const std::strin
     return rp;
 }
 
-void CodeGen::emitStoreInstruction(const std::string& varName, const ExprPtr& value, SymbolType stype,
-                                   RegisterPair reg) {
-    if (cast::toInt(value)) {
-        emit1(generatedCode, "mov", getAddr(stype, varName), reg.sreg);
-    } else if (cast::toDouble(value)) {
-        emit1(generatedCode, "movsd", getAddr(stype, varName), reg.sreg);
-    }
+void CodeGen::emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair reg) {
+    reg.rType == GP ? emit1(generatedCode, "mov", getAddr(stype, varName), reg.sreg) :
+                    emit1(generatedCode, "movsd", getAddr(stype, varName), reg.sreg);
 }
 
 std::string CodeGen::getAddr(SymbolType stype, const std::string& varName) {
