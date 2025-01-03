@@ -86,13 +86,25 @@ private:
 
     void emitCond(const CondExpr& cond);
 
-    void emitNumb(const ExprPtr& n, RegisterPair& rp);
+    RegisterPair emitNumb(const ExprPtr& n);
 
-    void emitRHS(const ExprPtr& rhs, RegisterPair& rp);
+    RegisterPair emitRHS(const ExprPtr& rhs);
 
     void emitSection(const ExprPtr& value);
 
     void emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op, RegisterPair& rp);
+
+    void handleAssignment(const ExprPtr& var);
+
+    void handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr, const std::string& value);
+
+    void handleVariable(const VarExpr& var, const std::string& varName);
+
+    RegisterPair emitLoadInstruction(const VarExpr& value, const std::string& valueName);
+
+    void emitStoreInstruction(const std::string& varName, const ExprPtr& value, SymbolType stype, RegisterPair reg);
+
+    std::string getAddr(SymbolType stype, const std::string& varName);
 
     std::string generatedCode;
     // Register
