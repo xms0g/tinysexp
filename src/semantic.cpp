@@ -111,11 +111,11 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
     ExprPtr rhs = varResolve(binop.rhs);
 
     // If one of both is double, return it.Otherwise, result is int
-    if (cast::toDouble(lhs)) {
+    if (auto var = cast::toVar(lhs); cast::toDouble(var->value)) {
         return lhs;
     }
 
-    if (cast::toDouble(rhs)) {
+    if (auto var = cast::toVar(rhs); cast::toDouble(var->value)) {
         return rhs;
     }
 
@@ -150,6 +150,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
             } while (cast::toVar(var_));
         }
     }
+    return nullptr;
 }
 
 void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
@@ -186,14 +187,16 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
             }
             // Update
             var_->value = sym_.value;
+            stracker.bind(varName, {varName, var, SymbolType::LOCAL});
         } else {
             bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
             if (isExpr) {
-                exprResolve(var_->value);
+                ExprPtr name_ = var_->name;
+                ExprPtr value_ = exprResolve(var_->value);
+                ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
+                stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
             }
         }
-
-        stracker.bind(varName, {varName, var, SymbolType::LOCAL});
     }
 
     for (auto& statement: let.body) {
