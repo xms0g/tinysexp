@@ -1,7 +1,7 @@
 #include "codegen.h"
 #include <format>
 
-#define emit1(code, op, reg, n) code += std::format("\t{} {}, {}\n", op, reg, n)
+#define emitInstruction(op, reg, n) generatedCode += std::format("\t{} {}, {}\n", op, reg, n)
 
 RegisterPair RegisterTracker::alloc(int index) {
     for (int i = index; i < EOR; ++i) {
@@ -150,11 +150,11 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
 
     if (auto int_ = cast::toInt(n)) {
         rp = rtracker.alloc();
-        emit1(generatedCode, "mov", rp.sreg, int_->n);
+        emitInstruction("mov", rp.sreg, int_->n);
     } else if (auto double_ = cast::toDouble(n)) {
         rp = rtracker.alloc(14);
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-        emit1(generatedCode, "movsd", rp.sreg, std::format("0x{:X}", hex));
+        emitInstruction("movsd", rp.sreg, std::format("0x{:X}", hex));
     } else {
         const auto var = cast::toVar(n);
         const std::string varName = cast::toString(var->name)->data;
@@ -186,27 +186,27 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
 
     if (reg1.rType == SSE && reg2.rType == GP) {
         RegisterPair new_rp = rtracker.alloc(14);
-        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg2.sreg);
+        emitInstruction("cvtsi2sd", new_rp.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
 
-        emit1(generatedCode, op.second, reg1.sreg, new_rp.sreg);
+        emitInstruction(op.second, reg1.sreg, new_rp.sreg);
         rtracker.free(new_rp.reg);
         return reg1;
     } else if (reg1.rType == GP && reg2.rType == SSE) {
         RegisterPair new_rp = rtracker.alloc(14);
-        emit1(generatedCode, "cvtsi2sd", new_rp.sreg, reg1.sreg);
+        emitInstruction("cvtsi2sd", new_rp.sreg, reg1.sreg);
         rtracker.free(reg1.reg);
 
-        emit1(generatedCode, op.second, new_rp.sreg, reg2.sreg);
-        emit1(generatedCode, "movsd", reg2.sreg, new_rp.sreg);
+        emitInstruction(op.second, new_rp.sreg, reg2.sreg);
+        emitInstruction("movsd", reg2.sreg, new_rp.sreg);
         rtracker.free(new_rp.reg);
         return reg2;
     } else if (reg1.rType == SSE && reg2.rType == SSE) {
-        emit1(generatedCode, op.second, reg1.sreg, reg2.sreg);
+        emitInstruction(op.second, reg1.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
         return reg1;
     } else {
-        emit1(generatedCode, op.first, reg1.sreg, reg2.sreg);
+        emitInstruction(op.first, reg1.sreg, reg2.sreg);
         rtracker.free(reg2.reg);
         return reg1;
     }
@@ -246,6 +246,7 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         } else if (auto funcCall = cast::toFuncCall(var_->value)) {
             rp = emitFuncCall(*funcCall);
         }
+
         emitStoreInstruction(varName, var_->sType, rp);
         rtracker.free(rp.reg);
     }
@@ -254,7 +255,7 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
 void CodeGen::handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr,
                               const std::string& value) {
     const std::string address = getAddr(var.sType, varName);
-    emit1(generatedCode, instr, address, value);
+    emitInstruction(instr, address, value);
 }
 
 void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
@@ -277,17 +278,23 @@ RegisterPair CodeGen::emitLoadInstruction(const VarExpr& value, const std::strin
 
     if (cast::toInt(value.value)) {
         rp = rtracker.alloc();
-        emit1(generatedCode, "mov", rp.sreg, getAddr(value.sType, valueName));
+        emitInstruction("mov", rp.sreg, getAddr(value.sType, valueName));
     } else if (cast::toDouble(value.value)) {
         rp = rtracker.alloc(14);
-        emit1(generatedCode, "movsd", rp.sreg, getAddr(value.sType, valueName));
+        emitInstruction("movsd", rp.sreg, getAddr(value.sType, valueName));
     }
     return rp;
 }
 
 void CodeGen::emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair reg) {
-    reg.rType == GP ? emit1(generatedCode, "mov", getAddr(stype, varName), reg.sreg) :
-                    emit1(generatedCode, "movsd", getAddr(stype, varName), reg.sreg);
+    switch (reg.rType) {
+        case GP:
+            emitInstruction("mov", getAddr(stype, varName), reg.sreg);
+            break;
+        case SSE:
+            emitInstruction("movsd", getAddr(stype, varName), reg.sreg);
+            break;
+    }
 }
 
 std::string CodeGen::getAddr(SymbolType stype, const std::string& varName) {
