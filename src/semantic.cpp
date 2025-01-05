@@ -125,32 +125,31 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
     checkNotNumber(var);
 
-    if (!cast::toInt(var) && !cast::toDouble(var)) {
-        if (auto binop = cast::toBinop(var)) {
-            return binopResolve(*binop);
-        } else {
-            const std::string name = cast::toString(var)->data;
-            Symbol sym = stracker.lookup(name);
+    if (cast::toInt(var) || cast::toDouble(var)) return nullptr;
 
-            if (!sym.value) {
-                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
-            }
+    if (auto binop = cast::toBinop(var)) {
+        return binopResolve(*binop);
+    } else {
+        const std::string name = cast::toString(var)->data;
+        Symbol sym = stracker.lookup(name);
 
-            auto var_ = cast::toVar(sym.value);
-            do {
-                checkNotNumber(var_);
-                // Check out if the sym value is int,double or var. Update var.
-                if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
-                    ExprPtr value_ = var_->value;
-                    var = std::make_shared<VarExpr>(var, value_, sym.sType);
-                    return var;
-                } else {
-                    var_ = cast::toVar(var_->value);
-                }
-            } while (cast::toVar(var_));
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
+
+        auto var_ = cast::toVar(sym.value);
+        do {
+            checkNotNumber(var_);
+            // Check out if the sym value is int,double or var. Update var.
+            if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
+                ExprPtr value_ = var_->value;
+                var = std::make_shared<VarExpr>(var, value_, sym.sType);
+                return var;
+            } else {
+                var_ = cast::toVar(var_->value);
+            }
+        } while (cast::toVar(var_));
     }
-    return nullptr;
 }
 
 void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
