@@ -9,7 +9,7 @@ A subset of Lisp, including:
 ### Condition
 - `if`,`when` and `cond`
 ### Loop
-- `dotimes`
+- `dotimes` and `loop`
 ### Functions
 - `defun`
 ### Variables
