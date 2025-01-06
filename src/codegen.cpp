@@ -259,6 +259,8 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         handlePrimitive(*var_, varName, "movsd", std::format("0x{:X}", hex));
     } else if (cast::toVar(var_->value)) {
         handleVariable(*var_, varName);
+    } else if (cast::toNIL(var_->value)) {
+        getAddr(var_->sType, varName);
     } else {
         RegisterPair rp{};
 
