@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include "parser.h"
 
-enum Register {
+enum class Register {
     RAX, RBX, RCX,
     RDX, RDI, RSI,
     R8, R9, R10,
@@ -17,39 +17,65 @@ enum Register {
     xmm6, xmm7, xmm8,
     xmm9, xmm10, xmm11,
     xmm12, xmm13, xmm14,
-    xmm15, EOR
+    xmm15
 };
 
-enum RegisterType {
+enum class RegisterType {
     GP, SSE
 };
 
 struct RegisterPair {
-    Register reg;
-    const char* sreg;
+    std::pair<Register, const char*> pair;
     RegisterType rType;
 };
 
 class RegisterTracker {
 public:
-    RegisterPair alloc(int index = 0);
+    RegisterPair alloc(RegisterType rtype);
 
     void free(Register reg);
 
 private:
     std::unordered_set<Register> registersInUse;
-    static constexpr char* stringRepFromReg[30] = {
-            "rax", "rbx", "rcx",
-            "rdx", "rdi", "rsi",
-            "r8", "r9", "r10",
-            "r11", "r12", "r13",
-            "r14", "r15",
-            "xmm0", "xmm1", "xmm2",
-            "xmm3", "xmm4", "xmm5",
-            "xmm6", "xmm7", "xmm8",
-            "xmm9", "xmm10", "xmm11",
-            "xmm12", "xmm13", "xmm14",
-            "xmm15"
+
+    static constexpr std::pair<Register, const char*> scratchRegisters[9] = {
+            {Register::RAX, "rax"},
+            {Register::RCX, "rcx"},
+            {Register::RDX, "rdx"},
+            {Register::RDI, "rdi"},
+            {Register::RSI, "rsi"},
+            {Register::R8, "r8"},
+            {Register::R9, "r9"},
+            {Register::R10, "r10"},
+            {Register::R11, "r11"},
+    };
+
+    static constexpr std::pair<Register, const char*> sseRegisters[16] = {
+            {Register::xmm0, "xmm0"},
+            {Register::xmm1, "xmm1"},
+            {Register::xmm2, "xmm2"},
+            {Register::xmm3, "xmm3"},
+            {Register::xmm4, "xmm4"},
+            {Register::xmm5, "xmm5"},
+            {Register::xmm6, "xmm6"},
+            {Register::xmm7, "xmm7"},
+            {Register::xmm8, "xmm8"},
+            {Register::xmm9, "xmm9"},
+            {Register::xmm10, "xmm10"},
+            {Register::xmm11, "xmm11"},
+            {Register::xmm12, "xmm12"},
+            {Register::xmm13, "xmm13"},
+            {Register::xmm14, "xmm14"},
+            {Register::xmm15, "xmm15"},
+    };
+
+    static constexpr std::pair<Register, const char*> preservedRegisters[5] = {
+            {Register::RBX, "rbx"},
+            {Register::R12, "r12"},
+            {Register::R13, "r13"},
+            {Register::R14, "r14"},
+            {Register::R15, "r15"},
+
     };
 };
 

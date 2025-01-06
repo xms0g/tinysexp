@@ -1,13 +1,34 @@
 #include "codegen.h"
 #include <format>
 
-#define emitInstruction(op, reg, n) generatedCode += std::format("\t{} {}, {}\n", op, reg, n)
+#define emitInstruction(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
 
-RegisterPair RegisterTracker::alloc(int index) {
-    for (int i = index; i < EOR; ++i) {
-        if (!registersInUse.contains((Register) i)) {
-            registersInUse.emplace((Register) i);
-            return {(Register) i, stringRepFromReg[i], i < 14 ? GP : SSE};
+RegisterPair RegisterTracker::alloc(RegisterType rtype) {
+    switch (rtype) {
+        case RegisterType::GP: {
+            for (const auto& sreg: scratchRegisters) {
+                if (!registersInUse.contains(sreg.first)) {
+                    registersInUse.emplace(sreg.first);
+                    return {sreg, RegisterType::GP};
+                }
+            }
+
+            for (const auto& preg: preservedRegisters) {
+                if (!registersInUse.contains(preg.first)) {
+                    registersInUse.emplace(preg.first);
+                    return {preg, RegisterType::GP};
+                }
+            }
+            break;
+        }
+        case RegisterType::SSE: {
+            for (const auto& sse: sseRegisters) {
+                if (!registersInUse.contains(sse.first)) {
+                    registersInUse.emplace(sse.first);
+                    return {sse, RegisterType::SSE};
+                }
+            }
+            break;
         }
     }
 }
@@ -149,12 +170,12 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
     RegisterPair rp{};
 
     if (auto int_ = cast::toInt(n)) {
-        rp = rtracker.alloc();
-        emitInstruction("mov", rp.sreg, int_->n);
+        rp = rtracker.alloc(RegisterType::GP);
+        emitInstruction("mov", rp.pair.second, int_->n);
     } else if (auto double_ = cast::toDouble(n)) {
-        rp = rtracker.alloc(14);
+        rp = rtracker.alloc(RegisterType::SSE);
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-        emitInstruction("movsd", rp.sreg, std::format("0x{:X}", hex));
+        emitInstruction("movsd", rp.pair.second, std::format("0x{:X}", hex));
     } else {
         const auto var = cast::toVar(n);
         const std::string varName = cast::toString(var->name)->data;
@@ -184,30 +205,30 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
     reg1 = emitNumb(lhs);
     reg2 = emitRHS(rhs);
 
-    if (reg1.rType == SSE && reg2.rType == GP) {
-        RegisterPair new_rp = rtracker.alloc(14);
-        emitInstruction("cvtsi2sd", new_rp.sreg, reg2.sreg);
-        rtracker.free(reg2.reg);
+    if (reg1.rType == RegisterType::SSE && reg2.rType == RegisterType::GP) {
+        RegisterPair new_rp = rtracker.alloc(RegisterType::SSE);
+        emitInstruction("cvtsi2sd", new_rp.pair.second, reg2.pair.second);
+        rtracker.free(reg2.pair.first);
 
-        emitInstruction(op.second, reg1.sreg, new_rp.sreg);
-        rtracker.free(new_rp.reg);
+        emitInstruction(op.second, reg1.pair.second, new_rp.pair.second);
+        rtracker.free(new_rp.pair.first);
         return reg1;
-    } else if (reg1.rType == GP && reg2.rType == SSE) {
-        RegisterPair new_rp = rtracker.alloc(14);
-        emitInstruction("cvtsi2sd", new_rp.sreg, reg1.sreg);
-        rtracker.free(reg1.reg);
+    } else if (reg1.rType == RegisterType::GP && reg2.rType == RegisterType::SSE) {
+        RegisterPair new_rp = rtracker.alloc(RegisterType::SSE);
+        emitInstruction("cvtsi2sd", new_rp.pair.second, reg1.pair.second);
+        rtracker.free(reg1.pair.first);
 
-        emitInstruction(op.second, new_rp.sreg, reg2.sreg);
-        emitInstruction("movsd", reg2.sreg, new_rp.sreg);
-        rtracker.free(new_rp.reg);
+        emitInstruction(op.second, new_rp.pair.second, reg2.pair.second);
+        emitInstruction("movsd", reg2.pair.second, new_rp.pair.second);
+        rtracker.free(new_rp.pair.first);
         return reg2;
-    } else if (reg1.rType == SSE && reg2.rType == SSE) {
-        emitInstruction(op.second, reg1.sreg, reg2.sreg);
-        rtracker.free(reg2.reg);
+    } else if (reg1.rType == RegisterType::SSE && reg2.rType == RegisterType::SSE) {
+        emitInstruction(op.second, reg1.pair.second, reg2.pair.second);
+        rtracker.free(reg2.pair.first);
         return reg1;
     } else {
-        emitInstruction(op.first, reg1.sreg, reg2.sreg);
-        rtracker.free(reg2.reg);
+        emitInstruction(op.first, reg1.pair.second, reg2.pair.second);
+        rtracker.free(reg2.pair.first);
         return reg1;
     }
 }
@@ -248,7 +269,7 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         }
 
         emitStoreInstruction(varName, var_->sType, rp);
-        rtracker.free(rp.reg);
+        rtracker.free(rp.pair.first);
     }
 }
 
@@ -270,29 +291,29 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
         value = cast::toVar(value->value);
     } while (cast::toVar(value));
 
-    rtracker.free(rp.reg);
+    rtracker.free(rp.pair.first);
 }
 
 RegisterPair CodeGen::emitLoadInstruction(const VarExpr& value, const std::string& valueName) {
     RegisterPair rp{};
 
     if (cast::toInt(value.value)) {
-        rp = rtracker.alloc();
-        emitInstruction("mov", rp.sreg, getAddr(value.sType, valueName));
+        rp = rtracker.alloc(RegisterType::GP);
+        emitInstruction("mov", rp.pair.second, getAddr(value.sType, valueName));
     } else if (cast::toDouble(value.value)) {
-        rp = rtracker.alloc(14);
-        emitInstruction("movsd", rp.sreg, getAddr(value.sType, valueName));
+        rp = rtracker.alloc(RegisterType::SSE);
+        emitInstruction("movsd", rp.pair.second, getAddr(value.sType, valueName));
     }
     return rp;
 }
 
 void CodeGen::emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair reg) {
     switch (reg.rType) {
-        case GP:
-            emitInstruction("mov", getAddr(stype, varName), reg.sreg);
+        case RegisterType::GP:
+            emitInstruction("mov", getAddr(stype, varName), reg.pair.second);
             break;
-        case SSE:
-            emitInstruction("movsd", getAddr(stype, varName), reg.sreg);
+        case RegisterType::SSE:
+            emitInstruction("movsd", getAddr(stype, varName), reg.pair.second);
             break;
     }
 }
