@@ -1,6 +1,7 @@
 #include "codegen.h"
 #include <format>
 
+#define emitHex(n) std::format("0x{:X}", n)
 #define emitInstruction(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
 
 RegisterPair RegisterTracker::alloc(RegisterType rtype) {
@@ -175,7 +176,7 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
     } else if (auto double_ = cast::toDouble(n)) {
         rp = rtracker.alloc(RegisterType::SSE);
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-        emitInstruction("movsd", rp.pair.second, std::format("0x{:X}", hex));
+        emitInstruction("movsd", rp.pair.second, emitHex(hex));
     } else {
         const auto var = cast::toVar(n);
         const std::string varName = cast::toString(var->name)->data;
@@ -243,7 +244,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
             sectionData.emplace(cast::toString(var_->name)->data, std::format("dq {}", std::to_string(int_->n)));
         } else if (auto double_ = cast::toDouble(var_->value)) {
             uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-            sectionData.emplace(cast::toString(var_->name)->data, std::format("dq 0x{:X}", hex));
+            sectionData.emplace(cast::toString(var_->name)->data, "dq " + emitHex(hex));
         } else if (auto str = cast::toString(var_->value)) {
             sectionData.emplace(cast::toString(var_->name)->data, std::format("db \"{}\", 10", str->data));
         }
@@ -258,7 +259,7 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         handlePrimitive(*var_, varName, "mov", std::to_string(int_->n));
     } else if (auto double_ = cast::toDouble(var_->value)) {
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-        handlePrimitive(*var_, varName, "movsd", std::format("0x{:X}", hex));
+        handlePrimitive(*var_, varName, "movsd", emitHex(hex));
     } else if (cast::toVar(var_->value)) {
         handleVariable(*var_, varName);
     } else if (cast::toNIL(var_->value)) {
