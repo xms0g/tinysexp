@@ -62,7 +62,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
     generatedCode += !sectionBSS.empty() ? "\nsection .bss\n" : "";
     for (auto& var: sectionBSS) {
-        generatedCode += std::format("{}: dq {}\n", var, 0);
+        generatedCode += std::format("{}: resq {}\n", var, 1);
     }
     return generatedCode;
 }
