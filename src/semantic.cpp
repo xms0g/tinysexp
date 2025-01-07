@@ -130,25 +130,28 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
     if (auto binop = cast::toBinop(var)) {
         return binopResolve(*binop);
     } else {
-        const std::string name = cast::toString(var)->data;
+        const auto var_ = cast::toVar(var);
+        const std::string name = cast::toString(var_->name)->data;
+
         Symbol sym = stracker.lookup(name);
 
         if (!sym.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
 
-        auto var_ = cast::toVar(sym.value);
+        auto innerVar = cast::toVar(sym.value);
         do {
-            checkNotNumber(var_);
+            checkNotNumber(innerVar);
             // Check out if the sym value is int,double or var. Update var.
-            if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
-                ExprPtr value_ = var_->value;
-                var = std::make_shared<VarExpr>(var, value_, sym.sType);
+            if (cast::toInt(innerVar->value) || cast::toDouble(innerVar->value)) {
+                ExprPtr name_ = cast::toString(var_->name);
+                ExprPtr value_ = innerVar->value;
+                var = std::make_shared<VarExpr>(name_, value_, sym.sType);
                 return var;
             } else {
-                var_ = cast::toVar(var_->value);
+                innerVar = cast::toVar(innerVar->value);
             }
-        } while (cast::toVar(var_));
+        } while (cast::toVar(innerVar));
     }
 }
 
@@ -178,23 +181,26 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
 
         // Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
         // If it's expr, resolve it.
-        if (const auto value = cast::toString(var_->value)) {
-            Symbol sym_ = stracker.lookup(value->data);
+        if (const auto value = cast::toVar(var_->value)) {
+            const std::string valueName = cast::toString(value->name)->data;
+            Symbol sym_ = stracker.lookup(valueName);
 
             if (!sym_.value) {
-                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
+                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, valueName), 0);
             }
             // Update
             var_->value = sym_.value;
             stracker.bind(varName, {varName, var, SymbolType::LOCAL});
+        } else if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
+            ExprPtr name_ = var_->name;
+            ExprPtr value_ = var_->value;
+            ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
+            stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
         } else {
-            bool isExpr = (!cast::toInt(var_->value) && !cast::toDouble(var_->value));
-            if (isExpr) {
-                ExprPtr name_ = var_->name;
-                ExprPtr value_ = exprResolve(var_->value);
-                ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
-                stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
-            }
+            ExprPtr name_ = var_->name;
+            ExprPtr value_ = exprResolve(var_->value);
+            ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
+            stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
         }
     }
 
@@ -221,11 +227,13 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
     // If it's int or double, update sym->value and bind again.
     // If it's expr, resolve it.
-    if (const auto value = cast::toString(var->value)) {
-        Symbol sym_ = stracker.lookup(value->data);
+    if (const auto value = cast::toVar(var->value)) {
+        const std::string valueName = cast::toString(value->name)->data;
+
+        Symbol sym_ = stracker.lookup(valueName);
 
         if (!sym_.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, value->data), 0);
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, valueName), 0);
         }
         var->value = sym_.value;
 

@@ -142,7 +142,7 @@ ExprPtr Parser::parseLoop() {
 }
 
 ExprPtr Parser::parseLet() {
-    ExprPtr name, value;
+    ExprPtr var, value;
     std::vector<ExprPtr> bindings;
     std::vector<ExprPtr> body;
 
@@ -152,10 +152,9 @@ ExprPtr Parser::parseLet() {
     while (true) {
         // Check out (let (x))
         while (mCurrentToken.type == TokenType::VAR) {
-            name = parseAtom();
-            value = std::make_shared<NILExpr>();
-
-            bindings.emplace_back(std::make_shared<VarExpr>(name, value, SymbolType::LOCAL));
+            var = parseAtom();
+            cast::toVar(var)->sType =  SymbolType::LOCAL;
+            bindings.emplace_back(var);
         }
 
         if (mCurrentToken.type == TokenType::RPAREN)
@@ -164,7 +163,7 @@ ExprPtr Parser::parseLet() {
         // Check out (let ((x 11)) )
         while (mCurrentToken.type == TokenType::LPAREN) {
             consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-            name = parseAtom();
+            var = parseAtom();
 
             if (mCurrentToken.type == TokenType::LPAREN) {
                 value = parseExpr();
@@ -172,7 +171,9 @@ ExprPtr Parser::parseLet() {
                 value = parseAtom();
             }
 
-            bindings.emplace_back(std::make_shared<VarExpr>(name, value, SymbolType::LOCAL));
+            cast::toVar(var)->value = std::move(value);
+            cast::toVar(var)->sType = SymbolType::LOCAL;
+            bindings.emplace_back(var);
             consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
         }
 
@@ -284,10 +285,16 @@ ExprPtr Parser::parseCond() {
 }
 
 ExprPtr Parser::parseAtom() {
-    if (mCurrentToken.type == TokenType::VAR || mCurrentToken.type == TokenType::STRING) {
+    if (mCurrentToken.type == TokenType::STRING) {
         Token token = mCurrentToken;
         advance();
         return std::make_shared<StringExpr>(token.value);
+    } else if (mCurrentToken.type == TokenType::VAR) {
+        Token token = mCurrentToken;
+        advance();
+        ExprPtr name = std::make_shared<StringExpr>(token.value);
+        ExprPtr value = std::make_shared<NILExpr>();
+        return std::make_shared<VarExpr>(name, value);
     } else if (mCurrentToken.type == TokenType::NIL || mCurrentToken.type == TokenType::RPAREN) {
         // If it's not nil, do not consume. It will be done at the outer scope
         if (mCurrentToken.type == TokenType::NIL)
@@ -315,10 +322,10 @@ ExprPtr Parser::parseNumber() {
 }
 
 ExprPtr Parser::createVar(bool isConstant) {
-    ExprPtr name, value;
+    ExprPtr var, value;
     advance();
 
-    name = parseAtom();
+    var = parseAtom();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         value = parseExpr();
@@ -330,7 +337,8 @@ ExprPtr Parser::createVar(bool isConstant) {
         }
     }
 
-    return std::make_shared<VarExpr>(name, value);
+    cast::toVar(var)->value = std::move(value);
+    return var;
 }
 
 std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
