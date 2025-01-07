@@ -61,7 +61,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
     generatedCode += !sectionBSS.empty() ? "\nsection .bss\n" : "";
     for (auto& var: sectionBSS) {
-        generatedCode += std::format("{}: {}\n", var, 1);
+        generatedCode += std::format("{}: dq {}\n", var, 0);
     }
     return generatedCode;
 }
@@ -240,7 +240,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
         sectionBSS.emplace(cast::toString(var_->name)->data);
     } else {
         if (auto int_ = cast::toInt(var_->value)) {
-            sectionData.emplace(cast::toString(var_->name)->data, std::to_string(int_->n));
+            sectionData.emplace(cast::toString(var_->name)->data, std::format("dq {}", std::to_string(int_->n)));
         } else if (auto double_ = cast::toDouble(var_->value)) {
             uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
             sectionData.emplace(cast::toString(var_->name)->data, std::format("dq 0x{:X}", hex));
@@ -268,10 +268,12 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         std::string labelAddr = getAddr(var_->sType, label);
         std::string varAddr = getAddr(var_->sType, varName);
 
-        sectionData.emplace(label, str->data);
+        sectionData.emplace(label, std::format("db \"{}\",10", str->data));
 
-        emitInstruction("lea", "rax", labelAddr);
-        emitInstruction("mov", varAddr, "rax");
+        RegisterPair reg = rtracker.alloc(RegisterType::GP);
+        emitInstruction("lea", reg.pair.second, labelAddr);
+        emitInstruction("mov", varAddr, reg.pair.second);
+        rtracker.free(reg.pair.first);
     } else {
         RegisterPair rp{};
 
@@ -297,9 +299,12 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
     std::string valueName = cast::toString(value->name)->data;
 
     RegisterPair rp{};
+
     do {
         rp = emitLoadInstruction(*value, valueName);
-        emitStoreInstruction(varName, var.sType, rp);
+
+        if (rp.pair.second)
+            emitStoreInstruction(varName, var.sType, rp);
 
         value = cast::toVar(value->value);
     } while (cast::toVar(value));

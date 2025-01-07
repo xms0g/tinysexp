@@ -20,6 +20,7 @@ enum class Register {
     xmm15
 };
 
+//TODO: Add Scratch, Preserved type
 enum class RegisterType {
     GP, SSE
 };
