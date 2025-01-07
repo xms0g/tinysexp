@@ -54,14 +54,14 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     generatedCode += "\tpop rbp\n"
                      "\tret\n";
 
-    generatedCode += !sectionData.empty() ? "section .data\n" : "";
+    generatedCode += !sectionData.empty() ? "\nsection .data\n" : "";
     for (auto& var: sectionData) {
-        generatedCode += std::format("{}: dq {}\n", var.first, var.second);
+        generatedCode += std::format("{}: {}\n", var.first, var.second);
     }
 
-    generatedCode += !sectionBSS.empty() ? "section .bss\n" : "";
+    generatedCode += !sectionBSS.empty() ? "\nsection .bss\n" : "";
     for (auto& var: sectionBSS) {
-        generatedCode += std::format("{}: resq {}\n", var, 1);
+        generatedCode += std::format("{}: {}\n", var, 1);
     }
     return generatedCode;
 }
@@ -243,7 +243,9 @@ void CodeGen::emitSection(const ExprPtr& var) {
             sectionData.emplace(cast::toString(var_->name)->data, std::to_string(int_->n));
         } else if (auto double_ = cast::toDouble(var_->value)) {
             uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-            sectionData.emplace(cast::toString(var_->name)->data, std::format("0x{:X}", hex));
+            sectionData.emplace(cast::toString(var_->name)->data, std::format("dq 0x{:X}", hex));
+        } else if (auto str = cast::toString(var_->value)) {
+            sectionData.emplace(cast::toString(var_->name)->data, std::format("db \"{}\", 10", str->data));
         }
     }
 }
@@ -261,6 +263,15 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         handleVariable(*var_, varName);
     } else if (cast::toNIL(var_->value)) {
         getAddr(var_->sType, varName);
+    } else if (auto str = cast::toString(var_->value)) {
+        std::string label = ".L." + varName;
+        std::string labelAddr = getAddr(var_->sType, label);
+        std::string varAddr = getAddr(var_->sType, varName);
+
+        sectionData.emplace(label, str->data);
+
+        emitInstruction("lea", "rax", labelAddr);
+        emitInstruction("mov", varAddr, "rax");
     } else {
         RegisterPair rp{};
 
