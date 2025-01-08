@@ -70,7 +70,9 @@ private:
 
     void checkConstantVar(const ExprPtr& var);
 
-    void checkNotNumber(const ExprPtr& var);
+    void checkBool(const ExprPtr& var);
+
+    ExprPtr notNumberResolve(ExprPtr& n);
 
     ScopeTracker stracker;
     /* File Name */

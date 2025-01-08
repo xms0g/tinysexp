@@ -107,25 +107,26 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 }
 
 ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
-    ExprPtr lhs = varResolve(binop.lhs);
-    ExprPtr rhs = varResolve(binop.rhs);
+    ExprPtr lhs = notNumberResolve(binop.lhs);
+    ExprPtr rhs = notNumberResolve(binop.rhs);
 
-    // If one of both is double, return it.Otherwise, result is int
-    if (auto var = cast::toVar(lhs); cast::toDouble(var->value)) {
-        return lhs;
+    if (lhs) {
+        if (auto var = cast::toVar(lhs); cast::toDouble(var->value))
+            return lhs;
     }
 
-    if (auto var = cast::toVar(rhs); cast::toDouble(var->value)) {
-        return rhs;
+    if (rhs) {
+        if (auto var = cast::toVar(rhs); cast::toDouble(var->value))
+            return rhs;
+        else
+            return lhs;
     }
 
-    return lhs;
+    return nullptr;
 }
 
 ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
-    checkNotNumber(var);
-
-    if (cast::toInt(var) || cast::toDouble(var)) return nullptr;
+    checkBool(var);
 
     if (auto binop = cast::toBinop(var)) {
         return binopResolve(*binop);
@@ -141,7 +142,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
 
         auto innerVar = cast::toVar(sym.value);
         do {
-            checkNotNumber(innerVar);
+            checkBool(innerVar);
             // Check out if the sym value is int,double or var. Update var.
             if (cast::toInt(innerVar->value) || cast::toDouble(innerVar->value)) {
                 ExprPtr name_ = cast::toString(var_->name);
@@ -362,7 +363,7 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     }
 }
 
-void SemanticAnalyzer::checkNotNumber(const ExprPtr& var) {
+void SemanticAnalyzer::checkBool(const ExprPtr& var) {
     if (cast::toT(var)) {
         throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
     }
@@ -370,4 +371,12 @@ void SemanticAnalyzer::checkNotNumber(const ExprPtr& var) {
     if (cast::toNIL(var)) {
         throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
     }
+}
+
+ExprPtr SemanticAnalyzer::notNumberResolve(ExprPtr& n) {
+    if (!cast::toInt(n) && !cast::toDouble(n)) {
+        return varResolve(n);
+    }
+
+    return nullptr;
 }
