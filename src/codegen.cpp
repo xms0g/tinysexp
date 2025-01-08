@@ -105,6 +105,12 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
             return emitExpr(binop.lhs, binop.rhs, {"idiv", "divsd"});
         case TokenType::MUL:
             return emitExpr(binop.lhs, binop.rhs, {"imul", "mulsd"});
+        case TokenType::AND:
+            return emitExpr(binop.lhs, binop.rhs, {"and", nullptr});
+        case TokenType::OR:
+            return emitExpr(binop.lhs, binop.rhs, {"or", nullptr});
+        case TokenType::NOT:
+            return emitExpr(binop.lhs, binop.rhs, {"not", nullptr});
         case TokenType::EQUAL:
         case TokenType::NEQUAL:
         case TokenType::GREATER_THEN:
@@ -112,12 +118,6 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::GREATER_THEN_EQ:
         case TokenType::LESS_THEN_EQ:
             return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
-        case TokenType::AND:
-            return emitExpr(binop.lhs, binop.rhs, {"and", nullptr});
-        case TokenType::OR:
-            return emitExpr(binop.lhs, binop.rhs, {"or", nullptr});
-        case TokenType::NOT:
-            return emitExpr(binop.lhs, binop.rhs, {"not", nullptr});;
     }
 }
 
