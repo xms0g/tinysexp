@@ -9,6 +9,8 @@
 constexpr const char* MISSING_PAREN_ERROR = "Missing parenthesis";
 constexpr const char* EXPECTED_NUMBER_ERROR = "Expected int or double";
 constexpr const char* EXPECTED_ELEMS_NUMBER_ERROR = "Too few elements in '{}'";
+constexpr const char* OP_INVALID_NUMBER_OF_ARGS_ERROR = "The function '{}' is called with two arguments, but wants exactly one.\n"
+                                                        "Invalid number of arguments: {}";
 /* Semantic Errors */
 // Variables
 constexpr const char* UNBOUND_VAR_ERROR = "The variable '{}' is unbound";
@@ -57,4 +59,5 @@ public:
     explicit SemanticError(const char* fn, const char* detail, int ln) :
             IError("Error: ", fn, detail, ln) {}
 };
+
 #endif
