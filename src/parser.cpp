@@ -106,6 +106,10 @@ ExprPtr Parser::parseSExpr() {
         right = parseAtom();
     }
 
+    if (token.type == TokenType::NOT && !cast::toNIL(right)) {
+        throw InvalidSyntaxError(mFileName, ERROR(OP_INVALID_NUMBER_OF_ARGS_ERROR, "NOT", 2), 0);
+    }
+
     return std::make_shared<BinOpExpr>(left, right, token);
 }
 
@@ -149,11 +153,11 @@ ExprPtr Parser::parseLet() {
     advance();
 
     consume(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "LET"));
-    while (true) {
+    for (;;) {
         // Check out (let (x))
         while (mCurrentToken.type == TokenType::VAR) {
             var = parseAtom();
-            cast::toVar(var)->sType =  SymbolType::LOCAL;
+            cast::toVar(var)->sType = SymbolType::LOCAL;
             bindings.emplace_back(var);
         }
 
