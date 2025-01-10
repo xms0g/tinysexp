@@ -222,7 +222,34 @@ void CodeGen::emitWhen(const WhenExpr& when) {
     emitLabel(done);
 }
 
-void CodeGen::emitCond(const CondExpr& cond) {}
+void CodeGen::emitCond(const CondExpr& cond) {
+    RegisterPair reg;
+    std::string done = createLabel();
+
+    for (auto& pair: cond.variants) {
+        std::string elseLabel = createLabel();
+
+        if (auto binop = cast::toBinop(pair.first)) {
+            reg = emitBinop(*binop);
+            rtracker.free(reg.pair.first);
+
+        } else if (auto funcCall = cast::toFuncCall(pair.first)) {
+            reg = emitFuncCall(*funcCall);
+            rtracker.free(reg.pair.first);
+        }
+
+        emitJump(jumps.top(), elseLabel);
+        jumps.pop();
+
+        for (auto& form: pair.second) {
+            emitAST(form);
+        }
+
+        emitJump("jmp", done);
+        emitLabel(elseLabel);
+    }
+    emitLabel(done);
+}
 
 RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
     RegisterPair rp{};
