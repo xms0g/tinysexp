@@ -1,0 +1,11 @@
+(defvar x 3)
+(defvar y 2)
+(defvar a 5)
+
+(when (> a 4)
+    (+ x y)
+    (if (< a 5)
+        (* x y)
+        (/ x y)
+    )
+)
