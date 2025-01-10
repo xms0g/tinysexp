@@ -2,6 +2,8 @@
 #include <format>
 
 #define emitHex(n) std::format("0x{:X}", n)
+#define emitJump(jmp, label)  generatedCode += std::format("\t{} {}\n", jmp, label)
+#define emitLabel(label) generatedCode += std::format("{}:\n", label)
 #define emitInstruction(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
 
 RegisterPair RegisterTracker::alloc(RegisterType rtype) {
@@ -112,13 +114,25 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::NOT:
             return emitExpr(binop.lhs, binop.rhs, {"not", nullptr});
         case TokenType::EQUAL:
+            jumps.push("jne");
+            break;
         case TokenType::NEQUAL:
+            jumps.push("je");
+            break;
         case TokenType::GREATER_THEN:
+            jumps.push("jle");
+            break;
         case TokenType::LESS_THEN:
+            jumps.push("jge");
+            break;
         case TokenType::GREATER_THEN_EQ:
+            jumps.push("jl");
+            break;
         case TokenType::LESS_THEN_EQ:
-            return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
+            jumps.push("jg");
+            break;
     }
+    return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
 }
 
 void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
@@ -151,13 +165,62 @@ void CodeGen::emitDefconst(const DefconstExpr& defconst) {
 
 void CodeGen::emitDefun(const DefunExpr& defun) {}
 
-RegisterPair CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
+RegisterPair CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {}
 
+void CodeGen::emitIf(const IfExpr& if_) {
+    RegisterPair reg;
+    std::string elseLabel = createLabel();
+    // Emit test
+    if (auto binop = cast::toBinop(if_.test)) {
+        reg = emitBinop(*binop);
+        rtracker.free(reg.pair.first);
+
+    } else if (auto funcCall = cast::toFuncCall(if_.test)) {
+        reg = emitFuncCall(*funcCall);
+        rtracker.free(reg.pair.first);
+    }
+
+    emitJump(jumps.top(), elseLabel);
+    jumps.pop();
+
+    // Emit then
+    emitAST(if_.then);
+
+    // Emit else
+    if (!cast::toNIL(if_.else_)) {
+        std::string done = createLabel();
+        emitJump("jmp", done);
+        emitLabel(elseLabel);
+        emitAST(if_.else_);
+        emitLabel(done);
+    } else {
+        emitLabel(elseLabel);
+    }
 }
 
-void CodeGen::emitIf(const IfExpr& if_) {}
+void CodeGen::emitWhen(const WhenExpr& when) {
+    RegisterPair reg;
+    std::string done = createLabel();
+    // Emit test
+    if (auto binop = cast::toBinop(when.test)) {
+        reg = emitBinop(*binop);
+        rtracker.free(reg.pair.first);
 
-void CodeGen::emitWhen(const WhenExpr& when) {}
+    } else if (auto funcCall = cast::toFuncCall(when.test)) {
+        reg = emitFuncCall(*funcCall);
+        rtracker.free(reg.pair.first);
+    }
+
+    emitJump(jumps.top(), done);
+    jumps.pop();
+
+    // Emit then
+    for (auto& form: when.then) {
+        emitAST(form);
+    }
+
+    emitLabel(done);
+}
 
 void CodeGen::emitCond(const CondExpr& cond) {}
 
@@ -351,5 +414,9 @@ std::string CodeGen::getAddr(SymbolType stype, const std::string& varName) {
         default:
             throw std::runtime_error("Unknown SymbolType.");
     }
+}
+
+std::string CodeGen::createLabel() {
+    return ".L" + std::to_string(currentLabelCount++);
 }
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <stack>
 #include "parser.h"
 
 enum class Register {
@@ -82,7 +83,7 @@ private:
 
 class CodeGen {
 public:
-    CodeGen() : currentStackOffset(8) {}
+    CodeGen() : currentStackOffset(8), currentLabelCount(0) {}
 
     std::string emit(const ExprPtr& ast);
 
@@ -133,7 +134,11 @@ private:
 
     std::string getAddr(SymbolType stype, const std::string& varName);
 
+    std::string createLabel();
+
     std::string generatedCode;
+    // Label
+    int currentLabelCount;
     // Register
     RegisterTracker rtracker;
     // Stack
@@ -142,6 +147,8 @@ private:
     // Sections
     std::unordered_map<std::string, std::string> sectionData;
     std::unordered_set<std::string> sectionBSS;
+    // Jump instructions
+    std::stack<std::string> jumps;
 };
 
 
