@@ -136,7 +136,42 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
 }
 
 void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
+    const auto iterVar = cast::toVar(dotimes.iterationCount);
+    const std::string iterVarName = cast::toString(iterVar->name)->data;
+    // Labels
+    std::string loop = createLabel();
+    std::string done = createLabel();
+    // Loop condition
+    ExprPtr name = iterVar->name;
+    ExprPtr value = std::make_shared<IntExpr>(0);
+    ExprPtr lhs = std::make_shared<VarExpr>(name, value, SymbolType::LOCAL);
+    ExprPtr rhs = iterVar->value;
+    Token token = Token{TokenType::LESS_THEN};
+    auto expr = BinOpExpr(lhs, rhs, token);
+    // Address of iter var
+    std::string iterVarAddr = getAddr(SymbolType::LOCAL, iterVarName);
 
+    // Set 0 to iter var
+    emitInstruction("mov", iterVarAddr, 0);
+    // Loop label
+    emitLabel(loop);
+    RegisterPair reg = emitBinop(expr);
+    rtracker.free(reg.pair.first);
+
+    emitJump(jumps.top(), done);
+    jumps.pop();
+    // Emit statements
+    for (auto& statement: dotimes.statements) {
+        emitAST(statement);
+
+    }
+    // Increment iteration count
+    reg = rtracker.alloc(RegisterType::GP);
+    emitInstruction("mov", reg.pair.second, iterVarAddr);
+    emitInstruction("add", reg.pair.second, 1);
+    emitInstruction("mov", iterVarAddr, reg.pair.second);
+    emitJump("jmp", loop);
+    emitLabel(done);
 }
 
 void CodeGen::emitLoop(const LoopExpr& loop) {}
