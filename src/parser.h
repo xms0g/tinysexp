@@ -74,7 +74,7 @@ struct DotimesExpr : IExpr {
 struct LoopExpr : IExpr {
     std::vector<ExprPtr> sexprs;
 
-    LoopExpr(std::vector<ExprPtr>& sexprs_): sexprs(std::move(sexprs_)) {}
+    LoopExpr(std::vector<ExprPtr>& sexprs_) : sexprs(std::move(sexprs_)) {}
 };
 
 struct LetExpr : IExpr {
@@ -136,9 +136,13 @@ struct IfExpr : IExpr {
             else_(std::move(e)) {}
 };
 
-struct WhenExpr : IfExpr {
-    WhenExpr(ExprPtr& test, ExprPtr& then, ExprPtr else_ = nullptr) :
-            IfExpr(test, then, std::move(else_)) {}
+struct WhenExpr : IExpr {
+    ExprPtr test;
+    std::vector<ExprPtr> then;
+
+    WhenExpr(ExprPtr& test_,  std::vector<ExprPtr>& then_) :
+            test(std::move(test_)),
+            then(std::move(then_)) {}
 };
 
 struct CondExpr : IExpr {
@@ -199,8 +203,6 @@ private:
     ExprPtr parseNumber();
 
     ExprPtr createVar(bool isConstant);
-
-    std::tuple<ExprPtr, ExprPtr, ExprPtr> createCond();
 
     void consume(TokenType expected, const char* errorStr);
 

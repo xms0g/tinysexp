@@ -248,13 +248,56 @@ ExprPtr Parser::parseFuncCall() {
 }
 
 ExprPtr Parser::parseIf() {
-    auto condState = createCond();
-    return std::make_shared<IfExpr>(std::get<0>(condState), std::get<1>(condState), std::get<2>(condState));
+    ExprPtr test, then, else_;
+
+    advance();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        test = parseExpr();
+    } else {
+        test = parseAtom();
+    }
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        then = parseExpr();
+    } else {
+        then = parseAtom();
+    }
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        else_ = parseExpr();
+    } else {
+        else_ = parseAtom();
+    }
+
+    return std::make_shared<IfExpr>(test, then, else_);
 }
 
 ExprPtr Parser::parseWhen() {
-    auto condState = createCond();
-    return std::make_shared<WhenExpr>(std::get<0>(condState), std::get<1>(condState), std::get<2>(condState));
+    ExprPtr test;
+    std::vector<ExprPtr> then;
+
+    advance();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        test = parseExpr();
+    } else {
+        test = parseAtom();
+    }
+
+    for (;;) {
+        if (mCurrentToken.type == TokenType::LPAREN) {
+            then.push_back(parseExpr());
+        } else {
+            then.push_back(parseAtom());
+        }
+
+        if (mCurrentToken.type == TokenType::RPAREN)
+            break;
+    }
+
+
+    return std::make_shared<WhenExpr>(test, then);
 }
 
 ExprPtr Parser::parseCond() {
@@ -343,32 +386,6 @@ ExprPtr Parser::createVar(bool isConstant) {
 
     cast::toVar(var)->value = std::move(value);
     return var;
-}
-
-std::tuple<ExprPtr, ExprPtr, ExprPtr> Parser::createCond() {
-    ExprPtr test, then, else_;
-
-    advance();
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        test = parseExpr();
-    } else {
-        test = parseAtom();
-    }
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        then = parseExpr();
-    } else {
-        then = parseAtom();
-    }
-
-    if (mCurrentToken.type == TokenType::LPAREN) {
-        else_ = parseExpr();
-    } else {
-        else_ = parseAtom();
-    }
-
-    return std::make_tuple(test, then, else_);
 }
 
 void Parser::consume(TokenType expected, const char* errorStr) {

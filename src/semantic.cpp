@@ -325,13 +325,25 @@ void SemanticAnalyzer::ifResolve(const IfExpr& if_) {
 
     exprResolve(if_.then);
 
-    if (if_.else_) {
+    if (!cast::toNIL(if_.else_)) {
         exprResolve(if_.else_);
     }
 }
 
 void SemanticAnalyzer::whenResolve(const WhenExpr& when) {
-    ifResolve(when);
+    if (const auto test = cast::toString(when.test)) {
+        Symbol sym = stracker.lookup(test->data);
+
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
+        }
+    } else {
+        exprResolve(when.test);
+    }
+
+    for (auto& form: when.then) {
+        exprResolve(form);
+    }
 }
 
 void SemanticAnalyzer::condResolve(const CondExpr& cond) {
