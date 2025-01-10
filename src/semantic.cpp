@@ -107,22 +107,25 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 }
 
 ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
-    ExprPtr lhs = notNumberResolve(binop.lhs);
-    ExprPtr rhs = notNumberResolve(binop.rhs);
+    ExprPtr lhs = numberResolve(binop.lhs);
+    ExprPtr rhs = numberResolve(binop.rhs);
 
-    if (lhs) {
-        if (auto var = cast::toVar(lhs); cast::toDouble(var->value))
+    if (cast::toDouble(lhs))
+        return lhs;
+    else if (auto var = cast::toVar(lhs)) {
+        if (cast::toDouble(var->value))
             return lhs;
     }
 
-    if (rhs) {
-        if (auto var = cast::toVar(rhs); cast::toDouble(var->value))
+    if (cast::toDouble(rhs))
+        return rhs;
+    else if (auto var = cast::toVar(rhs)) {
+        if (cast::toDouble(var->value))
             return rhs;
-        else
-            return lhs;
     }
 
-    return nullptr;
+    return lhs;
+
 }
 
 ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
@@ -159,6 +162,36 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
 void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     stracker.enter();
     checkConstantVar(dotimes.iterationCount);
+
+    const auto var = cast::toVar(dotimes.iterationCount);
+    const std::string varName = cast::toString(var->name)->data;
+    // Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
+    // If it's expr, resolve it.
+    if (const auto value = cast::toVar(var->value)) {
+        const std::string valueName = cast::toString(value->name)->data;
+        Symbol sym = stracker.lookup(valueName);
+
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, valueName), 0);
+        }
+        // Update value
+        var->value = sym.value;
+        stracker.bind(varName, {varName, var, SymbolType::LOCAL});
+    } else if (cast::toInt(var->value) || cast::toDouble(var->value)) {
+        ExprPtr name_ = var->name;
+        ExprPtr value_ = var->value;
+        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
+        stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
+    } else {
+        ExprPtr name_ = var->name;
+        ExprPtr value_ = exprResolve(var->value);
+        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
+        stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
+    }
+
+    for (auto& statement: dotimes.statements) {
+        exprResolve(statement);
+    }
     stracker.exit();
 }
 
@@ -385,10 +418,10 @@ void SemanticAnalyzer::checkBool(const ExprPtr& var) {
     }
 }
 
-ExprPtr SemanticAnalyzer::notNumberResolve(ExprPtr& n) {
+ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n) {
     if (!cast::toInt(n) && !cast::toDouble(n)) {
         return varResolve(n);
     }
 
-    return nullptr;
+    return n;
 }

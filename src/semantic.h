@@ -72,7 +72,7 @@ private:
 
     void checkBool(const ExprPtr& var);
 
-    ExprPtr notNumberResolve(ExprPtr& n);
+    ExprPtr numberResolve(ExprPtr& n);
 
     ScopeTracker stracker;
     /* File Name */
