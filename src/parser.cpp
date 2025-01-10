@@ -115,14 +115,22 @@ ExprPtr Parser::parseSExpr() {
 
 ExprPtr Parser::parseDotimes() {
     std::vector<ExprPtr> statements;
-    ExprPtr var, name, value;
+    ExprPtr var, value;
 
     advance();
 
     consume(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DOTIMES"));
-    name = parseAtom();
-    value = parseAtom();
-    var = std::make_shared<VarExpr>(name, value);
+    var = parseAtom();
+
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        value = parseExpr();
+    } else {
+        value = parseAtom();
+    }
+
+    cast::toVar(var)->value = std::move(value);
+    cast::toVar(var)->sType = SymbolType::LOCAL;
+
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
 
