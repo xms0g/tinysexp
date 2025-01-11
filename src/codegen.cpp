@@ -174,7 +174,31 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     emitLabel(done);
 }
 
-void CodeGen::emitLoop(const LoopExpr& loop) {}
+void CodeGen::emitLoop(const LoopExpr& loop) {
+    // Labels
+    std::string loopLabel = createLabel();
+    std::string doneLabel = createLabel();
+
+    emitLabel(loopLabel);
+    for (auto& sexpr: loop.sexprs) {
+        if (auto when = cast::toWhen(sexpr)) {
+            emitAST(when->test);
+
+            for (auto& form: when->then) {
+                if (cast::toReturn(form)) {
+                    emitJump(jumps.top(), doneLabel);
+                    jumps.pop();
+                    break;
+                }
+                emitAST(form);
+            }
+        } else {
+            emitAST(sexpr);
+        }
+    }
+    emitJump("jmp", loopLabel);
+    emitLabel(doneLabel);
+}
 
 void CodeGen::emitLet(const LetExpr& let) {
     for (auto& var: let.bindings) {
