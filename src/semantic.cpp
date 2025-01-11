@@ -96,6 +96,8 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
         defunResolve(*defun);
     } else if (auto funcCall = cast::toFuncCall(ast)) {
         funcCallResolve(*funcCall);
+    } else if (auto return_ = cast::toReturn(ast)) {
+        returnResolve(*return_);
     } else if (auto if_ = cast::toIf(ast)) {
         ifResolve(*if_);
     } else if (auto when = cast::toWhen(ast)) {
@@ -307,6 +309,19 @@ void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
     const auto func = cast::toDefun(sym.value);
     if (funcCall.args.size() != func->args.size()) {
         throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
+    }
+}
+
+void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
+    if (cast::toT(return_.arg) || cast::toNIL(return_.arg)) return;
+
+    const auto arg = cast::toVar(return_.arg);
+    const std::string argName = cast::toString(arg->name)->data;
+    // Check out the var.If it's not defined, raise error.
+    Symbol sym = stracker.lookup(argName);
+
+    if (!sym.value) {
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
     }
 }
 

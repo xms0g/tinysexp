@@ -64,6 +64,8 @@ private:
 
     void funcCallResolve(const FuncCallExpr& funcCall);
 
+    void returnResolve(const ReturnExpr& return_);
+
     void ifResolve(const IfExpr& if_);
 
     void whenResolve(const WhenExpr& when);
