@@ -46,6 +46,8 @@ private:
 
     ExprPtr varResolve(ExprPtr& var);
 
+    void valueResolve(const ExprPtr& var);
+
     void dotimesResolve(const DotimesExpr& dotimes);
 
     void loopResolve(const LoopExpr& loop);
