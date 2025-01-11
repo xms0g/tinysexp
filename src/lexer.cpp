@@ -13,6 +13,9 @@ void Lexer::process() {
         } else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
             mTokens.emplace_back(TokenType::DOTIMES);
             advance(7);
+        } else if (!std::strncmp("return", mCurrentChar, 6)) {
+            mTokens.emplace_back(TokenType::RETURN);
+            advance(6);
         } else if (!std::strncmp("loop", mCurrentChar, 4)) {
             mTokens.emplace_back(TokenType::LOOP);
             advance(4);

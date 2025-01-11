@@ -21,6 +21,8 @@ enum class TokenType {
     LET, SETQ, DEFVAR, DEFCONST,
     // Function
     DEFUN,
+    // Special function
+    RETURN,
     // Others
     LPAREN, RPAREN,
     EOF_
