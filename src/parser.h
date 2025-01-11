@@ -127,6 +127,12 @@ struct FuncCallExpr : IExpr {
             args(std::move(params_)) {}
 };
 
+struct ReturnExpr : IExpr {
+    ExprPtr arg;
+
+    ReturnExpr(ExprPtr& arg_) : arg(std::move(arg_)) {}
+};
+
 struct IfExpr : IExpr {
     ExprPtr test, then, else_;
 
@@ -192,6 +198,8 @@ private:
 
     ExprPtr parseFuncCall();
 
+    ExprPtr parseReturn();
+
     ExprPtr parseIf();
 
     ExprPtr parseWhen();
@@ -249,6 +257,10 @@ inline std::shared_ptr<DefunExpr> toDefun(const ExprPtr& expr) {
 
 inline std::shared_ptr<FuncCallExpr> toFuncCall(const ExprPtr& expr) {
     return std::dynamic_pointer_cast<FuncCallExpr>(expr);
+}
+
+inline std::shared_ptr<ReturnExpr> toReturn(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<ReturnExpr>(expr);
 }
 
 inline std::shared_ptr<IfExpr> toIf(const ExprPtr& expr) {

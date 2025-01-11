@@ -82,6 +82,9 @@ ExprPtr Parser::parseExpr() {
         case TokenType::VAR:
             expr = parseFuncCall();
             break;
+        case TokenType::RETURN:
+            expr = parseReturn();
+            break;
         default:
             throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
     }
@@ -255,6 +258,16 @@ ExprPtr Parser::parseFuncCall() {
     return std::make_shared<FuncCallExpr>(name, args);
 }
 
+ExprPtr Parser::parseReturn() {
+    ExprPtr arg;
+
+    advance();
+
+    arg = parseAtom();
+
+    return std::make_shared<ReturnExpr>(arg);
+}
+
 ExprPtr Parser::parseIf() {
     ExprPtr test, then, else_;
 
@@ -303,7 +316,6 @@ ExprPtr Parser::parseWhen() {
         if (mCurrentToken.type == TokenType::RPAREN)
             break;
     }
-
 
     return std::make_shared<WhenExpr>(test, then);
 }
