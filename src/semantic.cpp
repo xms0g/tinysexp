@@ -172,17 +172,17 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var) {
         }
         // Update value
         var_->value = sym.value;
-        stracker.bind(varName, {varName, var, SymbolType::LOCAL});
+        stracker.bind(varName, {varName, var, var_->sType});
     } else if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
         ExprPtr name_ = var_->name;
         ExprPtr value_ = var_->value;
-        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
-        stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
+        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
+        stracker.bind(varName, {varName, new_var, var_->sType});
     } else {
         ExprPtr name_ = var_->name;
         ExprPtr value_ = exprResolve(var_->value);
-        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, SymbolType::LOCAL);
-        stracker.bind(varName, {varName, new_var, SymbolType::LOCAL});
+        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
+        stracker.bind(varName, {varName, new_var, var_->sType});
     }
 }
 
