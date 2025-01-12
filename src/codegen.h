@@ -122,6 +122,8 @@ private:
 
     void emitSection(const ExprPtr& value);
 
+    void emitTest(const ExprPtr& test);
+
     void handleAssignment(const ExprPtr& var);
 
     void handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr, const std::string& value);

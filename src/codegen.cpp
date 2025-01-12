@@ -147,7 +147,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     ExprPtr lhs = std::make_shared<VarExpr>(name, value, SymbolType::LOCAL);
     ExprPtr rhs = iterVar->value;
     Token token = Token{TokenType::LESS_THEN};
-    auto expr = BinOpExpr(lhs, rhs, token);
+    ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
     // Address of iter var
     std::string iterVarAddr = getAddr(SymbolType::LOCAL, iterVarName);
 
@@ -155,9 +155,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     emitInstruction("mov", iterVarAddr, 0);
     // Loop label
     emitLabel(loopLabel);
-    RegisterPair rp = emitBinop(expr);
-    rtracker.free(rp.pair.first);
-
+    emitTest(test);
     emitJump(jumps.top(), doneLabel);
     jumps.pop();
     // Emit statements
@@ -165,7 +163,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
         emitAST(statement);
     }
     // Increment iteration count
-    rp = rtracker.alloc(RegisterType::GP);
+    RegisterPair rp = rtracker.alloc(RegisterType::GP);
     emitInstruction("mov", rp.pair.second, iterVarAddr);
     emitInstruction("add", rp.pair.second, 1);
     emitInstruction("mov", iterVarAddr, rp.pair.second);
@@ -176,19 +174,24 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 }
 
 void CodeGen::emitLoop(const LoopExpr& loop) {
+    RegisterPair rp{};
     // Labels
     std::string loopLabel = createLabel();
+    std::string doneLabel = createLabel();
 
     emitLabel(loopLabel);
     for (auto& sexpr: loop.sexprs) {
         if (auto when = cast::toWhen(sexpr)) {
-            emitAST(when->test);
+            emitTest(when->test);
 
             for (auto& form: when->then) {
                 if (cast::toReturn(form)) {
                     emitJump(jumps.top(), loopLabel);
                     jumps.pop();
+                    emitJump("jmp", doneLabel);
                     break;
+                } else {
+                    emitJump("jmp", loopLabel);
                 }
                 emitAST(form);
             }
@@ -196,6 +199,7 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
             emitAST(sexpr);
         }
     }
+    emitLabel(doneLabel);
 }
 
 void CodeGen::emitLet(const LetExpr& let) {
@@ -228,14 +232,7 @@ void CodeGen::emitIf(const IfExpr& if_) {
     RegisterPair rp;
     std::string elseLabel = createLabel();
     // Emit test
-    if (auto binop = cast::toBinop(if_.test)) {
-        rp = emitBinop(*binop);
-        rtracker.free(rp.pair.first);
-
-    } else if (auto funcCall = cast::toFuncCall(if_.test)) {
-        rp = emitFuncCall(*funcCall);
-        rtracker.free(rp.pair.first);
-    }
+    emitTest(if_.test);
 
     emitJump(jumps.top(), elseLabel);
     jumps.pop();
@@ -256,17 +253,9 @@ void CodeGen::emitIf(const IfExpr& if_) {
 }
 
 void CodeGen::emitWhen(const WhenExpr& when) {
-    RegisterPair rp;
     std::string done = createLabel();
     // Emit test
-    if (auto binop = cast::toBinop(when.test)) {
-        rp = emitBinop(*binop);
-        rtracker.free(rp.pair.first);
-
-    } else if (auto funcCall = cast::toFuncCall(when.test)) {
-        rp = emitFuncCall(*funcCall);
-        rtracker.free(rp.pair.first);
-    }
+    emitTest(when.test);
 
     emitJump(jumps.top(), done);
     jumps.pop();
@@ -280,20 +269,12 @@ void CodeGen::emitWhen(const WhenExpr& when) {
 }
 
 void CodeGen::emitCond(const CondExpr& cond) {
-    RegisterPair rp;
     std::string done = createLabel();
 
     for (auto& pair: cond.variants) {
         std::string elseLabel = createLabel();
 
-        if (auto binop = cast::toBinop(pair.first)) {
-            rp = emitBinop(*binop);
-            rtracker.free(rp.pair.first);
-
-        } else if (auto funcCall = cast::toFuncCall(pair.first)) {
-            rp = emitFuncCall(*funcCall);
-            rtracker.free(rp.pair.first);
-        }
+        emitTest(pair.first);
 
         emitJump(jumps.top(), elseLabel);
         jumps.pop();
@@ -309,7 +290,7 @@ void CodeGen::emitCond(const CondExpr& cond) {
 }
 
 RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
-    RegisterPair rp{};
+    RegisterPair rp;
 
     if (auto int_ = cast::toInt(n)) {
         rp = rtracker.alloc(RegisterType::GP);
@@ -389,6 +370,19 @@ void CodeGen::emitSection(const ExprPtr& var) {
         } else if (auto str = cast::toString(var_->value)) {
             sectionData.emplace(cast::toString(var_->name)->data, std::format("db \"{}\", 10", str->data));
         }
+    }
+}
+
+void CodeGen::emitTest(const ExprPtr& test) {
+    RegisterPair rp;
+
+    if (auto binop = cast::toBinop(test)) {
+        rp = emitBinop(*binop);
+        rtracker.free(rp.pair.first);
+
+    } else if (auto funcCall = cast::toFuncCall(test)) {
+        rp = emitFuncCall(*funcCall);
+        rtracker.free(rp.pair.first);
     }
 }
 
