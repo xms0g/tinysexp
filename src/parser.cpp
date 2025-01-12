@@ -47,6 +47,10 @@ ExprPtr Parser::parseExpr() {
         case TokenType::AND:
         case TokenType::OR:
         case TokenType::NOT:
+        case TokenType::LOGAND:
+        case TokenType::LOGIOR:
+        case TokenType::LOGXOR:
+        case TokenType::LOGNOR:
             expr = parseSExpr();
             break;
         case TokenType::DOTIMES:

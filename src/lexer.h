@@ -13,6 +13,8 @@ enum class TokenType {
     EQUAL, NEQUAL, GREATER_THEN, LESS_THEN, GREATER_THEN_EQ, LESS_THEN_EQ,
     // Logical Operators
     AND, OR, NOT,
+    // Bitwise Operators
+    LOGAND, LOGIOR, LOGXOR, LOGNOR,
     // Loop
     DOTIMES, LOOP,
     // Condition

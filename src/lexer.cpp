@@ -46,6 +46,18 @@ void Lexer::process() {
         } else if (!std::strncmp("nil", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::NIL);
             advance(3);
+        } else if (!std::strncmp("logand", mCurrentChar, 6)) {
+            mTokens.emplace_back(TokenType::LOGAND);
+            advance(6);
+        } else if (!std::strncmp("logior", mCurrentChar, 6)) {
+            mTokens.emplace_back(TokenType::LOGIOR);
+            advance(6);
+        } else if (!std::strncmp("logxor", mCurrentChar, 6)) {
+            mTokens.emplace_back(TokenType::LOGXOR);
+            advance(6);
+        } else if (!std::strncmp("lognor", mCurrentChar, 6)) {
+            mTokens.emplace_back(TokenType::LOGNOR);
+            advance(6);
         } else if (!std::strncmp("and", mCurrentChar, 3)) {
             mTokens.emplace_back(TokenType::AND);
             advance(3);
