@@ -139,8 +139,8 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     const auto iterVar = cast::toVar(dotimes.iterationCount);
     const std::string iterVarName = cast::toString(iterVar->name)->data;
     // Labels
-    std::string loop = createLabel();
-    std::string done = createLabel();
+    std::string loopLabel = createLabel();
+    std::string doneLabel = createLabel();
     // Loop condition
     ExprPtr name = iterVar->name;
     ExprPtr value = std::make_shared<IntExpr>(0);
@@ -154,24 +154,25 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     // Set 0 to iter var
     emitInstruction("mov", iterVarAddr, 0);
     // Loop label
-    emitLabel(loop);
-    RegisterPair reg = emitBinop(expr);
-    rtracker.free(reg.pair.first);
+    emitLabel(loopLabel);
+    RegisterPair rp = emitBinop(expr);
+    rtracker.free(rp.pair.first);
 
-    emitJump(jumps.top(), done);
+    emitJump(jumps.top(), doneLabel);
     jumps.pop();
     // Emit statements
     for (auto& statement: dotimes.statements) {
         emitAST(statement);
-
     }
     // Increment iteration count
-    reg = rtracker.alloc(RegisterType::GP);
-    emitInstruction("mov", reg.pair.second, iterVarAddr);
-    emitInstruction("add", reg.pair.second, 1);
-    emitInstruction("mov", iterVarAddr, reg.pair.second);
-    emitJump("jmp", loop);
-    emitLabel(done);
+    rp = rtracker.alloc(RegisterType::GP);
+    emitInstruction("mov", rp.pair.second, iterVarAddr);
+    emitInstruction("add", rp.pair.second, 1);
+    emitInstruction("mov", iterVarAddr, rp.pair.second);
+    rtracker.free(rp.pair.first);
+
+    emitJump("jmp", loopLabel);
+    emitLabel(doneLabel);
 }
 
 void CodeGen::emitLoop(const LoopExpr& loop) {
@@ -227,16 +228,16 @@ void CodeGen::emitDefun(const DefunExpr& defun) {}
 RegisterPair CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {}
 
 void CodeGen::emitIf(const IfExpr& if_) {
-    RegisterPair reg;
+    RegisterPair rp;
     std::string elseLabel = createLabel();
     // Emit test
     if (auto binop = cast::toBinop(if_.test)) {
-        reg = emitBinop(*binop);
-        rtracker.free(reg.pair.first);
+        rp = emitBinop(*binop);
+        rtracker.free(rp.pair.first);
 
     } else if (auto funcCall = cast::toFuncCall(if_.test)) {
-        reg = emitFuncCall(*funcCall);
-        rtracker.free(reg.pair.first);
+        rp = emitFuncCall(*funcCall);
+        rtracker.free(rp.pair.first);
     }
 
     emitJump(jumps.top(), elseLabel);
@@ -258,16 +259,16 @@ void CodeGen::emitIf(const IfExpr& if_) {
 }
 
 void CodeGen::emitWhen(const WhenExpr& when) {
-    RegisterPair reg;
+    RegisterPair rp;
     std::string done = createLabel();
     // Emit test
     if (auto binop = cast::toBinop(when.test)) {
-        reg = emitBinop(*binop);
-        rtracker.free(reg.pair.first);
+        rp = emitBinop(*binop);
+        rtracker.free(rp.pair.first);
 
     } else if (auto funcCall = cast::toFuncCall(when.test)) {
-        reg = emitFuncCall(*funcCall);
-        rtracker.free(reg.pair.first);
+        rp = emitFuncCall(*funcCall);
+        rtracker.free(rp.pair.first);
     }
 
     emitJump(jumps.top(), done);
@@ -282,19 +283,19 @@ void CodeGen::emitWhen(const WhenExpr& when) {
 }
 
 void CodeGen::emitCond(const CondExpr& cond) {
-    RegisterPair reg;
+    RegisterPair rp;
     std::string done = createLabel();
 
     for (auto& pair: cond.variants) {
         std::string elseLabel = createLabel();
 
         if (auto binop = cast::toBinop(pair.first)) {
-            reg = emitBinop(*binop);
-            rtracker.free(reg.pair.first);
+            rp = emitBinop(*binop);
+            rtracker.free(rp.pair.first);
 
         } else if (auto funcCall = cast::toFuncCall(pair.first)) {
-            reg = emitFuncCall(*funcCall);
-            rtracker.free(reg.pair.first);
+            rp = emitFuncCall(*funcCall);
+            rtracker.free(rp.pair.first);
         }
 
         emitJump(jumps.top(), elseLabel);
@@ -331,15 +332,15 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
 }
 
 RegisterPair CodeGen::emitRHS(const ExprPtr& rhs) {
-    RegisterPair reg{};
+    RegisterPair rp{};
 
     if (auto binOp = cast::toBinop(rhs)) {
-        reg = emitBinop(*binOp);
+        rp = emitBinop(*binOp);
     } else {
-        reg = emitNumb(rhs);
+        rp = emitNumb(rhs);
     }
 
-    return reg;
+    return rp;
 }
 
 RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op) {
@@ -414,10 +415,10 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
 
         sectionData.emplace(label, std::format("db \"{}\",10", str->data));
 
-        RegisterPair reg = rtracker.alloc(RegisterType::GP);
-        emitInstruction("lea", reg.pair.second, labelAddr);
-        emitInstruction("mov", varAddr, reg.pair.second);
-        rtracker.free(reg.pair.first);
+        RegisterPair rp = rtracker.alloc(RegisterType::GP);
+        emitInstruction("lea", rp.pair.second, labelAddr);
+        emitInstruction("mov", varAddr, rp.pair.second);
+        rtracker.free(rp.pair.first);
     } else {
         RegisterPair rp{};
 
@@ -469,13 +470,13 @@ RegisterPair CodeGen::emitLoadInstruction(const VarExpr& value, const std::strin
     return rp;
 }
 
-void CodeGen::emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair reg) {
-    switch (reg.rType) {
+void CodeGen::emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair rp) {
+    switch (rp.rType) {
         case RegisterType::GP:
-            emitInstruction("mov", getAddr(stype, varName), reg.pair.second);
+            emitInstruction("mov", getAddr(stype, varName), rp.pair.second);
             break;
         case RegisterType::SSE:
-            emitInstruction("movsd", getAddr(stype, varName), reg.pair.second);
+            emitInstruction("movsd", getAddr(stype, varName), rp.pair.second);
             break;
     }
 }
