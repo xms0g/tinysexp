@@ -107,12 +107,27 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
             return emitExpr(binop.lhs, binop.rhs, {"idiv", "divsd"});
         case TokenType::MUL:
             return emitExpr(binop.lhs, binop.rhs, {"imul", "mulsd"});
-        case TokenType::AND:
+        case TokenType::LOGAND:
             return emitExpr(binop.lhs, binop.rhs, {"and", nullptr});
-        case TokenType::OR:
+        case TokenType::LOGIOR:
             return emitExpr(binop.lhs, binop.rhs, {"or", nullptr});
+        case TokenType::LOGXOR:
+            return emitExpr(binop.lhs, binop.rhs, {"xor", nullptr});
+        case TokenType::LOGNOR: {
+            ExprPtr negOne = std::make_shared<IntExpr>(-1);
+            // Bitwise NOT seperately
+            RegisterPair rp1 = emitExpr(binop.lhs, negOne, {"xor", nullptr});
+            RegisterPair rp2 = emitExpr(binop.rhs, negOne, {"xor", nullptr});
+            emitInstruction("and", rp1.pair.second, rp2.pair.second);
+            rtracker.free(rp2.pair.first);
+            return rp1;
+        }
+        case TokenType::AND:
+            break;
+        case TokenType::OR:
+            break;
         case TokenType::NOT:
-            return emitExpr(binop.lhs, binop.rhs, {"not", nullptr});
+            break;
         case TokenType::EQUAL:
             jumps.push("jne");
             break;
