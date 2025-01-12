@@ -187,7 +187,7 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
 
             for (auto& form: when->then) {
                 if (cast::toReturn(form)) {
-                    emitJump(jumps.top(), doneLabel);
+                    emitJump(jumps.top(), loopLabel);
                     jumps.pop();
                     break;
                 }
@@ -197,7 +197,7 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
             emitAST(sexpr);
         }
     }
-    emitJump("jmp", loopLabel);
+    emitJump("jmp", doneLabel);
     emitLabel(doneLabel);
 }
 
