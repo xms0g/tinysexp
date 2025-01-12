@@ -112,18 +112,26 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
     ExprPtr lhs = numberResolve(binop.lhs);
     ExprPtr rhs = numberResolve(binop.rhs);
 
-    if (cast::toDouble(lhs))
-        return lhs;
-    else if (auto var = cast::toVar(lhs)) {
-        if (cast::toDouble(var->value))
-            return lhs;
+    if (binop.opToken.type == TokenType::LOGAND ||
+        binop.opToken.type == TokenType::LOGIOR ||
+        binop.opToken.type == TokenType::LOGXOR ||
+        binop.opToken.type == TokenType::LOGNOR) {
+
+        if (checkDouble(lhs)) {
+            throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(lhs))), 0);
+        }
+
+        if (checkDouble(rhs)) {
+            throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(rhs))), 0);
+        }
     }
 
-    if (cast::toDouble(rhs))
+    if (checkDouble(lhs)) {
+        return lhs;
+    }
+
+    if (checkDouble(rhs)) {
         return rhs;
-    else if (auto var = cast::toVar(rhs)) {
-        if (cast::toDouble(var->value))
-            return rhs;
     }
 
     return lhs;
@@ -395,6 +403,36 @@ void SemanticAnalyzer::checkBool(const ExprPtr& var) {
 
     if (cast::toNIL(var)) {
         throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
+    }
+}
+
+bool SemanticAnalyzer::checkDouble(const ExprPtr& n) {
+    if (cast::toDouble(n))
+        return true;
+    else if (auto var = cast::toVar(n)) {
+        if (cast::toDouble(var->value))
+            return true;
+    }
+
+    return false;
+}
+
+
+std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
+    auto getPrimitive = [&](const ExprPtr& n) -> std::variant<int, double> {
+        if (auto double_ = cast::toDouble(n))
+            return double_->n;
+
+        if (auto int_ = cast::toInt(n)) {
+            return int_->n;
+        }
+    };
+
+    if (cast::toInt(n) || cast::toDouble(n))
+        return getPrimitive(n);
+
+    if (auto var = cast::toVar(n)) {
+        return getPrimitive(var->value);
     }
 }
 

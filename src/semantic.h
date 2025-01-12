@@ -76,6 +76,10 @@ private:
 
     void checkBool(const ExprPtr& var);
 
+    bool checkDouble(const ExprPtr& n);
+
+    std::variant<int, double> getValue(const ExprPtr& n);
+
     ExprPtr numberResolve(ExprPtr& n);
 
     ScopeTracker stracker;

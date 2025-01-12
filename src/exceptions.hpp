@@ -19,6 +19,8 @@ constexpr const char* CONSTANT_VAR_DECL_ERROR = "Constant variable '{}' is not a
 constexpr const char* GLOBAL_VAR_DECL_ERROR = "Global variable '{}' is not allowed here";
 constexpr const char* MULTIPLE_DECL_ERROR = "The variable '{}' occurs more than once";
 constexpr const char* NOT_NUMBER_ERROR = "The value '{}' is not of type number";
+constexpr const char* NOT_INT_ERROR = "The value '{}' is not of type INTEGER";
+
 // Functions
 constexpr const char* FUNC_UNDEFINED_ERROR = "The function '{}' is undefined";
 constexpr const char* FUNC_INVALID_NUMBER_OF_ARGS_ERROR = "'{}' Invalid number of arguments: {}";
