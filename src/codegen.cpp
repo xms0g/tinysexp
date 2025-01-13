@@ -441,8 +441,7 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
 
 void CodeGen::handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr,
                               const std::string& value) {
-    const std::string address = getAddr(var.sType, varName);
-    emitInstruction(instr, address, value);
+    emitInstruction(instr, getAddr(var.sType, varName), value);
 }
 
 void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
