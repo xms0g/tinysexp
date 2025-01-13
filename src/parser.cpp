@@ -103,12 +103,14 @@ ExprPtr Parser::parseSExpr() {
     Token token = mCurrentToken;
     advance();
 
-    left = parseAtom();
+    if (mCurrentToken.type == TokenType::LPAREN) {
+        left = parseExpr();
+    } else {
+        left = parseAtom();
+    }
 
     if (mCurrentToken.type == TokenType::LPAREN) {
-        consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-        right = parseSExpr();
-        consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+        right = parseExpr();
     } else {
         right = parseAtom();
     }
