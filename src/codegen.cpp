@@ -249,8 +249,10 @@ void CodeGen::emitIf(const IfExpr& if_) {
     // Emit test
     emitTest(if_.test);
 
-    emitJump(jumps.top(), elseLabel);
-    jumps.pop();
+    if (!jumps.empty()) {
+        emitJump(jumps.top(), elseLabel);
+        jumps.pop();
+    }
 
     // Emit then
     emitAST(if_.then);
@@ -268,19 +270,21 @@ void CodeGen::emitIf(const IfExpr& if_) {
 }
 
 void CodeGen::emitWhen(const WhenExpr& when) {
-    std::string done = createLabel();
+    std::string doneLabel = createLabel();
     // Emit test
     emitTest(when.test);
 
-    emitJump(jumps.top(), done);
-    jumps.pop();
+    if (!jumps.empty()) {
+        emitJump(jumps.top(), doneLabel);
+        jumps.pop();
+    }
 
     // Emit then
     for (auto& form: when.then) {
         emitAST(form);
     }
 
-    emitLabel(done);
+    emitLabel(doneLabel);
 }
 
 void CodeGen::emitCond(const CondExpr& cond) {
@@ -291,8 +295,10 @@ void CodeGen::emitCond(const CondExpr& cond) {
 
         emitTest(pair.first);
 
-        emitJump(jumps.top(), elseLabel);
-        jumps.pop();
+        if (!jumps.empty()) {
+            emitJump(jumps.top(), elseLabel);
+            jumps.pop();
+        }
 
         for (auto& form: pair.second) {
             emitAST(form);
@@ -394,10 +400,11 @@ void CodeGen::emitTest(const ExprPtr& test) {
     if (auto binop = cast::toBinop(test)) {
         rp = emitBinop(*binop);
         rtracker.free(rp.pair.first);
-
     } else if (auto funcCall = cast::toFuncCall(test)) {
         rp = emitFuncCall(*funcCall);
         rtracker.free(rp.pair.first);
+    } else if (cast::toNIL(test)) {
+        jumps.push("jmp");
     }
 }
 
