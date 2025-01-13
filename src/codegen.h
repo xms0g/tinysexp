@@ -116,7 +116,7 @@ private:
 
     RegisterPair emitNumb(const ExprPtr& n);
 
-    RegisterPair emitRHS(const ExprPtr& rhs);
+    RegisterPair emitNode(const ExprPtr& node);
 
     RegisterPair emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op);
 

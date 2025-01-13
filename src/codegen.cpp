@@ -122,8 +122,9 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
             rtracker.free(rp2.pair.first);
             return rp1;
         }
-        case TokenType::AND:
+        case TokenType::AND: {
             break;
+        }
         case TokenType::OR:
             break;
         case TokenType::NOT:
@@ -332,13 +333,15 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
     return rp;
 }
 
-RegisterPair CodeGen::emitRHS(const ExprPtr& rhs) {
+RegisterPair CodeGen::emitNode(const ExprPtr& node) {
     RegisterPair rp;
 
-    if (auto binOp = cast::toBinop(rhs)) {
+    if (auto binOp = cast::toBinop(node)) {
         rp = emitBinop(*binOp);
+    } else if (auto funcCall = cast::toFuncCall(node)) {
+        rp = emitFuncCall(*funcCall);
     } else {
-        rp = emitNumb(rhs);
+        rp = emitNumb(node);
     }
 
     return rp;
@@ -348,8 +351,8 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
     RegisterPair reg1;
     RegisterPair reg2;
 
-    reg1 = emitNumb(lhs);
-    reg2 = emitRHS(rhs);
+    reg1 = emitNode(lhs);
+    reg2 = emitNode(rhs);
 
     if (reg1.rType == RegisterType::SSE && reg2.rType == RegisterType::GP) {
         RegisterPair new_rp = rtracker.alloc(RegisterType::SSE);
