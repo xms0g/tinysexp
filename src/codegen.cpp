@@ -195,28 +195,32 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
     std::string doneLabel = createLabel();
 
     emitLabel(loopLabel);
+
     bool hasReturn{false};
     for (auto& sexpr: loop.sexprs) {
-        if (auto when = cast::toWhen(sexpr)) {
-            emitTest(when->test);
-
-            for (auto& form: when->then) {
-                if (cast::toReturn(form)) {
-                    hasReturn = true;
-                    if (!jumps.empty()) {
-                        emitJump(jumps.top(), loopLabel);
-                        jumps.pop();
-                    }
-                    emitJump("jmp", doneLabel);
-                    break;
-                } else {
-                    emitAST(form);
-                }
-            }
-            if (!hasReturn) emitJump("jmp", loopLabel);
-        } else {
+        auto when = cast::toWhen(sexpr);
+        if (!when) {
             emitAST(sexpr);
+            continue;
         }
+
+        emitTest(when->test);
+
+        for (auto& form: when->then) {
+            auto return_ = cast::toReturn(form);
+            if (!return_) {
+                emitAST(form);
+                continue;
+            }
+
+            hasReturn = true;
+            emitCondJump(loopLabel);
+            emitJump("jmp", doneLabel);
+            break;
+        }
+
+        if (!hasReturn)
+            emitJump("jmp", loopLabel);
     }
     emitLabel(doneLabel);
 }
@@ -251,25 +255,22 @@ void CodeGen::emitIf(const IfExpr& if_) {
     std::string elseLabel = createLabel();
     // Emit test
     emitTest(if_.test);
-
-    if (!jumps.empty()) {
-        emitJump(jumps.top(), elseLabel);
-        jumps.pop();
-    }
-
+    emitCondJump(elseLabel);
     // Emit then
     emitAST(if_.then);
-
     // Emit else
-    if (!cast::toNIL(if_.else_)) {
-        std::string done = createLabel();
-        emitJump("jmp", done);
+    if (cast::toNIL(if_.else_)) {
         emitLabel(elseLabel);
         emitAST(if_.else_);
         emitLabel(done);
     } else {
         emitLabel(elseLabel);
     }
+    std::string done = createLabel();
+    emitJump("jmp", done);
+    emitLabel(elseLabel);
+    emitAST(if_.else_);
+    emitLabel(done);
 }
 
 void CodeGen::emitWhen(const WhenExpr& when) {
