@@ -169,7 +169,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
     }
 }
 
-void SemanticAnalyzer::valueResolve(const ExprPtr& var) {
+void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
 
@@ -182,17 +182,17 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var) {
         }
         // Update value
         var_->value = sym.value;
-        stracker.bind(varName, {varName, var, var_->sType});
+        stracker.bind(varName, {varName, var, var_->sType, isConstant});
     } else if (cast::toInt(var_->value) || cast::toDouble(var_->value) || cast::toNIL(var_->value)) {
         ExprPtr name_ = var_->name;
         ExprPtr value_ = var_->value;
         ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
-        stracker.bind(varName, {varName, new_var, var_->sType});
+        stracker.bind(varName, {varName, new_var, var_->sType, isConstant});
     } else {
         ExprPtr name_ = var_->name;
         ExprPtr value_ = exprResolve(var_->value);
         ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
-        stracker.bind(varName, {varName, new_var, var_->sType});
+        stracker.bind(varName, {varName, new_var, var_->sType, isConstant});
     }
 }
 
@@ -268,7 +268,7 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
         throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
     }
 
-    stracker.bind(varName, {varName, defvar.pair, SymbolType::GLOBAL});
+    valueResolve(var);
 }
 
 void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
@@ -279,7 +279,7 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
         throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
     }
 
-    stracker.bind(varName, {varName, defconst.pair, SymbolType::GLOBAL, true});
+    valueResolve(var, true);
 }
 
 void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
@@ -437,7 +437,7 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
 }
 
 ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n) {
-    if (!cast::toInt(n) && !cast::toDouble(n)) {
+    if (!cast::toNIL(n) && !cast::toInt(n) && !cast::toDouble(n)) {
         return varResolve(n);
     }
 

@@ -46,7 +46,7 @@ private:
 
     ExprPtr varResolve(ExprPtr& var);
 
-    void valueResolve(const ExprPtr& var);
+    void valueResolve(const ExprPtr& var, bool isConstant = false);
 
     void dotimesResolve(const DotimesExpr& dotimes);
 
