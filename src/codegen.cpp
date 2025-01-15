@@ -2,9 +2,13 @@
 #include <format>
 
 #define emitHex(n) std::format("0x{:X}", n)
-#define emitJump(jmp, label)  generatedCode += std::format("\t{} {}\n", jmp, label)
 #define emitLabel(label) generatedCode += std::format("{}:\n", label)
-#define emitInstruction(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
+#define emitInstr1op(op, d) generatedCode += std::format("\t{} {}\n", op, d)
+#define emitInstr2op(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
+#define emitJump(jmp, label) generatedCode += std::format("\t{} {}\n", jmp, label);
+#define emitCondJump(label) \
+    generatedCode += std::format("\t{} {}\n", jumps.top(), label);  \
+    jumps.pop();                                                    \
 
 RegisterPair RegisterTracker::alloc(RegisterType rtype) {
     switch (rtype) {
@@ -118,37 +122,34 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
             // Bitwise NOT seperately
             RegisterPair rp1 = emitExpr(binop.lhs, negOne, {"xor", nullptr});
             RegisterPair rp2 = emitExpr(binop.rhs, negOne, {"xor", nullptr});
-            emitInstruction("and", rp1.pair.second, rp2.pair.second);
+            emitInstr2op("and", rp1.pair.second, rp2.pair.second);
             rtracker.free(rp2.pair.first);
             return rp1;
         }
         case TokenType::AND: {
+//            ExprPtr zero = std::make_shared<IntExpr>(0);
+//            RegisterPair rp1 = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
+//            RegisterPair rp2 = emitExpr(binop.rhs, zero, {"cmp", "ucomisd"});
             break;
         }
         case TokenType::OR:
             break;
-        case TokenType::NOT:
-            break;
+        case TokenType::NOT: {
+            RegisterPair rp = emitNode(binop.lhs);
+            emitInstr2op("test", rp.pair.second, rp.pair.second);
+            emitInstr1op("sete", "al");
+            emitInstr2op("movzx", rp.pair.second, "al");
+            rtracker.free(rp.pair.first);
+            return rp;
+        }
         case TokenType::EQUAL:
-            jumps.push("jne");
-            break;
         case TokenType::NEQUAL:
-            jumps.push("je");
-            break;
         case TokenType::GREATER_THEN:
-            jumps.push("jle");
-            break;
         case TokenType::LESS_THEN:
-            jumps.push("jge");
-            break;
         case TokenType::GREATER_THEN_EQ:
-            jumps.push("jl");
-            break;
         case TokenType::LESS_THEN_EQ:
-            jumps.push("jg");
-            break;
+            return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
     }
-    return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
 }
 
 void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
@@ -166,23 +167,21 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
     // Address of iter var
     std::string iterVarAddr = getAddr(SymbolType::LOCAL, iterVarName);
-
     // Set 0 to iter var
-    emitInstruction("mov", iterVarAddr, 0);
+    emitInstr2op("mov", iterVarAddr, 0);
     // Loop label
     emitLabel(loopLabel);
     emitTest(test);
-    emitJump(jumps.top(), doneLabel);
-    jumps.pop();
+    emitCondJump(doneLabel)
     // Emit statements
     for (auto& statement: dotimes.statements) {
         emitAST(statement);
     }
     // Increment iteration count
     RegisterPair rp = rtracker.alloc(RegisterType::GP);
-    emitInstruction("mov", rp.pair.second, iterVarAddr);
-    emitInstruction("add", rp.pair.second, 1);
-    emitInstruction("mov", iterVarAddr, rp.pair.second);
+    emitInstr2op("mov", rp.pair.second, iterVarAddr);
+    emitInstr2op("add", rp.pair.second, 1);
+    emitInstr2op("mov", iterVarAddr, rp.pair.second);
     rtracker.free(rp.pair.first);
 
     emitJump("jmp", loopLabel);
@@ -215,14 +214,12 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
 
             hasReturn = true;
             emitCondJump(loopLabel);
-            emitJump("jmp", doneLabel);
             break;
         }
 
         if (!hasReturn)
             emitJump("jmp", loopLabel);
     }
-    emitLabel(doneLabel);
 }
 
 void CodeGen::emitLet(const LetExpr& let) {
@@ -261,10 +258,7 @@ void CodeGen::emitIf(const IfExpr& if_) {
     // Emit else
     if (cast::toNIL(if_.else_)) {
         emitLabel(elseLabel);
-        emitAST(if_.else_);
-        emitLabel(done);
-    } else {
-        emitLabel(elseLabel);
+        return;
     }
     std::string done = createLabel();
     emitJump("jmp", done);
@@ -277,17 +271,11 @@ void CodeGen::emitWhen(const WhenExpr& when) {
     std::string doneLabel = createLabel();
     // Emit test
     emitTest(when.test);
-
-    if (!jumps.empty()) {
-        emitJump(jumps.top(), doneLabel);
-        jumps.pop();
-    }
-
+    emitCondJump(doneLabel);
     // Emit then
     for (auto& form: when.then) {
         emitAST(form);
     }
-
     emitLabel(doneLabel);
 }
 
@@ -298,11 +286,7 @@ void CodeGen::emitCond(const CondExpr& cond) {
         std::string elseLabel = createLabel();
 
         emitTest(pair.first);
-
-        if (!jumps.empty()) {
-            emitJump(jumps.top(), elseLabel);
-            jumps.pop();
-        }
+        emitCondJump(elseLabel);
 
         for (auto& form: pair.second) {
             emitAST(form);
@@ -319,16 +303,16 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
 
     if (auto int_ = cast::toInt(n)) {
         rp = rtracker.alloc(RegisterType::GP);
-        emitInstruction("mov", rp.pair.second, int_->n);
+        emitInstr2op("mov", rp.pair.second, int_->n);
     } else if (auto double_ = cast::toDouble(n)) {
         rp = rtracker.alloc(RegisterType::SSE);
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-        emitInstruction("movsd", rp.pair.second, emitHex(hex));
+        emitInstr2op("movsd", rp.pair.second, emitHex(hex));
     } else {
         const auto var = cast::toVar(n);
         const std::string varName = cast::toString(var->name)->data;
 
-        rp = emitLoadInstruction(*var, varName);
+        rp = emitLoadRegFromMem(*var, varName);
     }
 
     return rp;
@@ -357,27 +341,27 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
 
     if (reg1.rType == RegisterType::SSE && reg2.rType == RegisterType::GP) {
         RegisterPair new_rp = rtracker.alloc(RegisterType::SSE);
-        emitInstruction("cvtsi2sd", new_rp.pair.second, reg2.pair.second);
+        emitInstr2op("cvtsi2sd", new_rp.pair.second, reg2.pair.second);
         rtracker.free(reg2.pair.first);
 
-        emitInstruction(op.second, reg1.pair.second, new_rp.pair.second);
+        emitInstr2op(op.second, reg1.pair.second, new_rp.pair.second);
         rtracker.free(new_rp.pair.first);
         return reg1;
     } else if (reg1.rType == RegisterType::GP && reg2.rType == RegisterType::SSE) {
         RegisterPair new_rp = rtracker.alloc(RegisterType::SSE);
-        emitInstruction("cvtsi2sd", new_rp.pair.second, reg1.pair.second);
+        emitInstr2op("cvtsi2sd", new_rp.pair.second, reg1.pair.second);
         rtracker.free(reg1.pair.first);
 
-        emitInstruction(op.second, new_rp.pair.second, reg2.pair.second);
-        emitInstruction("movsd", reg2.pair.second, new_rp.pair.second);
+        emitInstr2op(op.second, new_rp.pair.second, reg2.pair.second);
+        emitInstr2op("movsd", reg2.pair.second, new_rp.pair.second);
         rtracker.free(new_rp.pair.first);
         return reg2;
     } else if (reg1.rType == RegisterType::SSE && reg2.rType == RegisterType::SSE) {
-        emitInstruction(op.second, reg1.pair.second, reg2.pair.second);
+        emitInstr2op(op.second, reg1.pair.second, reg2.pair.second);
         rtracker.free(reg2.pair.first);
         return reg1;
     } else {
-        emitInstruction(op.first, reg1.pair.second, reg2.pair.second);
+        emitInstr2op(op.first, reg1.pair.second, reg2.pair.second);
         rtracker.free(reg2.pair.first);
         return reg1;
     }
@@ -386,17 +370,18 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
 void CodeGen::emitSection(const ExprPtr& var) {
     const auto var_ = cast::toVar(var);
 
-    if (cast::toNIL(var_->value)) {
+    if (cast::toNIL(var_->value) || cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
         sectionBSS.emplace(cast::toString(var_->name)->data);
-    } else {
-        if (auto int_ = cast::toInt(var_->value)) {
-            sectionData.emplace(cast::toString(var_->name)->data, std::format("dq {}", std::to_string(int_->n)));
-        } else if (auto double_ = cast::toDouble(var_->value)) {
-            uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-            sectionData.emplace(cast::toString(var_->name)->data, "dq " + emitHex(hex));
-        } else if (auto str = cast::toString(var_->value)) {
-            sectionData.emplace(cast::toString(var_->name)->data, std::format("db \"{}\", 10", str->data));
-        }
+
+        RegisterPair rp = emitSet(var_->value);
+        rtracker.free(rp.pair.first);
+    } else if (auto int_ = cast::toInt(var_->value)) {
+        sectionData.emplace(cast::toString(var_->name)->data, std::format("dq {}", std::to_string(int_->n)));
+    } else if (auto double_ = cast::toDouble(var_->value)) {
+        uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
+        sectionData.emplace(cast::toString(var_->name)->data, "dq " + emitHex(hex));
+    } else if (auto str = cast::toString(var_->value)) {
+        sectionData.emplace(cast::toString(var_->name)->data, std::format("db \"{}\", 10", str->data));
     }
 }
 
@@ -405,6 +390,44 @@ void CodeGen::emitTest(const ExprPtr& test) {
 
     if (auto binop = cast::toBinop(test)) {
         rp = emitBinop(*binop);
+
+        switch (binop->opToken.type) {
+            case TokenType::PLUS:
+            case TokenType::MINUS:
+            case TokenType::DIV:
+            case TokenType::MUL:
+            case TokenType::LOGAND:
+            case TokenType::LOGIOR:
+            case TokenType::LOGXOR: {
+                emitInstr2op("cmp", rp.pair.second, 0);
+                jumps.push("je");
+                break;
+            }
+            case TokenType::EQUAL:
+                jumps.push("jne");
+                break;
+            case TokenType::NEQUAL:
+                jumps.push("je");
+                break;
+            case TokenType::GREATER_THEN:
+                jumps.push("jle");
+                break;
+            case TokenType::LESS_THEN:
+                jumps.push("jge");
+                break;
+            case TokenType::GREATER_THEN_EQ:
+                jumps.push("jl");
+                break;
+            case TokenType::LESS_THEN_EQ:
+                jumps.push("jg");
+                break;
+            case TokenType::AND:
+                break;
+            case TokenType::OR:
+                break;
+            case TokenType::NOT:
+                break;
+        }
         rtracker.free(rp.pair.first);
     } else if (auto funcCall = cast::toFuncCall(test)) {
         rp = emitFuncCall(*funcCall);
@@ -412,6 +435,52 @@ void CodeGen::emitTest(const ExprPtr& test) {
     } else if (cast::toNIL(test)) {
         jumps.push("jmp");
     }
+}
+
+RegisterPair CodeGen::emitSet(const ExprPtr& set) {
+    RegisterPair rp;
+
+    if (auto binop = cast::toBinop(set)) {
+        rp = emitBinop(*binop);
+
+        switch (binop->opToken.type) {
+            case TokenType::EQUAL:
+                emitInstr1op("sete", "al");
+                emitInstr2op("movzx", rp.pair.second, "al");
+                break;
+            case TokenType::NEQUAL:
+                emitInstr1op("setne", "al");
+                emitInstr2op("movzx", rp.pair.second, "al");
+                break;
+            case TokenType::GREATER_THEN:
+                emitInstr1op("setg", "al");
+                emitInstr2op("movzx", rp.pair.second, "al");
+                break;
+            case TokenType::LESS_THEN:
+                emitInstr1op("setl", "al");
+                emitInstr2op("movzx", rp.pair.second, "al");
+                break;
+            case TokenType::GREATER_THEN_EQ:
+                emitInstr1op("setge", "al");
+                emitInstr2op("movzx", rp.pair.second, "al");
+                break;
+            case TokenType::LESS_THEN_EQ:
+                emitInstr1op("setle", "al");
+                emitInstr2op("movzx", rp.pair.second, "al");
+                break;
+            case TokenType::AND:
+                break;
+            case TokenType::OR:
+                break;
+            case TokenType::NOT:
+                break;
+        }
+
+    } else if (auto funcCall = cast::toFuncCall(set)) {
+        rp = emitFuncCall(*funcCall);
+    }
+
+    return rp;
 }
 
 void CodeGen::handleAssignment(const ExprPtr& var) {
@@ -435,26 +504,19 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         sectionData.emplace(label, std::format("db \"{}\",10", str->data));
 
         RegisterPair rp = rtracker.alloc(RegisterType::GP);
-        emitInstruction("lea", rp.pair.second, labelAddr);
-        emitInstruction("mov", varAddr, rp.pair.second);
+        emitInstr2op("lea", rp.pair.second, labelAddr);
+        emitInstr2op("mov", varAddr, rp.pair.second);
         rtracker.free(rp.pair.first);
     } else {
-        RegisterPair rp;
-
-        if (auto binop = cast::toBinop(var_->value)) {
-            rp = emitBinop(*binop);
-        } else if (auto funcCall = cast::toFuncCall(var_->value)) {
-            rp = emitFuncCall(*funcCall);
-        }
-
-        emitStoreInstruction(varName, var_->sType, rp);
+        RegisterPair rp = emitSet(var_->value);
+        emitStoreMemFromReg(varName, var_->sType, rp);
         rtracker.free(rp.pair.first);
     }
 }
 
 void CodeGen::handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr,
                               const std::string& value) {
-    emitInstruction(instr, getAddr(var.sType, varName), value);
+    emitInstr2op(instr, getAddr(var.sType, varName), value);
 }
 
 void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
@@ -464,10 +526,10 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
     RegisterPair rp;
 
     do {
-        rp = emitLoadInstruction(*value, valueName);
+        rp = emitLoadRegFromMem(*value, valueName);
 
         if (rp.pair.second)
-            emitStoreInstruction(varName, var.sType, rp);
+            emitStoreMemFromReg(varName, var.sType, rp);
 
         value = cast::toVar(value->value);
     } while (cast::toVar(value));
@@ -480,10 +542,10 @@ RegisterPair CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string
 
     if (cast::toInt(value.value)) {
         rp = rtracker.alloc(RegisterType::GP);
-        emitInstruction("mov", rp.pair.second, getAddr(value.sType, valueName));
+        emitInstr2op("mov", rp.pair.second, getAddr(value.sType, valueName));
     } else if (cast::toDouble(value.value)) {
         rp = rtracker.alloc(RegisterType::SSE);
-        emitInstruction("movsd", rp.pair.second, getAddr(value.sType, valueName));
+        emitInstr2op("movsd", rp.pair.second, getAddr(value.sType, valueName));
     }
     return rp;
 }
@@ -491,10 +553,10 @@ RegisterPair CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string
 void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, RegisterPair rp) {
     switch (rp.rType) {
         case RegisterType::GP:
-            emitInstruction("mov", getAddr(stype, varName), rp.pair.second);
+            emitInstr2op("mov", getAddr(stype, varName), rp.pair.second);
             break;
         case RegisterType::SSE:
-            emitInstruction("movsd", getAddr(stype, varName), rp.pair.second);
+            emitInstr2op("movsd", getAddr(stype, varName), rp.pair.second);
             break;
     }
 }

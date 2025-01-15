@@ -124,6 +124,8 @@ private:
 
     void emitTest(const ExprPtr& test);
 
+    RegisterPair emitSet(const ExprPtr& set);
+
     void handleAssignment(const ExprPtr& var);
 
     void handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr, const std::string& value);
