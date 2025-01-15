@@ -166,6 +166,10 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
                 innerVar = cast::toVar(innerVar->value);
             }
         } while (cast::toVar(innerVar));
+
+        if (!innerVar) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        }
     }
 }
 
