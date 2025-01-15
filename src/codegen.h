@@ -130,9 +130,9 @@ private:
 
     void handleVariable(const VarExpr& var, const std::string& varName);
 
-    RegisterPair emitLoadInstruction(const VarExpr& value, const std::string& valueName);
+    RegisterPair emitLoadRegFromMem(const VarExpr& value, const std::string& valueName);
 
-    void emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair reg);
+    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, RegisterPair rp);
 
     std::string getAddr(SymbolType stype, const std::string& varName);
 

@@ -475,7 +475,7 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
     rtracker.free(rp.pair.first);
 }
 
-RegisterPair CodeGen::emitLoadInstruction(const VarExpr& value, const std::string& valueName) {
+RegisterPair CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& valueName) {
     RegisterPair rp;
 
     if (cast::toInt(value.value)) {
@@ -488,7 +488,7 @@ RegisterPair CodeGen::emitLoadInstruction(const VarExpr& value, const std::strin
     return rp;
 }
 
-void CodeGen::emitStoreInstruction(const std::string& varName, SymbolType stype, RegisterPair rp) {
+void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, RegisterPair rp) {
     switch (rp.rType) {
         case RegisterType::GP:
             emitInstruction("mov", getAddr(stype, varName), rp.pair.second);
