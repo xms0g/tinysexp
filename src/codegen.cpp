@@ -135,12 +135,8 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::OR:
             break;
         case TokenType::NOT: {
-            RegisterPair rp = emitNode(binop.lhs);
-            emitInstr2op("test", rp.pair.second, rp.pair.second);
-            emitInstr1op("sete", "al");
-            emitInstr2op("movzx", rp.pair.second, "al");
-            rtracker.free(rp.pair.first);
-            return rp;
+            ExprPtr zero = std::make_shared<IntExpr>(0);
+            return  emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
         }
         case TokenType::EQUAL:
         case TokenType::NEQUAL:
@@ -445,6 +441,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
 
         switch (binop->opToken.type) {
             case TokenType::EQUAL:
+            case TokenType::NOT:
                 emitInstr1op("sete", "al");
                 emitInstr2op("movzx", rp.pair.second, "al");
                 break;
@@ -471,8 +468,6 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
             case TokenType::AND:
                 break;
             case TokenType::OR:
-                break;
-            case TokenType::NOT:
                 break;
         }
 
