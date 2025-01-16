@@ -400,6 +400,7 @@ void CodeGen::emitTest(const ExprPtr& test) {
                 break;
             }
             case TokenType::EQUAL:
+            case TokenType::NOT:
                 jumps.push("jne");
                 break;
             case TokenType::NEQUAL:
@@ -420,8 +421,6 @@ void CodeGen::emitTest(const ExprPtr& test) {
             case TokenType::AND:
                 break;
             case TokenType::OR:
-                break;
-            case TokenType::NOT:
                 break;
         }
         rtracker.free(rp.pair.first);
