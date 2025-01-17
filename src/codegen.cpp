@@ -10,6 +10,7 @@
     generatedCode += std::format("\t{} {}\n", jumps.top(), label);  \
     jumps.pop();                                                    \
 
+
 RegisterPair RegisterTracker::alloc(RegisterType rtype) {
     switch (rtype) {
         case RegisterType::GP: {
@@ -136,7 +137,7 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
             break;
         case TokenType::NOT: {
             ExprPtr zero = std::make_shared<IntExpr>(0);
-            return  emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
+            return emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
         }
         case TokenType::EQUAL:
         case TokenType::NEQUAL:
@@ -427,6 +428,9 @@ void CodeGen::emitTest(const ExprPtr& test) {
     } else if (auto funcCall = cast::toFuncCall(test)) {
         rp = emitFuncCall(*funcCall);
         rtracker.free(rp.pair.first);
+    } else if (auto var = cast::toVar(test)) {
+        emitInstr2op("cmp", getAddr(var->sType, cast::toString(var->name)->data), 0);
+        jumps.push("je");
     } else if (cast::toNIL(test)) {
         jumps.push("jmp");
     }
