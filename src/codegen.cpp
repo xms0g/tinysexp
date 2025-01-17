@@ -127,12 +127,6 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
             rtracker.free(rp2.pair.first);
             return rp1;
         }
-        case TokenType::AND: {
-//            ExprPtr zero = std::make_shared<IntExpr>(0);
-//            RegisterPair rp1 = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
-//            RegisterPair rp2 = emitExpr(binop.rhs, zero, {"cmp", "ucomisd"});
-            break;
-        }
         case TokenType::OR:
             break;
         case TokenType::NOT: {
@@ -145,6 +139,7 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::LESS_THEN:
         case TokenType::GREATER_THEN_EQ:
         case TokenType::LESS_THEN_EQ:
+        case TokenType::AND:
             return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
     }
 }
@@ -168,8 +163,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     emitInstr2op("mov", iterVarAddr, 0);
     // Loop label
     emitLabel(loopLabel);
-    emitTest(test);
-    emitCondJump(doneLabel)
+    emitTest(test, doneLabel);
     // Emit statements
     for (auto& statement: dotimes.statements) {
         emitAST(statement);
@@ -200,23 +194,22 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
             continue;
         }
 
-        emitTest(when->test);
-
         for (auto& form: when->then) {
             auto return_ = cast::toReturn(form);
             if (!return_) {
                 emitAST(form);
                 continue;
             }
-
+            emitTest(when->test, loopLabel);
+            emitJump("jmp", doneLabel);
             hasReturn = true;
-            emitCondJump(loopLabel);
             break;
         }
 
         if (!hasReturn)
             emitJump("jmp", loopLabel);
     }
+    emitLabel(doneLabel);
 }
 
 void CodeGen::emitLet(const LetExpr& let) {
@@ -248,8 +241,7 @@ RegisterPair CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {}
 void CodeGen::emitIf(const IfExpr& if_) {
     std::string elseLabel = createLabel();
     // Emit test
-    emitTest(if_.test);
-    emitCondJump(elseLabel);
+    emitTest(if_.test, elseLabel);
     // Emit then
     emitAST(if_.then);
     // Emit else
@@ -267,8 +259,7 @@ void CodeGen::emitIf(const IfExpr& if_) {
 void CodeGen::emitWhen(const WhenExpr& when) {
     std::string doneLabel = createLabel();
     // Emit test
-    emitTest(when.test);
-    emitCondJump(doneLabel);
+    emitTest(when.test, doneLabel);
     // Emit then
     for (auto& form: when.then) {
         emitAST(form);
@@ -281,10 +272,7 @@ void CodeGen::emitCond(const CondExpr& cond) {
 
     for (auto& pair: cond.variants) {
         std::string elseLabel = createLabel();
-
-        emitTest(pair.first);
-        emitCondJump(elseLabel);
-
+        emitTest(pair.first, elseLabel);
         for (auto& form: pair.second) {
             emitAST(form);
         }
@@ -382,10 +370,21 @@ void CodeGen::emitSection(const ExprPtr& var) {
     }
 }
 
-void CodeGen::emitTest(const ExprPtr& test) {
+void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
     RegisterPair rp;
 
     if (auto binop = cast::toBinop(test)) {
+        if (binop->opToken.type == TokenType::AND) {
+            ExprPtr zero = std::make_shared<IntExpr>(0);
+            RegisterPair rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
+            emitJump("je", label);
+            RegisterPair rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
+            emitJump("je", label);
+            rtracker.free(rp1.pair.first);
+            rtracker.free(rp2.pair.first);
+            return;
+        }
+
         rp = emitBinop(*binop);
 
         switch (binop->opToken.type) {
@@ -397,29 +396,27 @@ void CodeGen::emitTest(const ExprPtr& test) {
             case TokenType::LOGIOR:
             case TokenType::LOGXOR: {
                 emitInstr2op("cmp", rp.pair.second, 0);
-                jumps.push("je");
+                emitJump("je", label);
                 break;
             }
             case TokenType::EQUAL:
             case TokenType::NOT:
-                jumps.push("jne");
+                emitJump("jne", label);
                 break;
             case TokenType::NEQUAL:
-                jumps.push("je");
+                emitJump("je", label);
                 break;
             case TokenType::GREATER_THEN:
-                jumps.push("jle");
+                emitJump("jle", label);
                 break;
             case TokenType::LESS_THEN:
-                jumps.push("jge");
+                emitJump("jge", label);
                 break;
             case TokenType::GREATER_THEN_EQ:
-                jumps.push("jl");
+                emitJump("jl", label);
                 break;
             case TokenType::LESS_THEN_EQ:
-                jumps.push("jg");
-                break;
-            case TokenType::AND:
+                emitJump("jg", label);
                 break;
             case TokenType::OR:
                 break;
@@ -430,9 +427,9 @@ void CodeGen::emitTest(const ExprPtr& test) {
         rtracker.free(rp.pair.first);
     } else if (auto var = cast::toVar(test)) {
         emitInstr2op("cmp", getAddr(var->sType, cast::toString(var->name)->data), 0);
-        jumps.push("je");
+        emitJump("je", label);
     } else if (cast::toNIL(test)) {
-        jumps.push("jmp");
+        emitJump("jmp", label);
     }
 }
 
@@ -440,6 +437,18 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
     RegisterPair rp;
 
     if (auto binop = cast::toBinop(set)) {
+        if (binop->opToken.type == TokenType::AND) {
+            ExprPtr zero = std::make_shared<IntExpr>(0);
+            RegisterPair rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
+            emitInstr1op("setne", "al");
+            RegisterPair rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
+            emitInstr1op("setne", "cl");
+            emitInstr2op("and", "al", "cl");
+            emitInstr2op("movzx", rp1.pair.second, "al");
+            rtracker.free(rp2.pair.first);
+            return rp1;
+        }
+
         rp = emitBinop(*binop);
 
         switch (binop->opToken.type) {
@@ -467,8 +476,6 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
             case TokenType::LESS_THEN_EQ:
                 emitInstr1op("setle", "al");
                 emitInstr2op("movzx", rp.pair.second, "al");
-                break;
-            case TokenType::AND:
                 break;
             case TokenType::OR:
                 break;

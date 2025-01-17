@@ -122,7 +122,7 @@ private:
 
     void emitSection(const ExprPtr& value);
 
-    void emitTest(const ExprPtr& test);
+    void emitTest(const ExprPtr& test, std::string& label);
 
     RegisterPair emitSet(const ExprPtr& set);
 
