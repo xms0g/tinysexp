@@ -31,5 +31,3 @@ A subset of Lisp, including:
 ```
 
 ## License
-
-## Credits
