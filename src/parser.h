@@ -210,7 +210,7 @@ private:
 
     ExprPtr parseNumber();
 
-    ExprPtr createVar(bool isConstant);
+    ExprPtr createVar(bool isConstant = false);
 
     void consume(TokenType expected, const char* errorStr);
 

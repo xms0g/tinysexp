@@ -211,12 +211,12 @@ ExprPtr Parser::parseLet() {
 }
 
 ExprPtr Parser::parseSetq() {
-    ExprPtr var = createVar(false);
+    ExprPtr var = createVar();
     return std::make_shared<SetqExpr>(var);
 }
 
 ExprPtr Parser::parseDefvar() {
-    ExprPtr var = createVar(false);
+    ExprPtr var = createVar();
     return std::make_shared<DefvarExpr>(var);
 }
 
