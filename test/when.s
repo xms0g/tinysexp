@@ -4,15 +4,14 @@ section .text
 _start:
 	push rbp
 	mov rbp, rsp
-	mov qword [rbp - 8], 5
-	mov rax, qword [rbp - 8]
+	mov rax, qword [rel a]
 	mov rcx, 4
 	cmp rax, rcx
 	jle .L0
 	mov rax, qword [rel x]
 	mov rcx, qword [rel y]
 	add rax, rcx
-	mov rcx, qword [rbp - 8]
+	mov rcx, qword [rel a]
 	mov rdx, 5
 	cmp rcx, rdx
 	jge .L1
@@ -30,5 +29,6 @@ _start:
 	ret
 
 section .data
+a: dq 5
 y: dq 2
 x: dq 3
