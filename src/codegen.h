@@ -160,8 +160,6 @@ private:
     // Sections
     std::unordered_map<std::string, std::string> sectionData;
     std::unordered_set<std::string> sectionBSS;
-    // Jump instructions
-    std::stack<std::string> jumps;
 };
 
 
