@@ -21,63 +21,72 @@ enum class Register {
     xmm15
 };
 
-//TODO: Add Scratch, Preserved type
-enum class RegisterType {
-    GP, SSE
+enum RegisterSize {
+    REG64, REG32, REG16, REG8_1, REG8_2
+};
+
+enum RegisterType {
+    GP = 1 << 0,
+    SSE = 1 << 1,
+    SCRATCH = 1 << 2,
+    PRESERVED = 1 << 3,
+    PARAM = 1 << 4,
+    CHAIN = 1 << 5
 };
 
 struct RegisterPair {
-    std::pair<Register, const char*> pair;
-    RegisterType rType;
+    Register reg;
+    const char* sreg[5];
+    uint8_t rType;
 };
 
 class RegisterTracker {
 public:
-    RegisterPair alloc(RegisterType rtype);
+    RegisterPair alloc(uint8_t rtype);
 
     void free(Register reg);
 
 private:
     std::unordered_set<Register> registersInUse;
 
-    static constexpr std::pair<Register, const char*> scratchRegisters[9] = {
-            {Register::RAX, "rax"},
-            {Register::RCX, "rcx"},
-            {Register::RDX, "rdx"},
-            {Register::RDI, "rdi"},
-            {Register::RSI, "rsi"},
-            {Register::R8, "r8"},
-            {Register::R9, "r9"},
-            {Register::R10, "r10"},
-            {Register::R11, "r11"},
+    static constexpr RegisterPair scratchRegisters[9] = {
+            {Register::RAX, {"rax", "eax",  "ax",   "ah", "al"},   GP | SCRATCH},
+            {Register::RCX, {"rcx", "ecx",  "cx",   "ch", "cl"},   GP | SCRATCH | PARAM},
+            {Register::RDX, {"rdx", "edx",  "dx",   "dh", "dl"},   GP | SCRATCH | PARAM},
+            {Register::RDI, {"rdi", "edi",  "di",   "",   "dil"},  GP | SCRATCH | PARAM},
+            {Register::RDI, {"rsi", "esi",  "si",   "",   "sil"},  GP | SCRATCH | PARAM},
+            {Register::R8,  {"r8",  "r8d",  "r8w",  "",   "r8b"},  GP | SCRATCH | PARAM},
+            {Register::R9,  {"r9",  "r9d",  "r9w",  "",   "r9b"},  GP | SCRATCH | PARAM},
+            {Register::R10, {"r10", "r10d", "r10w", "",   "r10b"}, GP | SCRATCH | CHAIN},
+            {Register::R11, {"r11", "r11d", "r11w", "",   "r11b"}, GP | SCRATCH},
+
     };
 
-    static constexpr std::pair<Register, const char*> sseRegisters[16] = {
-            {Register::xmm0, "xmm0"},
-            {Register::xmm1, "xmm1"},
-            {Register::xmm2, "xmm2"},
-            {Register::xmm3, "xmm3"},
-            {Register::xmm4, "xmm4"},
-            {Register::xmm5, "xmm5"},
-            {Register::xmm6, "xmm6"},
-            {Register::xmm7, "xmm7"},
-            {Register::xmm8, "xmm8"},
-            {Register::xmm9, "xmm9"},
-            {Register::xmm10, "xmm10"},
-            {Register::xmm11, "xmm11"},
-            {Register::xmm12, "xmm12"},
-            {Register::xmm13, "xmm13"},
-            {Register::xmm14, "xmm14"},
-            {Register::xmm15, "xmm15"},
+    static constexpr RegisterPair sseRegisters[16] = {
+            {Register::xmm0,  {"xmm0",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm1,  {"xmm1",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm2,  {"xmm2",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm3,  {"xmm3",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm4,  {"xmm4",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm5,  {"xmm5",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm6,  {"xmm6",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm7,  {"xmm7",  "", "", "", ""}, SSE | PARAM},
+            {Register::xmm8,  {"xmm8",  "", "", "", ""}, SSE},
+            {Register::xmm9,  {"xmm9",  "", "", "", ""}, SSE},
+            {Register::xmm10, {"xmm10", "", "", "", ""}, SSE},
+            {Register::xmm11, {"xmm11", "", "", "", ""}, SSE},
+            {Register::xmm12, {"xmm12", "", "", "", ""}, SSE},
+            {Register::xmm13, {"xmm13", "", "", "", ""}, SSE},
+            {Register::xmm14, {"xmm14", "", "", "", ""}, SSE},
+            {Register::xmm15, {"xmm15", "", "", "", ""}, SSE},
     };
 
-    static constexpr std::pair<Register, const char*> preservedRegisters[5] = {
-            {Register::RBX, "rbx"},
-            {Register::R12, "r12"},
-            {Register::R13, "r13"},
-            {Register::R14, "r14"},
-            {Register::R15, "r15"},
-
+    static constexpr RegisterPair preservedRegisters[5] = {
+            {Register::RBX, {"rbx", "ebx",  "bx",   "bh", "bl"},   GP | PRESERVED},
+            {Register::R12, {"r12", "r12d", "r12w", "",   "r12b"}, GP | PRESERVED},
+            {Register::R13, {"r13", "r13d", "r13w", "",   "r13b"}, GP | PRESERVED},
+            {Register::R14, {"r14", "r14d", "r14w", "",   "r14b"}, GP | PRESERVED},
+            {Register::R15, {"r15", "r15d", "r15w", "",   "r15b"}, GP | PRESERVED},
     };
 };
 
