@@ -13,7 +13,8 @@ RegisterPair RegisterTracker::alloc(uint8_t rtype) {
     if (checkRType(rtype, GP)) {
         for (const auto& sreg: scratchRegisters) {
             if (checkRType(rtype, PARAM)) {
-                if (!checkRType(sreg.rType, PARAM)) continue;
+                if (!checkRType(sreg.rType, PARAM))
+                    continue;
             }
             if (!registersInUse.contains(sreg.reg)) {
                 registersInUse.emplace(sreg.reg);
@@ -427,7 +428,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
 }
 
 RegisterPair CodeGen::emitSet(const ExprPtr& set) {
-    RegisterPair rp{};
+    RegisterPair rp{}, setReg{};
 
     if (auto binop = cast::toBinop(set)) {
         if (binop->opToken.type == TokenType::AND) {
@@ -443,7 +444,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
             }
 
             emitInstr2op("xor", setReg1.sreg[REG64], setReg1.sreg[REG64]);
-            emitInstr1op("setne", setReg1.sreg[REG8_2]);
+            emitInstr1op("setne", setReg1.sreg[REG8L]);
 
             RegisterPair rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
 
@@ -453,10 +454,10 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
                 setReg2 = rp2;
             }
             emitInstr2op("xor", setReg2.sreg[REG64], setReg2.sreg[REG64]);
-            emitInstr1op("setne", setReg2.sreg[REG8_2]);
+            emitInstr1op("setne", setReg2.sreg[REG8L]);
 
-            emitInstr2op("and", setReg1.sreg[REG8_2], setReg2.sreg[REG8_2]);
-            emitInstr2op("movzx", setReg1.sreg[REG64], setReg1.sreg[REG8_2]);
+            emitInstr2op("and", setReg1.sreg[REG8L], setReg2.sreg[REG8L]);
+            emitInstr2op("movzx", setReg1.sreg[REG64], setReg1.sreg[REG8L]);
 
             if (checkRType(rp1.rType, SSE)) {
                 emitInstr2op("cvtsi2sd", rp1.sreg[REG64], setReg1.sreg[REG64]);
@@ -486,31 +487,37 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
 
         rp = emitBinop(*binop);
 
+        if (checkRType(rp.rType, SSE)) {
+            setReg = rtracker.alloc(GP);
+        } else {
+            setReg = rp;
+        }
+
         switch (binop->opToken.type) {
             case TokenType::EQUAL:
             case TokenType::NOT:
-                emitInstr1op("sete", "al");
-                emitInstr2op("movzx", rp.sreg[REG64], "al");
+                emitInstr1op("sete", setReg.sreg[REG8L]);
+                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
                 break;
             case TokenType::NEQUAL:
-                emitInstr1op("setne", "al");
-                emitInstr2op("movzx", rp.sreg[REG64], "al");
+                emitInstr1op("setne", setReg.sreg[REG8L]);
+                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
                 break;
             case TokenType::GREATER_THEN:
-                emitInstr1op("setg", "al");
-                emitInstr2op("movzx", rp.sreg[REG64], "al");
+                emitInstr1op("setg", setReg.sreg[REG8L]);
+                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
                 break;
             case TokenType::LESS_THEN:
-                emitInstr1op("setl", "al");
-                emitInstr2op("movzx", rp.sreg[REG64], "al");
+                emitInstr1op("setl", setReg.sreg[REG8L]);
+                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
                 break;
             case TokenType::GREATER_THEN_EQ:
-                emitInstr1op("setge", "al");
-                emitInstr2op("movzx", rp.sreg[REG64], "al");
+                emitInstr1op("setge", setReg.sreg[REG8L]);
+                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
                 break;
             case TokenType::LESS_THEN_EQ:
-                emitInstr1op("setle", "al");
-                emitInstr2op("movzx", rp.sreg[REG64], "al");
+                emitInstr1op("setle", setReg.sreg[REG8L]);
+                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
                 break;
         }
 
@@ -518,7 +525,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
         rp = emitFuncCall(*funcCall);
     }
 
-    return rp;
+    return setReg;
 }
 
 void CodeGen::handleAssignment(const ExprPtr& var) {

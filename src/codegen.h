@@ -22,7 +22,7 @@ enum class Register {
 };
 
 enum RegisterSize {
-    REG64, REG32, REG16, REG8_1, REG8_2
+    REG64, REG32, REG16, REG8H, REG8L
 };
 
 enum RegisterType {
