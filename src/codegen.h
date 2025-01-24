@@ -25,13 +25,12 @@ enum RegisterSize {
     REG64, REG32, REG16, REG8H, REG8L
 };
 
-enum RegisterType {
-    GP = 1 << 0,
-    SSE = 1 << 1,
-    SCRATCH = 1 << 2,
-    PRESERVED = 1 << 3,
-    PARAM = 1 << 4,
-    CHAIN = 1 << 5
+enum RegisterType : uint8_t {
+    SSE = 1 << 0,
+    SCRATCH = 1 << 1,
+    PRESERVED = 1 << 2,
+    PARAM = 1 << 3,
+    CHAIN = 1 << 4
 };
 
 struct RegisterPair {
@@ -50,16 +49,15 @@ private:
     std::unordered_set<Register> registersInUse;
 
     static constexpr RegisterPair scratchRegisters[9] = {
-            {Register::RAX, {"rax", "eax",  "ax",   "ah", "al"},   GP | SCRATCH},
-            {Register::RCX, {"rcx", "ecx",  "cx",   "ch", "cl"},   GP | SCRATCH | PARAM},
-            {Register::RDX, {"rdx", "edx",  "dx",   "dh", "dl"},   GP | SCRATCH | PARAM},
-            {Register::RDI, {"rdi", "edi",  "di",   "",   "dil"},  GP | SCRATCH | PARAM},
-            {Register::RDI, {"rsi", "esi",  "si",   "",   "sil"},  GP | SCRATCH | PARAM},
-            {Register::R8,  {"r8",  "r8d",  "r8w",  "",   "r8b"},  GP | SCRATCH | PARAM},
-            {Register::R9,  {"r9",  "r9d",  "r9w",  "",   "r9b"},  GP | SCRATCH | PARAM},
-            {Register::R10, {"r10", "r10d", "r10w", "",   "r10b"}, GP | SCRATCH | CHAIN},
-            {Register::R11, {"r11", "r11d", "r11w", "",   "r11b"}, GP | SCRATCH},
-
+            {Register::RAX, {"rax", "eax",  "ax",   "ah", "al"},   SCRATCH},
+            {Register::RCX, {"rcx", "ecx",  "cx",   "ch", "cl"},   SCRATCH | PARAM},
+            {Register::RDX, {"rdx", "edx",  "dx",   "dh", "dl"},   SCRATCH | PARAM},
+            {Register::RDI, {"rdi", "edi",  "di",   "",   "dil"},  SCRATCH | PARAM},
+            {Register::RDI, {"rsi", "esi",  "si",   "",   "sil"},  SCRATCH | PARAM},
+            {Register::R8,  {"r8",  "r8d",  "r8w",  "",   "r8b"},  SCRATCH | PARAM},
+            {Register::R9,  {"r9",  "r9d",  "r9w",  "",   "r9b"},  SCRATCH | PARAM},
+            {Register::R10, {"r10", "r10d", "r10w", "",   "r10b"}, SCRATCH | CHAIN},
+            {Register::R11, {"r11", "r11d", "r11w", "",   "r11b"}, SCRATCH},
     };
 
     static constexpr RegisterPair sseRegisters[16] = {
@@ -82,11 +80,11 @@ private:
     };
 
     static constexpr RegisterPair preservedRegisters[5] = {
-            {Register::RBX, {"rbx", "ebx",  "bx",   "bh", "bl"},   GP | PRESERVED},
-            {Register::R12, {"r12", "r12d", "r12w", "",   "r12b"}, GP | PRESERVED},
-            {Register::R13, {"r13", "r13d", "r13w", "",   "r13b"}, GP | PRESERVED},
-            {Register::R14, {"r14", "r14d", "r14w", "",   "r14b"}, GP | PRESERVED},
-            {Register::R15, {"r15", "r15d", "r15w", "",   "r15b"}, GP | PRESERVED},
+            {Register::RBX, {"rbx", "ebx",  "bx",   "bh", "bl"},   PRESERVED},
+            {Register::R12, {"r12", "r12d", "r12w", "",   "r12b"}, PRESERVED},
+            {Register::R13, {"r13", "r13d", "r13w", "",   "r13b"}, PRESERVED},
+            {Register::R14, {"r14", "r14d", "r14w", "",   "r14b"}, PRESERVED},
+            {Register::R15, {"r15", "r15d", "r15w", "",   "r15b"}, PRESERVED},
     };
 };
 

@@ -10,7 +10,7 @@
 #define checkRType(type, t) ((type) & (t))
 
 RegisterPair RegisterTracker::alloc(uint8_t rtype) {
-    if (checkRType(rtype, GP)) {
+    if (checkRType(rtype, SCRATCH)) {
         for (const auto& sreg: scratchRegisters) {
             if (checkRType(rtype, PARAM)) {
                 if (!checkRType(sreg.rType, PARAM))
@@ -21,19 +21,19 @@ RegisterPair RegisterTracker::alloc(uint8_t rtype) {
                 return sreg;
             }
         }
-
-        for (const auto& preg: preservedRegisters) {
-            if (!registersInUse.contains(preg.reg)) {
-                registersInUse.emplace(preg.reg);
-                return preg;
-            }
-        }
     } else if (checkRType(rtype, SSE)) {
         for (const auto& sse: sseRegisters) {
             if (!registersInUse.contains(sse.reg)) {
                 registersInUse.emplace(sse.reg);
                 return sse;
             }
+        }
+    }
+    // If all scratch registers are in use
+    for (const auto& preg: preservedRegisters) {
+        if (!registersInUse.contains(preg.reg)) {
+            registersInUse.emplace(preg.reg);
+            return preg;
         }
     }
 }
@@ -283,7 +283,7 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
     RegisterPair rp{};
 
     if (auto int_ = cast::toInt(n)) {
-        rp = rtracker.alloc(GP | SCRATCH);
+        rp = rtracker.alloc(SCRATCH);
         emitInstr2op("mov", rp.sreg[REG64], int_->n);
     } else if (auto double_ = cast::toDouble(n)) {
         rp = rtracker.alloc(SSE);
@@ -320,7 +320,7 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
     reg1 = emitNode(lhs);
     reg2 = emitNode(rhs);
 
-    if (checkRType(reg1.rType, SSE) && checkRType(reg2.rType, GP)) {
+    if (checkRType(reg1.rType, SSE) && (checkRType(reg2.rType, SCRATCH) || checkRType(reg2.rType, PRESERVED))) {
         RegisterPair new_rp = rtracker.alloc(SSE);
         emitInstr2op("cvtsi2sd", new_rp.sreg[REG64], reg2.sreg[REG64]);
         rtracker.free(reg2.reg);
@@ -328,7 +328,7 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
         emitInstr2op(op.second, reg1.sreg[REG64], new_rp.sreg[REG64]);
         rtracker.free(new_rp.reg);
         return reg1;
-    } else if (checkRType(reg1.rType, GP) && checkRType(reg2.rType, SSE)) {
+    } else if ((checkRType(reg1.rType, SCRATCH) || checkRType(reg1.rType, PRESERVED)) && checkRType(reg2.rType, SSE)) {
         RegisterPair new_rp = rtracker.alloc(SSE);
         emitInstr2op("cvtsi2sd", new_rp.sreg[REG64], reg1.sreg[REG64]);
         rtracker.free(reg1.reg);
@@ -438,7 +438,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
             RegisterPair rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
 
             if (checkRType(rp1.rType, SSE)) {
-                setReg1 = rtracker.alloc(GP);
+                setReg1 = rtracker.alloc(SCRATCH);
             } else {
                 setReg1 = rp1;
             }
@@ -449,7 +449,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
             RegisterPair rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
 
             if (checkRType(rp2.rType, SSE)) {
-                setReg2 = rtracker.alloc(GP);
+                setReg2 = rtracker.alloc(SCRATCH);
             } else {
                 setReg2 = rp2;
             }
@@ -488,7 +488,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
         rp = emitBinop(*binop);
 
         if (checkRType(rp.rType, SSE)) {
-            setReg = rtracker.alloc(GP);
+            setReg = rtracker.alloc(SCRATCH);
         } else {
             setReg = rp;
         }
@@ -548,7 +548,7 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
 
         sectionData.emplace(label, std::format("db \"{}\",10", str->data));
 
-        RegisterPair rp = rtracker.alloc(GP | SCRATCH);
+        RegisterPair rp = rtracker.alloc(SCRATCH);
         emitInstr2op("lea", rp.sreg[REG64], labelAddr);
         emitInstr2op("mov", varAddr, rp.sreg[REG64]);
         rtracker.free(rp.reg);
@@ -586,7 +586,7 @@ RegisterPair CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string
     RegisterPair rp{};
 
     if (cast::toInt(value.value)) {
-        rp = rtracker.alloc(GP | SCRATCH);
+        rp = rtracker.alloc(SCRATCH);
         emitInstr2op("mov", rp.sreg[REG64], getAddr(value.sType, valueName));
     } else if (cast::toDouble(value.value)) {
         rp = rtracker.alloc(SSE);
@@ -596,7 +596,7 @@ RegisterPair CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string
 }
 
 void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, RegisterPair rp) {
-    if (checkRType(rp.rType, GP)) {
+    if (checkRType(rp.rType, SCRATCH) || checkRType(rp.rType, PRESERVED)) {
         emitInstr2op("mov", getAddr(stype, varName), rp.sreg[REG64]);
     } else if (checkRType(rp.rType, SSE)) {
         emitInstr2op("movsd", getAddr(stype, varName), rp.sreg[REG64]);
