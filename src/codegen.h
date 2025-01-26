@@ -48,19 +48,21 @@ public:
 private:
     std::unordered_set<Register> registersInUse;
 
-    static constexpr RegisterPair scratchRegisters[9] = {
+    static constexpr RegisterPair registers[30] = {
             {Register::RAX, {"rax", "eax",  "ax",   "ah", "al"},   SCRATCH},
             {Register::RCX, {"rcx", "ecx",  "cx",   "ch", "cl"},   SCRATCH | PARAM},
             {Register::RDX, {"rdx", "edx",  "dx",   "dh", "dl"},   SCRATCH | PARAM},
             {Register::RDI, {"rdi", "edi",  "di",   "",   "dil"},  SCRATCH | PARAM},
-            {Register::RDI, {"rsi", "esi",  "si",   "",   "sil"},  SCRATCH | PARAM},
+            {Register::RSI, {"rsi", "esi",  "si",   "",   "sil"},  SCRATCH | PARAM},
             {Register::R8,  {"r8",  "r8d",  "r8w",  "",   "r8b"},  SCRATCH | PARAM},
             {Register::R9,  {"r9",  "r9d",  "r9w",  "",   "r9b"},  SCRATCH | PARAM},
             {Register::R10, {"r10", "r10d", "r10w", "",   "r10b"}, SCRATCH | CHAIN},
             {Register::R11, {"r11", "r11d", "r11w", "",   "r11b"}, SCRATCH},
-    };
-
-    static constexpr RegisterPair sseRegisters[16] = {
+            {Register::RBX, {"rbx", "ebx",  "bx",   "bh", "bl"},   PRESERVED},
+            {Register::R12, {"r12", "r12d", "r12w", "",   "r12b"}, PRESERVED},
+            {Register::R13, {"r13", "r13d", "r13w", "",   "r13b"}, PRESERVED},
+            {Register::R14, {"r14", "r14d", "r14w", "",   "r14b"}, PRESERVED},
+            {Register::R15, {"r15", "r15d", "r15w", "",   "r15b"}, PRESERVED},
             {Register::xmm0,  {"xmm0",  "", "", "", ""}, SSE | PARAM},
             {Register::xmm1,  {"xmm1",  "", "", "", ""}, SSE | PARAM},
             {Register::xmm2,  {"xmm2",  "", "", "", ""}, SSE | PARAM},
@@ -77,14 +79,6 @@ private:
             {Register::xmm13, {"xmm13", "", "", "", ""}, SSE},
             {Register::xmm14, {"xmm14", "", "", "", ""}, SSE},
             {Register::xmm15, {"xmm15", "", "", "", ""}, SSE},
-    };
-
-    static constexpr RegisterPair preservedRegisters[5] = {
-            {Register::RBX, {"rbx", "ebx",  "bx",   "bh", "bl"},   PRESERVED},
-            {Register::R12, {"r12", "r12d", "r12w", "",   "r12b"}, PRESERVED},
-            {Register::R13, {"r13", "r13d", "r13w", "",   "r13b"}, PRESERVED},
-            {Register::R14, {"r14", "r14d", "r14w", "",   "r14b"}, PRESERVED},
-            {Register::R15, {"r15", "r15d", "r15w", "",   "r15b"}, PRESERVED},
     };
 };
 

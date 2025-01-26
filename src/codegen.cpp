@@ -8,32 +8,28 @@
 #define emitJump(jmp, label) generatedCode += std::format("\t{} {}\n", jmp, label)
 
 #define checkRType(type, t) ((type) & (t))
+#define preservedPrologue(rp) if (checkRType((rp).rType, PRESERVED)) { emitInstr1op("push", rp.sreg[REG64]); }
+#define preservedEpilogue(rp) if (checkRType((rp).rType, PRESERVED)) { emitInstr1op("pop", rp.sreg[REG64]); }
+#define register_alloc(rp, type) \
+    rp = rtracker.alloc(type); \
+    preservedPrologue(rp)
+#define register_free(rp) \
+    rtracker.free(rp.reg); \
+    preservedEpilogue(rp)
 
 RegisterPair RegisterTracker::alloc(uint8_t rtype) {
-    if (checkRType(rtype, SCRATCH)) {
-        for (const auto& sreg: scratchRegisters) {
-            if (checkRType(rtype, PARAM)) {
-                if (!checkRType(sreg.rType, PARAM))
-                    continue;
-            }
-            if (!registersInUse.contains(sreg.reg)) {
-                registersInUse.emplace(sreg.reg);
-                return sreg;
-            }
+    for (const auto& register_: registers) {
+        if (checkRType(rtype, SSE)) {
+            if (!checkRType(register_.rType, SSE))
+                continue;
+        } else if (checkRType(rtype, PARAM)) {
+            if (!checkRType(register_.rType, PARAM))
+                continue;
         }
-    } else if (checkRType(rtype, SSE)) {
-        for (const auto& sse: sseRegisters) {
-            if (!registersInUse.contains(sse.reg)) {
-                registersInUse.emplace(sse.reg);
-                return sse;
-            }
-        }
-    }
-    // If all scratch registers are in use
-    for (const auto& preg: preservedRegisters) {
-        if (!registersInUse.contains(preg.reg)) {
-            registersInUse.emplace(preg.reg);
-            return preg;
+
+        if (!registersInUse.contains(register_.reg)) {
+            registersInUse.emplace(register_.reg);
+            return register_;
         }
     }
 }
@@ -122,7 +118,7 @@ RegisterPair CodeGen::emitBinop(const BinOpExpr& binop) {
             RegisterPair rp1 = emitExpr(binop.lhs, negOne, {"xor", nullptr});
             RegisterPair rp2 = emitExpr(binop.rhs, negOne, {"xor", nullptr});
             emitInstr2op("and", rp1.sreg[REG64], rp2.sreg[REG64]);
-            rtracker.free(rp2.reg);
+            register_free(rp2)
             return rp1;
         }
         case TokenType::NOT: {
@@ -165,11 +161,14 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
         emitAST(statement);
     }
     // Increment iteration count
-    RegisterPair rp = rtracker.alloc(GP | SCRATCH);
+    RegisterPair rp{};
+    register_alloc(rp, SCRATCH)
+
     emitInstr2op("mov", rp.sreg[REG64], iterVarAddr);
     emitInstr2op("add", rp.sreg[REG64], 1);
     emitInstr2op("mov", iterVarAddr, rp.sreg[REG64]);
-    rtracker.free(rp.reg);
+
+    register_free(rp)
 
     emitJump("jmp", loopLabel);
     emitLabel(doneLabel);
@@ -283,7 +282,7 @@ RegisterPair CodeGen::emitNumb(const ExprPtr& n) {
     RegisterPair rp{};
 
     if (auto int_ = cast::toInt(n)) {
-        rp = rtracker.alloc(SCRATCH);
+        register_alloc(rp, SCRATCH)
         emitInstr2op("mov", rp.sreg[REG64], int_->n);
     } else if (auto double_ = cast::toDouble(n)) {
         rp = rtracker.alloc(SSE);
@@ -323,7 +322,7 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
     if (checkRType(reg1.rType, SSE) && (checkRType(reg2.rType, SCRATCH) || checkRType(reg2.rType, PRESERVED))) {
         RegisterPair new_rp = rtracker.alloc(SSE);
         emitInstr2op("cvtsi2sd", new_rp.sreg[REG64], reg2.sreg[REG64]);
-        rtracker.free(reg2.reg);
+        register_free(reg2)
 
         emitInstr2op(op.second, reg1.sreg[REG64], new_rp.sreg[REG64]);
         rtracker.free(new_rp.reg);
@@ -331,7 +330,7 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
     } else if ((checkRType(reg1.rType, SCRATCH) || checkRType(reg1.rType, PRESERVED)) && checkRType(reg2.rType, SSE)) {
         RegisterPair new_rp = rtracker.alloc(SSE);
         emitInstr2op("cvtsi2sd", new_rp.sreg[REG64], reg1.sreg[REG64]);
-        rtracker.free(reg1.reg);
+        register_free(reg1)
 
         emitInstr2op(op.second, new_rp.sreg[REG64], reg2.sreg[REG64]);
         emitInstr2op("movsd", reg2.sreg[REG64], new_rp.sreg[REG64]);
@@ -343,7 +342,7 @@ RegisterPair CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair
         return reg1;
     } else {
         emitInstr2op(op.first, reg1.sreg[REG64], reg2.sreg[REG64]);
-        rtracker.free(reg2.reg);
+        register_free(reg2)
         return reg1;
     }
 }
@@ -355,7 +354,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
         sectionBSS.emplace(cast::toString(var_->name)->data);
 
         RegisterPair rp = emitSet(var_->value);
-        rtracker.free(rp.reg);
+        register_free(rp)
     } else if (auto int_ = cast::toInt(var_->value)) {
         sectionData.emplace(cast::toString(var_->name)->data, std::format("dq {}", std::to_string(int_->n)));
     } else if (auto double_ = cast::toDouble(var_->value)) {
@@ -376,8 +375,8 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
             emitJump("je", label);
             RegisterPair rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
             emitJump("je", label);
-            rtracker.free(rp1.reg);
-            rtracker.free(rp2.reg);
+            register_free(rp1)
+            register_free(rp2)
             return;
         }
 
@@ -415,10 +414,10 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
                 emitJump("jg", label);
                 break;
         }
-        rtracker.free(rp.reg);
+        register_free(rp)
     } else if (auto funcCall = cast::toFuncCall(test)) {
         rp = emitFuncCall(*funcCall);
-        rtracker.free(rp.reg);
+        register_free(rp)
     } else if (auto var = cast::toVar(test)) {
         emitInstr2op("cmp", getAddr(var->sType, cast::toString(var->name)->data), 0);
         emitJump("je", label);
@@ -438,7 +437,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
             RegisterPair rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
 
             if (checkRType(rp1.rType, SSE)) {
-                setReg1 = rtracker.alloc(SCRATCH);
+                register_alloc(setReg1, SCRATCH)
             } else {
                 setReg1 = rp1;
             }
@@ -449,7 +448,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
             RegisterPair rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
 
             if (checkRType(rp2.rType, SSE)) {
-                setReg2 = rtracker.alloc(SCRATCH);
+                register_alloc(setReg2, SCRATCH)
             } else {
                 setReg2 = rp2;
             }
@@ -461,14 +460,14 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
 
             if (checkRType(rp1.rType, SSE)) {
                 emitInstr2op("cvtsi2sd", rp1.sreg[REG64], setReg1.sreg[REG64]);
-                rtracker.free(setReg1.reg);
+                register_free(setReg1)
             }
 
             if (checkRType(rp2.rType, SSE)) {
-                rtracker.free(setReg2.reg);
+                register_free(setReg2)
             }
 
-            rtracker.free(rp2.reg);
+            register_free(rp2)
             return rp1;
         }
 
@@ -488,7 +487,7 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
         rp = emitBinop(*binop);
 
         if (checkRType(rp.rType, SSE)) {
-            setReg = rtracker.alloc(SCRATCH);
+            register_alloc(setReg, SCRATCH)
         } else {
             setReg = rp;
         }
@@ -548,14 +547,15 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
 
         sectionData.emplace(label, std::format("db \"{}\",10", str->data));
 
-        RegisterPair rp = rtracker.alloc(SCRATCH);
+        RegisterPair rp{};
+        register_alloc(rp, SCRATCH)
         emitInstr2op("lea", rp.sreg[REG64], labelAddr);
         emitInstr2op("mov", varAddr, rp.sreg[REG64]);
-        rtracker.free(rp.reg);
+        register_free(rp)
     } else {
         RegisterPair rp = emitSet(var_->value);
         emitStoreMemFromReg(varName, var_->sType, rp);
-        rtracker.free(rp.reg);
+        register_free(rp)
     }
 }
 
@@ -579,14 +579,14 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
         value = cast::toVar(value->value);
     } while (cast::toVar(value));
 
-    rtracker.free(rp.reg);
+    register_free(rp)
 }
 
 RegisterPair CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& valueName) {
     RegisterPair rp{};
 
     if (cast::toInt(value.value)) {
-        rp = rtracker.alloc(SCRATCH);
+        register_alloc(rp, SCRATCH)
         emitInstr2op("mov", rp.sreg[REG64], getAddr(value.sType, valueName));
     } else if (cast::toDouble(value.value)) {
         rp = rtracker.alloc(SSE);
