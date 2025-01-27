@@ -5,7 +5,7 @@
 #define emitLabel(label) generatedCode += std::format("{}:\n", label)
 #define emitInstr1op(op, d) generatedCode += std::format("\t{} {}\n", op, d)
 #define emitInstr2op(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
-#define emitJump(jmp, label) generatedCode += std::format("\t{} {}\n", jmp, label)
+#define emitJump(jmp, label) emitInstr1op(jmp, label)
 
 #define checkRType(type, t) ((type) & (t))
 #define preservedPrologue(rp) if (checkRType((rp).rType, PRESERVED)) { emitInstr1op("push", rp.sreg[REG64]); }
