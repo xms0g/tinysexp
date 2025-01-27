@@ -6,10 +6,13 @@
 #define emitInstr1op(op, d) generatedCode += std::format("\t{} {}\n", op, d)
 #define emitInstr2op(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
 #define emitJump(jmp, label) emitInstr1op(jmp, label)
+#define emitSet8L(op, rp) \
+    emitInstr1op(op, rp.sreg[REG8L]); \
+    emitInstr2op("movzx", rp.sreg[REG64], rp.sreg[REG8L]);
 
 #define checkRType(type, t) ((type) & (t))
-#define preservedPrologue(rp) if (checkRType((rp).rType, PRESERVED)) { emitInstr1op("push", rp.sreg[REG64]); }
-#define preservedEpilogue(rp) if (checkRType((rp).rType, PRESERVED)) { emitInstr1op("pop", rp.sreg[REG64]); }
+#define preservedPrologue(rp) if (checkRType((rp).rType, PRESERVED)) { emitInstr1op("push", (rp).sreg[REG64]); }
+#define preservedEpilogue(rp) if (checkRType((rp).rType, PRESERVED)) { emitInstr1op("pop", (rp).sreg[REG64]); }
 #define register_alloc(rp, type) \
     rp = rtracker.alloc(type); \
     preservedPrologue(rp)
@@ -495,28 +498,22 @@ RegisterPair CodeGen::emitSet(const ExprPtr& set) {
         switch (binop->opToken.type) {
             case TokenType::EQUAL:
             case TokenType::NOT:
-                emitInstr1op("sete", setReg.sreg[REG8L]);
-                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
+                emitSet8L("sete", setReg)
                 break;
             case TokenType::NEQUAL:
-                emitInstr1op("setne", setReg.sreg[REG8L]);
-                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
+                emitSet8L("setne", setReg)
                 break;
             case TokenType::GREATER_THEN:
-                emitInstr1op("setg", setReg.sreg[REG8L]);
-                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
+                emitSet8L("setg", setReg)
                 break;
             case TokenType::LESS_THEN:
-                emitInstr1op("setl", setReg.sreg[REG8L]);
-                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
+                emitSet8L("setl", setReg)
                 break;
             case TokenType::GREATER_THEN_EQ:
-                emitInstr1op("setge", setReg.sreg[REG8L]);
-                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
+                emitSet8L("setge", setReg)
                 break;
             case TokenType::LESS_THEN_EQ:
-                emitInstr1op("setle", setReg.sreg[REG8L]);
-                emitInstr2op("movzx", setReg.sreg[REG64], setReg.sreg[REG8L]);
+                emitSet8L("setle", setReg)
                 break;
         }
 
@@ -573,8 +570,9 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
     do {
         rp = emitLoadRegFromMem(*value, valueName);
 
-        if (rp.sreg[REG64])
+        if (rp.sreg[REG64]) {
             emitStoreMemFromReg(varName, var.sType, rp);
+        }
 
         value = cast::toVar(value->value);
     } while (cast::toVar(value));
