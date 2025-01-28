@@ -45,10 +45,12 @@ public:
 
     void free(Register* reg);
 
-    const char* strRepFromID(uint32_t id, int size);
+    const char* name(uint32_t id, int size);
 
 private:
-    Register registers[30] = {
+    static constexpr int REGISTER_COUNT = 30;
+
+    Register registers[REGISTER_COUNT] = {
             {RAX,   SCRATCH,         false},
             {RCX,   SCRATCH | PARAM, false},
             {RDX,   SCRATCH | PARAM, false},
@@ -81,7 +83,7 @@ private:
             {xmm15, SSE,             false},
     };
 
-    static constexpr const char* strReps[30][5] = {
+    static constexpr const char* registerNames[REGISTER_COUNT][5] = {
             {"rax",   "eax",  "ax",   "ah", "al"},
             {"rcx",   "ecx",  "cx",   "ch", "cl"},
             {"rdx",   "edx",  "dx",   "dh", "dl"},
