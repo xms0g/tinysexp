@@ -162,6 +162,8 @@ private:
 
     Register* emitSet(const ExprPtr& set);
 
+    Register* emitLogAO(const BinOpExpr& binop, const char* op);
+
     void handleAssignment(const ExprPtr& var);
 
     void handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr, const std::string& value);

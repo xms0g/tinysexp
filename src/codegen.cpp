@@ -469,65 +469,12 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 
     if (auto binop = cast::toBinop(set)) {
         if (binop->opToken.type == TokenType::AND) {
-            ExprPtr zero = std::make_shared<IntExpr>(0);
-            Register* setReg1, * setReg2;
-
-            auto* rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
-
-            if (checkRType(rp1->rType, SSE)) {
-                setReg1 = register_alloc(SCRATCH);
-            } else {
-                setReg1 = rp1;
-            }
-
-            const char* setReg1Str = rtracker.name(setReg1->id, REG64);
-            const char* setReg18LStr = rtracker.name(setReg1->id, REG8L);
-
-            emitInstr2op("xor", setReg1Str, setReg1Str);
-            emitInstr1op("setne", setReg18LStr);
-
-            auto* rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
-
-            if (checkRType(rp2->rType, SSE)) {
-                setReg2 = register_alloc(SCRATCH);
-            } else {
-                setReg2 = rp2;
-            }
-
-            const char* setReg2Str = rtracker.name(setReg2->id, REG64);
-            const char* setReg28LStr = rtracker.name(setReg2->id, REG8L);
-
-            emitInstr2op("xor", setReg2Str, setReg2Str);
-            emitInstr1op("setne", setReg28LStr);
-
-            emitInstr2op("and", setReg18LStr, setReg28LStr);
-            emitInstr2op("movzx", setReg1Str, setReg18LStr);
-
-            if (checkRType(rp1->rType, SSE)) {
-                emitInstr2op("cvtsi2sd", rtracker.name(rp1->id, REG64), setReg1Str);
-                register_free(setReg1)
-            }
-
-            if (checkRType(rp2->rType, SSE)) {
-                register_free(setReg2)
-            }
-
-            register_free(rp2)
-            return rp1;
+            return emitLogAO(*binop, "and");
         }
 
-        //TODO: check out for double
-//        if (binop->opToken.type == TokenType::OR) {
-//            ExprPtr zero = std::make_shared<IntExpr>(0);
-//            RegisterPair rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
-//            emitInstr1op("setne", "al");
-//            RegisterPair rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
-//            emitInstr1op("setne", "cl");
-//            emitInstr2op("or", "al", "cl");
-//            emitInstr2op("movzx", rtracker.strRepFromID(rp1->id, REG64), "al");
-//            rtracker.free(rp2);
-//            return rp1;
-//        }
+        if (binop->opToken.type == TokenType::OR) {
+            return emitLogAO(*binop, "or");
+        }
 
         rp = emitBinop(*binop);
 
@@ -564,6 +511,54 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
     }
 
     return setReg;
+}
+
+Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
+    Register* setReg1, * setReg2;
+    ExprPtr zero = std::make_shared<IntExpr>(0);
+
+    auto* rp1 = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
+
+    if (checkRType(rp1->rType, SSE)) {
+        setReg1 = register_alloc(SCRATCH);
+    } else {
+        setReg1 = rp1;
+    }
+
+    const char* setReg1Str = rtracker.name(setReg1->id, REG64);
+    const char* setReg18LStr = rtracker.name(setReg1->id, REG8L);
+
+    emitInstr2op("xor", setReg1Str, setReg1Str);
+    emitInstr1op("setne", setReg18LStr);
+
+    auto* rp2 = emitExpr(binop.rhs, zero, {"cmp", "ucomisd"});
+
+    if (checkRType(rp2->rType, SSE)) {
+        setReg2 = register_alloc(SCRATCH);
+    } else {
+        setReg2 = rp2;
+    }
+
+    const char* setReg2Str = rtracker.name(setReg2->id, REG64);
+    const char* setReg28LStr = rtracker.name(setReg2->id, REG8L);
+
+    emitInstr2op("xor", setReg2Str, setReg2Str);
+    emitInstr1op("setne", setReg28LStr);
+
+    emitInstr2op(op, setReg18LStr, setReg28LStr);
+    emitInstr2op("movzx", setReg1Str, setReg18LStr);
+
+    if (checkRType(rp1->rType, SSE)) {
+        emitInstr2op("cvtsi2sd", rtracker.name(rp1->id, REG64), setReg1Str);
+        register_free(setReg1)
+    }
+
+    if (checkRType(rp2->rType, SSE)) {
+        register_free(setReg2)
+    }
+
+    register_free(rp2)
+    return rp1;
 }
 
 void CodeGen::handleAssignment(const ExprPtr& var) {
