@@ -123,7 +123,6 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::LOGAND:
             return emitExpr(binop.lhs, binop.rhs, {"and", nullptr});
         case TokenType::LOGIOR:
-        case TokenType::OR:
             return emitExpr(binop.lhs, binop.rhs, {"or", nullptr});
         case TokenType::LOGXOR:
             return emitExpr(binop.lhs, binop.rhs, {"xor", nullptr});
@@ -147,6 +146,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::GREATER_THEN_EQ:
         case TokenType::LESS_THEN_EQ:
         case TokenType::AND:
+        case TokenType::OR: //TODO: Check this
             return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
     }
 }
@@ -155,6 +155,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     const auto iterVar = cast::toVar(dotimes.iterationCount);
     const std::string iterVarName = cast::toString(iterVar->name)->data;
     // Labels
+    std::string trueLabel;
     std::string loopLabel = createLabel();
     std::string doneLabel = createLabel();
     // Loop condition
@@ -170,7 +171,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     emitInstr2op("mov", iterVarAddr, 0);
     // Loop label
     emitLabel(loopLabel);
-    emitTest(test, doneLabel);
+    emitTest(test, trueLabel, doneLabel);
     // Emit statements
     for (auto& statement: dotimes.statements) {
         emitAST(statement);
@@ -190,6 +191,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 
 void CodeGen::emitLoop(const LoopExpr& loop) {
     // Labels
+    std::string trueLabel;
     std::string loopLabel = createLabel();
     std::string doneLabel = createLabel();
 
@@ -209,7 +211,7 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
                 emitAST(form);
                 continue;
             }
-            emitTest(when->test, loopLabel);
+            emitTest(when->test, trueLabel, loopLabel);
             emitJump("jmp", doneLabel);
             hasReturn = true;
             break;
@@ -249,8 +251,9 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {}
 
 void CodeGen::emitIf(const IfExpr& if_) {
     std::string elseLabel = createLabel();
+    std::string trueLabel = createLabel();
     // Emit test
-    emitTest(if_.test, elseLabel);
+    emitTest(if_.test, trueLabel, elseLabel);
     // Emit then
     emitAST(if_.then);
     // Emit else
@@ -266,9 +269,10 @@ void CodeGen::emitIf(const IfExpr& if_) {
 }
 
 void CodeGen::emitWhen(const WhenExpr& when) {
+    std::string trueLabel;
     std::string doneLabel = createLabel();
     // Emit test
-    emitTest(when.test, doneLabel);
+    emitTest(when.test, trueLabel, doneLabel);
     // Emit then
     for (auto& form: when.then) {
         emitAST(form);
@@ -277,11 +281,12 @@ void CodeGen::emitWhen(const WhenExpr& when) {
 }
 
 void CodeGen::emitCond(const CondExpr& cond) {
+    std::string trueLabel;
     std::string done = createLabel();
 
     for (auto& pair: cond.variants) {
         std::string elseLabel = createLabel();
-        emitTest(pair.first, elseLabel);
+        emitTest(pair.first, trueLabel, elseLabel);
         for (auto& form: pair.second) {
             emitAST(form);
         }
@@ -379,7 +384,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
     }
 }
 
-void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
+void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string& elseLabel) {
     Register* rp;
 
     if (auto binop = cast::toBinop(test)) {
@@ -388,11 +393,27 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
 
             auto* rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
             register_free(rp1)
-            emitJump("je", label);
+            emitJump("je", elseLabel);
 
             auto* rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
             register_free(rp2)
-            emitJump("je", label);
+            emitJump("je", elseLabel);
+
+            return;
+        }
+
+        if (binop->opToken.type == TokenType::OR) {
+            ExprPtr zero = std::make_shared<IntExpr>(0);
+
+            auto* rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
+            register_free(rp1)
+            emitJump("jne", trueLabel);
+
+            auto* rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
+            register_free(rp2)
+            emitJump("je", elseLabel);
+
+            emitLabel(trueLabel);
 
             return;
         }
@@ -408,30 +429,27 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
             case TokenType::LOGIOR:
             case TokenType::LOGXOR: {
                 emitInstr2op("cmp", rtracker.name(rp->id, REG64), 0);
-                emitJump("je", label);
+                emitJump("je", elseLabel);
                 break;
             }
-            case TokenType::OR:
-                emitJump("je", label);
-                break;
             case TokenType::EQUAL:
             case TokenType::NOT:
-                emitJump("jne", label);
+                emitJump("jne", elseLabel);
                 break;
             case TokenType::NEQUAL:
-                emitJump("je", label);
+                emitJump("je", elseLabel);
                 break;
             case TokenType::GREATER_THEN:
-                emitJump("jle", label);
+                emitJump("jle", elseLabel);
                 break;
             case TokenType::LESS_THEN:
-                emitJump("jge", label);
+                emitJump("jge", elseLabel);
                 break;
             case TokenType::GREATER_THEN_EQ:
-                emitJump("jl", label);
+                emitJump("jl", elseLabel);
                 break;
             case TokenType::LESS_THEN_EQ:
-                emitJump("jg", label);
+                emitJump("jg", elseLabel);
                 break;
         }
         register_free(rp)
@@ -440,9 +458,9 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
         register_free(rp)
     } else if (auto var = cast::toVar(test)) {
         emitInstr2op("cmp", getAddr(var->sType, cast::toString(var->name)->data), 0);
-        emitJump("je", label);
+        emitJump("je", elseLabel);
     } else if (cast::toNIL(test)) {
-        emitJump("jmp", label);
+        emitJump("jmp", elseLabel);
     }
 }
 

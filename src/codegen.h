@@ -158,7 +158,7 @@ private:
 
     void emitSection(const ExprPtr& value);
 
-    void emitTest(const ExprPtr& test, std::string& label);
+    void emitTest(const ExprPtr& test, std::string& trueLabel, std::string& elseLabel);
 
     Register* emitSet(const ExprPtr& set);
 
