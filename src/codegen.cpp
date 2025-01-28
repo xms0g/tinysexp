@@ -376,6 +376,9 @@ void CodeGen::emitSection(const ExprPtr& var) {
     } else if (auto double_ = cast::toDouble(var_->value)) {
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
         sectionData.emplace(cast::toString(var_->name)->data, "dq " + emitHex(hex));
+    } else if (cast::toVar(var_->value)) {
+        sectionData.emplace(cast::toString(var_->name)->data, std::to_string(0));
+        handleAssignment(var);
     } else if (auto str = cast::toString(var_->value)) {
         sectionData.emplace(cast::toString(var_->name)->data, std::format("db \"{}\", 10", str->data));
     }
@@ -446,12 +449,12 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
 }
 
 Register* CodeGen::emitSet(const ExprPtr& set) {
-    Register* rp, *setReg;
+    Register* rp, * setReg;
 
     if (auto binop = cast::toBinop(set)) {
         if (binop->opToken.type == TokenType::AND) {
             ExprPtr zero = std::make_shared<IntExpr>(0);
-            Register* setReg1, *setReg2;
+            Register* setReg1, * setReg2;
 
             auto* rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
 
@@ -595,7 +598,7 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
     do {
         rp = emitLoadRegFromMem(*value, valueName);
 
-        if (rp.sreg[REG64]) {
+        if (rp) {
             emitStoreMemFromReg(varName, var.sType, rp);
         }
 
@@ -606,7 +609,7 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
 }
 
 Register* CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& valueName) {
-    Register* rp;
+    Register* rp = nullptr;
 
     if (cast::toInt(value.value)) {
         rp = register_alloc(SCRATCH);
