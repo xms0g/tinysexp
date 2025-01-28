@@ -9,10 +9,10 @@ _start:
 	cvtsi2sd xmm1, rax
 	ucomisd xmm0, xmm1
 	je .L0
-	movsd xmm1, qword [rel b]
+	movsd xmm0, qword [rel b]
 	mov rax, 0
-	cvtsi2sd xmm2, rax
-	ucomisd xmm1, xmm2
+	cvtsi2sd xmm1, rax
+	ucomisd xmm0, xmm1
 	je .L0
 	movsd xmm0, qword [rel a]
 	movsd xmm1, qword [rel b]
