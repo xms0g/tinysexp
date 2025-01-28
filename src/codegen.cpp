@@ -13,23 +13,19 @@
 
 #define checkRType(type, t) ((type) & (t))
 
-#define preservedPrologue(rp) \
-    if (checkRType((rp)->rType, PRESERVED)) { emitInstr1op("push", rtracker.name((rp)->id, REG64)); }
+#define register_alloc(type) ([&]() {                       \
+    auto* rp = rtracker.alloc(type);                        \
+    if (checkRType(rp->rType, PRESERVED)) {                 \
+        emitInstr1op("push", rtracker.name(rp->id, REG64)); \
+    }                                                       \
+    return rp;                                              \
+    }())                                                    \
 
-#define preservedEpilogue(rp) \
-    if (checkRType((rp)->rType, PRESERVED)) { emitInstr1op("pop", rtracker.name((rp)->id, REG64)); }
-
-#define register_alloc(type) \
-    ([&]() -> Register* {               \
-         auto* rp = rtracker.alloc(type);   \
-         preservedPrologue(rp)              \
-         return rp;                         \
-    }())                                    \
-
-
-#define register_free(rp) \
-    rtracker.free(rp); \
-    preservedEpilogue(rp)
+#define register_free(rp)                                   \
+    rtracker.free(rp);                                      \
+    if (checkRType(rp->rType, PRESERVED)) {                 \
+        emitInstr1op("pop", rtracker.name(rp->id, REG64));  \
+    }
 
 Register* RegisterTracker::alloc(uint8_t rtype) {
     for (auto& register_: registers) {
@@ -70,6 +66,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
         emitAST(next);
         next = next->child;
     }
+
     generatedCode += "\tpop rbp\n"
                      "\tret\n";
 
@@ -416,6 +413,9 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& label) {
                 emitJump("je", label);
                 break;
             }
+            case TokenType::OR:
+                emitJump("je", label);
+                break;
             case TokenType::EQUAL:
             case TokenType::NOT:
                 emitJump("jne", label);
