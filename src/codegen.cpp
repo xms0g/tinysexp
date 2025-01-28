@@ -8,8 +8,8 @@
 #define emitJump(jmp, label) emitInstr1op(jmp, label)
 
 #define emitSet8L(op, rp) \
-    emitInstr1op(op, rtracker.name((rp)->id, REG8L)); \
-    emitInstr2op("movzx", rtracker.name((rp)->id, REG64), rtracker.name((rp)->id, REG8L));
+    emitInstr1op(op, rtracker.name(rp->id, REG8L)); \
+    emitInstr2op("movzx", rtracker.name(rp->id, REG64), rtracker.name(rp->id, REG8L));
 
 #define checkRType(type, t) ((type) & (t))
 
@@ -365,9 +365,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
 
     if (cast::toNIL(var_->value) || cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
         sectionBSS.emplace(cast::toString(var_->name)->data);
-
-        auto* rp = emitSet(var_->value);
-        register_free(rp)
+        handleAssignment(var);
     } else if (auto int_ = cast::toInt(var_->value)) {
         sectionData.emplace(cast::toString(var_->name)->data, std::format("dq {}", std::to_string(int_->n)));
     } else if (auto double_ = cast::toDouble(var_->value)) {
@@ -571,7 +569,6 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         sectionData.emplace(label, std::format("db \"{}\",10", str->data));
 
         auto* rp = register_alloc(SCRATCH);
-
         const char* rpStr = rtracker.name(rp->id, REG64);
 
         emitInstr2op("lea", rpStr, labelAddr);
