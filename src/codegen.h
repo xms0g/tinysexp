@@ -168,17 +168,19 @@ private:
 
     Register* emitLogAO(const BinOpExpr& binop, const char* op);
 
-    void handleAssignment(const ExprPtr& var);
+    void handleAssignment(const ExprPtr& var, uint32_t size);
 
     void handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr, const std::string& value);
 
-    void handleVariable(const VarExpr& var, const std::string& varName);
+    void handleVariable(const VarExpr& var, const std::string& varName, uint32_t size);
 
-    Register* emitLoadRegFromMem(const VarExpr& value, const std::string& valueName);
+    Register* emitLoadRegFromMem(const VarExpr& value, const std::string& valueName, uint32_t size);
 
-    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp);
+    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size);
 
-    std::string getAddr(SymbolType stype, const std::string& varName);
+    std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
+
+    std::pair<uint32_t , std::string> getSize(const ExprPtr& var);
 
     std::string createLabel();
 

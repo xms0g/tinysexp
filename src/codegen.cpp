@@ -9,11 +9,11 @@
 
 #define push(id) emitInstr1op("push", register64(id))
 #define pop(id) emitInstr1op("pop", register64(id))
-#define mov(d, s) emitInstr2op("mov", d, s);
-#define movd(d, s) emitInstr2op("movsd", d, s);
+#define mov(d, s) emitInstr2op("mov", d, s)
+#define movd(d, s) emitInstr2op("movsd", d, s)
 #define strDirective(s) std::format("db \"{}\", 10", s)
-#define numDirectiveInitialized(n) std::format("dq {}", n)
-#define numDirectiveUninitialized(n) std::format("resq {}", n)
+#define quadDirective(state, n) std::format("{} {}", state, n)
+#define byteDirective(n) std::format("db {}", n)
 #define ret() generatedCode += "\tret\n"
 
 #define emitSet8L(op, rp) \
@@ -179,7 +179,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     Token token = Token{TokenType::LESS_THEN};
     ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
     // Address of iter var
-    std::string iterVarAddr = getAddr(SymbolType::LOCAL, iterVarName);
+    std::string iterVarAddr = getAddr(iterVarName, SymbolType::LOCAL, REG64);
     // Set 0 to iter var
     mov(iterVarAddr, 0);
     // Loop label
@@ -238,7 +238,8 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
 
 void CodeGen::emitLet(const LetExpr& let) {
     for (auto& var: let.bindings) {
-        handleAssignment(var);
+        auto sizeInfo = getSize(var);
+        handleAssignment(var, sizeInfo.first);
     }
 
     for (auto& sexpr: let.body) {
@@ -247,7 +248,8 @@ void CodeGen::emitLet(const LetExpr& let) {
 }
 
 void CodeGen::emitSetq(const SetqExpr& setq) {
-    handleAssignment(setq.pair);
+    auto sizeInfo = getSize(setq.pair);
+    handleAssignment(setq.pair, sizeInfo.first);
 }
 
 void CodeGen::emitDefvar(const DefvarExpr& defvar) {
@@ -324,7 +326,7 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
         const auto var = cast::toVar(n);
         const std::string varName = cast::toString(var->name)->data;
 
-        return emitLoadRegFromMem(*var, varName);
+        return emitLoadRegFromMem(*var, varName, REG64);
     }
 }
 
@@ -355,7 +357,8 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
         emitInstr2op(op.second, register64(reg1->id), newRPStr);
         rtracker.free(newRP);
         return reg1;
-    } else if ((checkRType(reg1->rType, SCRATCH) || checkRType(reg1->rType, PRESERVED)) && checkRType(reg2->rType, SSE)) {
+    } else if ((checkRType(reg1->rType, SCRATCH) || checkRType(reg1->rType, PRESERVED)) &&
+               checkRType(reg2->rType, SSE)) {
         auto* newRP = rtracker.alloc(SSE);
         const char* newRPStr = register64(newRP->id);
         const char* reg2Str = register64(reg2->id);
@@ -381,23 +384,34 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 void CodeGen::emitSection(const ExprPtr& var) {
     const auto var_ = cast::toVar(var);
 
-    if (cast::toNIL(var_->value) || cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
+    if (cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
         updateSections("\nsection .bss\n",
-                       std::make_pair(cast::toString(var_->name)->data, numDirectiveUninitialized(1)));
+                       std::make_pair(cast::toString(var_->name)->data, quadDirective("resq", 1)));
 
-        handleAssignment(var);
+        handleAssignment(var, REG64);
+    } else if (cast::toUninitialized(var_->value)) {
+        updateSections("\nsection .bss\n",
+                       std::make_pair(cast::toString(var_->name)->data, quadDirective("resq", 1)));
+    } else if (cast::toNIL(var_->value)) {
+        updateSections("\nsection .data\n",
+                       std::make_pair(cast::toString(var_->name)->data, byteDirective(0)));
+    } else if (cast::toT(var_->value)) {
+        updateSections("\nsection .data\n",
+                       std::make_pair(cast::toString(var_->name)->data, byteDirective(1)));
     } else if (auto int_ = cast::toInt(var_->value)) {
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, numDirectiveInitialized(int_->n)));
+                       std::make_pair(cast::toString(var_->name)->data, quadDirective("dq", int_->n)));
     } else if (auto double_ = cast::toDouble(var_->value)) {
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, numDirectiveInitialized(emitHex(hex))));
+                       std::make_pair(cast::toString(var_->name)->data, quadDirective("dq", emitHex(hex))));
     } else if (cast::toVar(var_->value)) {
-        updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, std::to_string(0)));
+        auto sizeInfo = getSize(var_);
 
-        handleAssignment(var);
+        updateSections("\nsection .data\n",
+                       std::make_pair(cast::toString(var_->name)->data, sizeInfo.second));
+
+        handleAssignment(var, sizeInfo.first);
     } else if (auto str = cast::toString(var_->value)) {
         updateSections("\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data, strDirective(str->data)));
@@ -477,7 +491,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
         rp = emitFuncCall(*funcCall);
         register_free(rp)
     } else if (auto var = cast::toVar(test)) {
-        emitInstr2op("cmp", getAddr(var->sType, cast::toString(var->name)->data), 0);
+        emitInstr2op("cmp", getAddr(cast::toString(var->name)->data, var->sType, REG64), 0);
         emitJump("je", elseLabel);
     } else if (cast::toNIL(test)) {
         emitJump("jmp", elseLabel);
@@ -581,7 +595,7 @@ Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
     return rp1;
 }
 
-void CodeGen::handleAssignment(const ExprPtr& var) {
+void CodeGen::handleAssignment(const ExprPtr& var, uint32_t size) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
 
@@ -591,13 +605,17 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
         handlePrimitive(*var_, varName, "movsd", emitHex(hex));
     } else if (cast::toVar(var_->value)) {
-        handleVariable(*var_, varName);
+        handleVariable(*var_, varName, size);
     } else if (cast::toNIL(var_->value)) {
-        getAddr(var_->sType, varName);
+        handlePrimitive(*var_, varName, "mov", std::to_string(0));
+    } else if (cast::toT(var_->value)) {
+        handlePrimitive(*var_, varName, "mov", std::to_string(1));
+    } else if (cast::toUninitialized(var_->value) && var_->sType == SymbolType::LOCAL) {
+        getAddr(varName, var_->sType, REG64);
     } else if (auto str = cast::toString(var_->value)) {
         std::string label = ".L." + varName;
-        std::string labelAddr = getAddr(var_->sType, label);
-        std::string varAddr = getAddr(var_->sType, varName);
+        std::string labelAddr = getAddr(label, var_->sType, size);
+        std::string varAddr = getAddr(varName, var_->sType, size);
 
         updateSections("\nsection .data\n",
                        std::make_pair(label, strDirective(str->data)));
@@ -610,27 +628,27 @@ void CodeGen::handleAssignment(const ExprPtr& var) {
         register_free(rp)
     } else {
         auto* rp = emitSet(var_->value);
-        emitStoreMemFromReg(varName, var_->sType, rp);
+        emitStoreMemFromReg(varName, var_->sType, rp, REG64);
         register_free(rp)
     }
 }
 
 void CodeGen::handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr,
                               const std::string& value) {
-    emitInstr2op(instr, getAddr(var.sType, varName), value);
+    emitInstr2op(instr, getAddr(varName, var.sType, REG64), value);
 }
 
-void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
+void CodeGen::handleVariable(const VarExpr& var, const std::string& varName, uint32_t size) {
     auto value = cast::toVar(var.value);
     std::string valueName = cast::toString(value->name)->data;
 
     Register* rp;
 
     do {
-        rp = emitLoadRegFromMem(*value, valueName);
+        rp = emitLoadRegFromMem(*value, valueName, size);
 
         if (rp) {
-            emitStoreMemFromReg(varName, var.sType, rp);
+            emitStoreMemFromReg(varName, var.sType, rp, size);
         }
 
         value = cast::toVar(value->value);
@@ -639,34 +657,40 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName) {
     register_free(rp)
 }
 
-Register* CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& valueName) {
+Register* CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& valueName, uint32_t size) {
     Register* rp = nullptr;
 
     if (cast::toInt(value.value)) {
         rp = register_alloc(SCRATCH);
-        mov(register64(rp->id), getAddr(value.sType, valueName));
+        mov(register64(rp->id), getAddr(valueName, value.sType, size));
     } else if (cast::toDouble(value.value)) {
         rp = rtracker.alloc(SSE);
-        movd(register64(rp->id), getAddr(value.sType, valueName));
+        movd(register64(rp->id), getAddr(valueName, value.sType, size));
     } else if (cast::toString(value.value)) {
         rp = register_alloc(SCRATCH);
-        emitInstr2op("lea", register64(rp->id), getAddr(value.sType, valueName));
+        emitInstr2op("lea", register64(rp->id), getAddr(valueName, value.sType, size));
+    } else if (cast::toNIL(value.value) || cast::toT(value.value)) {
+        rp = register_alloc(SCRATCH);
+        emitInstr2op("movzx", register64(rp->id), getAddr(valueName, value.sType, size));
     }
 
     return rp;
 }
 
-void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp) {
-    const char* rpStr = register64(rp->id);
+void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size) {
+    const char* rpStr = size == REG64 ? register64(rp->id) :
+                        size == REG32 ? register32(rp->id) :
+                        size == REG16 ? register16(rp->id) :
+                        size == REG8H ? register8H(rp->id) : register8L(rp->id);
 
     if (checkRType(rp->rType, SCRATCH) || checkRType(rp->rType, PRESERVED)) {
-        mov(getAddr(stype, varName), rpStr);
+        mov(getAddr(varName, stype, size), rpStr);
     } else if (checkRType(rp->rType, SSE)) {
-        movd(getAddr(stype, varName), rpStr);
+        movd(getAddr(varName, stype, size), rpStr);
     }
 }
 
-std::string CodeGen::getAddr(SymbolType stype, const std::string& varName) {
+std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint32_t size) {
     switch (stype) {
         case SymbolType::LOCAL: {
             int stackOffset;
@@ -677,15 +701,43 @@ std::string CodeGen::getAddr(SymbolType stype, const std::string& varName) {
                 stackOffsets.emplace(varName, currentStackOffset);
                 currentStackOffset += 8;
             }
-            return std::format("qword [rbp - {}]", stackOffset);
+            return std::format("{} [rbp - {}]", size == REG64 ? "qword" :
+                                                size == REG32 ? "dword" :
+                                                size == REG16 ? "word" : "byte", stackOffset);
         }
         case SymbolType::GLOBAL:
-            return std::format("qword [rel {}]", varName);
+            return std::format("{} [rel {}]", size == REG64 ? "qword" :
+                                              size == REG32 ? "dword" :
+                                              size == REG16 ? "word" : "byte", varName);
         case SymbolType::PARAM:
             throw std::runtime_error("PARAM handling not implemented.");
         default:
             throw std::runtime_error("Unknown SymbolType.");
     }
+}
+
+std::pair<uint32_t , std::string> CodeGen::getSize(const ExprPtr& var) {
+    std::string directive;
+    uint32_t size;
+
+    auto var_ = cast::toVar(var);
+    do {
+        if (cast::toNIL(var_->value) || cast::toT(var_->value)) {
+            directive = byteDirective(0);
+            size = REG8L;
+
+            return std::make_pair(size, directive);
+        } else if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
+            directive = quadDirective("dq", 0);
+            size = REG64;
+
+            return std::make_pair(size, directive);
+        }
+
+        var_ = cast::toVar(var_->value);
+    } while (cast::toVar(var_));
+
+    return {};
 }
 
 std::string CodeGen::createLabel() {
