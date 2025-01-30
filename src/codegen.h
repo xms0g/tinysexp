@@ -18,7 +18,7 @@ enum RegisterID : uint32_t {
     RDI, RSI, R8,
     R9, R10, R11,
     RBX, R12, R13,
-    R14, R15,
+    R14, R15, RSP, RBP,
     xmm0, xmm1, xmm2,
     xmm3, xmm4, xmm5,
     xmm6, xmm7, xmm8,
@@ -45,10 +45,10 @@ public:
 
     void free(Register* reg);
 
-    const char* name(uint32_t id, int size);
+    const char* name(uint32_t id, int size = REG64);
 
 private:
-    static constexpr int REGISTER_COUNT = 30;
+    static constexpr int REGISTER_COUNT = 32;
 
     Register registers[REGISTER_COUNT] = {
             {RAX,   SCRATCH,         false},
@@ -65,6 +65,8 @@ private:
             {R13,   PRESERVED,       false},
             {R14,   PRESERVED,       false},
             {R15,   PRESERVED,       false},
+            {RSP,   PRESERVED,       false},
+            {RBP,   PRESERVED,       false},
             {xmm0,  SSE | PARAM,     false},
             {xmm1,  SSE | PARAM,     false},
             {xmm2,  SSE | PARAM,     false},
@@ -98,6 +100,8 @@ private:
             {"r13",   "r13d", "r13w", "",   "r13b"},
             {"r14",   "r14d", "r14w", "",   "r14b"},
             {"r15",   "r15d", "r15w", "",   "r15b"},
+            {"rsp",   "esp",  "sp",   "",   "spl"},
+            {"rbp",   "ebp",  "bp",   "",   "bpl"},
             {"xmm0",  "",     "",     "",   ""},
             {"xmm1",  "",     "",     "",   ""},
             {"xmm2",  "",     "",     "",   ""},
@@ -178,6 +182,8 @@ private:
 
     std::string createLabel();
 
+    void updateSections(const char* name, const std::pair<std::string, std::string>& data);
+
     std::string generatedCode;
     // Label
     int currentLabelCount;
@@ -187,8 +193,7 @@ private:
     int currentStackOffset;
     std::unordered_map<std::string, int> stackOffsets;
     // Sections
-    std::unordered_map<std::string, std::string> sectionData;
-    std::unordered_set<std::string> sectionBSS;
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> sections;
 };
 
 
