@@ -190,7 +190,9 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
     } else if (cast::toInt(var_->value) ||
                cast::toDouble(var_->value) ||
                cast::toNIL(var_->value) ||
-               cast::toString(var_->value)) {
+               cast::toT(var_->value) ||
+               cast::toString(var_->value) ||
+               cast::toUninitialized(var_->value)) {
         ExprPtr name_ = var_->name;
         ExprPtr value_ = var_->value;
         ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
