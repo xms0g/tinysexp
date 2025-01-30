@@ -648,6 +648,9 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& v
     } else if (cast::toDouble(value.value)) {
         rp = rtracker.alloc(SSE);
         movd(register64(rp->id), getAddr(value.sType, valueName));
+    } else if (cast::toString(value.value)) {
+        rp = register_alloc(SCRATCH);
+        emitInstr2op("lea", register64(rp->id), getAddr(value.sType, valueName));
     }
 
     return rp;
