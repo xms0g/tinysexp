@@ -701,14 +701,10 @@ std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint3
                 stackOffsets.emplace(varName, currentStackOffset);
                 currentStackOffset += 8;
             }
-            return std::format("{} [rbp - {}]", size == REG64 ? "qword" :
-                                                size == REG32 ? "dword" :
-                                                size == REG16 ? "word" : "byte", stackOffset);
+            return std::format("{} [rbp - {}]", dataSize[size], stackOffset);
         }
         case SymbolType::GLOBAL:
-            return std::format("{} [rel {}]", size == REG64 ? "qword" :
-                                              size == REG32 ? "dword" :
-                                              size == REG16 ? "word" : "byte", varName);
+            return std::format("{} [rel {}]", dataSize[size], varName);
         case SymbolType::PARAM:
             throw std::runtime_error("PARAM handling not implemented.");
         default:
@@ -717,21 +713,13 @@ std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint3
 }
 
 std::pair<uint32_t , std::string> CodeGen::getSize(const ExprPtr& var) {
-    std::string directive;
-    uint32_t size;
-
     auto var_ = cast::toVar(var);
+
     do {
         if (cast::toNIL(var_->value) || cast::toT(var_->value)) {
-            directive = byteDirective(0);
-            size = REG8L;
-
-            return std::make_pair(size, directive);
+            return std::make_pair(REG8L, byteDirective(0));
         } else if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
-            directive = quadDirective("dq", 0);
-            size = REG64;
-
-            return std::make_pair(size, directive);
+            return std::make_pair(REG64, quadDirective("dq", 0));
         }
 
         var_ = cast::toVar(var_->value);

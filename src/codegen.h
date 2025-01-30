@@ -31,6 +31,10 @@ enum RegisterSize {
     REG64, REG32, REG16, REG8H, REG8L
 };
 
+static constexpr const char* dataSize[5] = {
+        "qword", "dword", "word", "byte", "byte"
+};
+
 enum RegisterType : uint8_t {
     SSE = 1 << 0,
     SCRATCH = 1 << 1,
@@ -180,7 +184,7 @@ private:
 
     std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
 
-    std::pair<uint32_t , std::string> getSize(const ExprPtr& var);
+    std::pair<uint32_t, std::string> getSize(const ExprPtr& var);
 
     std::string createLabel();
 
