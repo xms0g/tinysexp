@@ -366,16 +366,16 @@ ExprPtr Parser::parseAtom() {
         Token token = mCurrentToken;
         advance();
         ExprPtr name = std::make_shared<StringExpr>(token.value);
-        ExprPtr value = std::make_shared<NILExpr>();
+        ExprPtr value = std::make_shared<Uninitialized>();
         return std::make_shared<VarExpr>(name, value);
-    } else if (mCurrentToken.type == TokenType::NIL || mCurrentToken.type == TokenType::RPAREN) {
-        // If it's not nil, do not consume. It will be done at the outer scope
-        if (mCurrentToken.type == TokenType::NIL)
-            advance();
+    } else if (mCurrentToken.type == TokenType::NIL) {
+        advance();
         return std::make_shared<NILExpr>();
     } else if (mCurrentToken.type == TokenType::T) {
         advance();
         return std::make_shared<TExpr>();
+    } else if (mCurrentToken.type == TokenType::RPAREN) {
+        return std::make_shared<Uninitialized>();
     } else {
         return parseNumber();
     }

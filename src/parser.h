@@ -146,7 +146,7 @@ struct WhenExpr : IExpr {
     ExprPtr test;
     std::vector<ExprPtr> then;
 
-    WhenExpr(ExprPtr& test_,  std::vector<ExprPtr>& then_) :
+    WhenExpr(ExprPtr& test_, std::vector<ExprPtr>& then_) :
             test(std::move(test_)),
             then(std::move(then_)) {}
 };
@@ -168,6 +168,8 @@ struct VarExpr : IExpr {
             value(std::move(value_)),
             sType(type) {}
 };
+
+struct Uninitialized : IExpr {};
 
 class Parser {
 public:
@@ -297,6 +299,10 @@ inline std::shared_ptr<TExpr> toT(const ExprPtr& expr) {
 
 inline std::shared_ptr<NILExpr> toNIL(const ExprPtr& expr) {
     return std::dynamic_pointer_cast<NILExpr>(expr);
+}
+
+inline std::shared_ptr<Uninitialized> toUninitialized(const ExprPtr& expr) {
+    return std::dynamic_pointer_cast<Uninitialized>(expr);
 }
 }
 
