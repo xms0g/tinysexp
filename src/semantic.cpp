@@ -187,7 +187,10 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
         // Update value
         var_->value = sym.value;
         stracker.bind(varName, {varName, var, var_->sType, isConstant});
-    } else if (cast::toInt(var_->value) || cast::toDouble(var_->value) || cast::toNIL(var_->value)) {
+    } else if (cast::toInt(var_->value) ||
+               cast::toDouble(var_->value) ||
+               cast::toNIL(var_->value) ||
+               cast::toString(var_->value)) {
         ExprPtr name_ = var_->name;
         ExprPtr value_ = var_->value;
         ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
