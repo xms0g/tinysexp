@@ -27,12 +27,20 @@ enum RegisterID : uint32_t {
     xmm15
 };
 
-enum RegisterSize {
+enum RegisterSize: uint32_t {
     REG64, REG32, REG16, REG8H, REG8L
 };
 
 static constexpr const char* memorySize[5] = {
         "qword", "dword", "word", "byte", "byte"
+};
+
+static constexpr const char* dataSizeInitialized[5] = {
+        "dq", "dd", "dw", "db", "db"
+};
+
+static constexpr const char* dataSizeUninitialized[5] = {
+        "resq", "resd", "resw", "resb", "resb"
 };
 
 enum RegisterType : uint8_t {
@@ -184,7 +192,7 @@ private:
 
     std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
 
-    std::pair<uint32_t, std::string> getMemSize(const ExprPtr& var);
+    uint32_t getMemSize(const ExprPtr& var);
 
     std::string createLabel();
 

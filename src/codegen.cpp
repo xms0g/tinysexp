@@ -12,8 +12,7 @@
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movd(d, s) emitInstr2op("movsd", d, s)
 #define strDirective(s) std::format("db \"{}\", 10", s)
-#define quadDirective(state, n) std::format("{} {}", state, n)
-#define byteDirective(n) std::format("db {}", n)
+#define memDirective(d, n) std::format("{} {}", d, n)
 #define ret() generatedCode += "\tret\n"
 
 #define emitSet8L(op, rp) \
@@ -239,7 +238,7 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
 void CodeGen::emitLet(const LetExpr& let) {
     for (auto& var: let.bindings) {
         auto memSize = getMemSize(var);
-        handleAssignment(var, memSize.first);
+        handleAssignment(var, memSize);
     }
 
     for (auto& sexpr: let.body) {
@@ -249,7 +248,7 @@ void CodeGen::emitLet(const LetExpr& let) {
 
 void CodeGen::emitSetq(const SetqExpr& setq) {
     auto memSize = getMemSize(setq.pair);
-    handleAssignment(setq.pair, memSize.first);
+    handleAssignment(setq.pair, memSize);
 }
 
 void CodeGen::emitDefvar(const DefvarExpr& defvar) {
@@ -386,35 +385,42 @@ void CodeGen::emitSection(const ExprPtr& var) {
 
     if (cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
         updateSections("\nsection .bss\n",
-                       std::make_pair(cast::toString(var_->name)->data, quadDirective("resq", 1)));
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      memDirective(dataSizeUninitialized[REG64], 1)));
 
         handleAssignment(var, REG64);
     } else if (cast::toUninitialized(var_->value)) {
         updateSections("\nsection .bss\n",
-                       std::make_pair(cast::toString(var_->name)->data, quadDirective("resq", 1)));
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      memDirective(dataSizeUninitialized[REG64], 1)));
     } else if (cast::toNIL(var_->value)) {
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, byteDirective(0)));
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      memDirective(dataSizeInitialized[REG8L], 0)));
     } else if (cast::toT(var_->value)) {
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, byteDirective(1)));
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      memDirective(dataSizeInitialized[REG8L], 1)));
     } else if (auto int_ = cast::toInt(var_->value)) {
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, quadDirective("dq", int_->n)));
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      memDirective(dataSizeInitialized[REG64], int_->n)));
     } else if (auto double_ = cast::toDouble(var_->value)) {
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, quadDirective("dq", emitHex(hex))));
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      memDirective(dataSizeInitialized[REG64], emitHex(hex))));
     } else if (cast::toVar(var_->value)) {
         auto memSize = getMemSize(var_);
 
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, memSize.second));
-
-        handleAssignment(var, memSize.first);
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      memDirective(dataSizeInitialized[memSize], 0)));
+        handleAssignment(var, memSize);
     } else if (auto str = cast::toString(var_->value)) {
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, strDirective(str->data)));
+                       std::make_pair(cast::toString(var_->name)->data,
+                                      strDirective(str->data)));
     }
 }
 
@@ -521,22 +527,22 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
         switch (binop->opToken.type) {
             case TokenType::EQUAL:
             case TokenType::NOT:
-                emitSet8L("sete", setReg)
+            emitSet8L("sete", setReg)
                 break;
             case TokenType::NEQUAL:
-                emitSet8L("setne", setReg)
+            emitSet8L("setne", setReg)
                 break;
             case TokenType::GREATER_THEN:
-                emitSet8L("setg", setReg)
+            emitSet8L("setg", setReg)
                 break;
             case TokenType::LESS_THEN:
-                emitSet8L("setl", setReg)
+            emitSet8L("setl", setReg)
                 break;
             case TokenType::GREATER_THEN_EQ:
-                emitSet8L("setge", setReg)
+            emitSet8L("setge", setReg)
                 break;
             case TokenType::LESS_THEN_EQ:
-                emitSet8L("setle", setReg)
+            emitSet8L("setle", setReg)
                 break;
         }
 
@@ -712,20 +718,18 @@ std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint3
     }
 }
 
-std::pair<uint32_t , std::string> CodeGen::getMemSize(const ExprPtr& var) {
+uint32_t CodeGen::getMemSize(const ExprPtr& var) {
     auto var_ = cast::toVar(var);
 
     do {
         if (cast::toNIL(var_->value) || cast::toT(var_->value)) {
-            return std::make_pair(REG8L, byteDirective(0));
+            return REG8L;
         } else if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
-            return std::make_pair(REG64, quadDirective("dq", 0));
+            return REG64;
         }
 
         var_ = cast::toVar(var_->value);
     } while (cast::toVar(var_));
-
-    return {};
 }
 
 std::string CodeGen::createLabel() {
