@@ -184,7 +184,7 @@ private:
 
     std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
 
-    std::pair<uint32_t, std::string> getSize(const ExprPtr& var);
+    std::pair<uint32_t, std::string> getMemSize(const ExprPtr& var);
 
     std::string createLabel();
 

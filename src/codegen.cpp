@@ -238,7 +238,7 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
 
 void CodeGen::emitLet(const LetExpr& let) {
     for (auto& var: let.bindings) {
-        auto sizeInfo = getSize(var);
+        auto sizeInfo = getMemSize(var);
         handleAssignment(var, sizeInfo.first);
     }
 
@@ -248,7 +248,7 @@ void CodeGen::emitLet(const LetExpr& let) {
 }
 
 void CodeGen::emitSetq(const SetqExpr& setq) {
-    auto sizeInfo = getSize(setq.pair);
+    auto sizeInfo = getMemSize(setq.pair);
     handleAssignment(setq.pair, sizeInfo.first);
 }
 
@@ -406,7 +406,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
         updateSections("\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data, quadDirective("dq", emitHex(hex))));
     } else if (cast::toVar(var_->value)) {
-        auto sizeInfo = getSize(var_);
+        auto sizeInfo = getMemSize(var_);
 
         updateSections("\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data, sizeInfo.second));
@@ -712,7 +712,7 @@ std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint3
     }
 }
 
-std::pair<uint32_t , std::string> CodeGen::getSize(const ExprPtr& var) {
+std::pair<uint32_t , std::string> CodeGen::getMemSize(const ExprPtr& var) {
     auto var_ = cast::toVar(var);
 
     do {
