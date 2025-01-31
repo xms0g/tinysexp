@@ -31,18 +31,6 @@ enum RegisterSize: uint32_t {
     REG64, REG32, REG16, REG8H, REG8L
 };
 
-static constexpr const char* memorySize[5] = {
-        "qword", "dword", "word", "byte", "byte"
-};
-
-static constexpr const char* dataSizeInitialized[5] = {
-        "dq", "dd", "dw", "db", "db"
-};
-
-static constexpr const char* dataSizeUninitialized[5] = {
-        "resq", "resd", "resw", "resb", "resb"
-};
-
 enum RegisterType : uint8_t {
     SSE = 1 << 0,
     SCRATCH = 1 << 1,
@@ -57,7 +45,7 @@ public:
 
     void free(Register* reg);
 
-    const char* name(uint32_t id, int size = REG64);
+    const char* name(uint32_t id, int size);
 
 private:
     static constexpr int REGISTER_COUNT = 32;
@@ -194,6 +182,8 @@ private:
 
     uint32_t getMemSize(const ExprPtr& var);
 
+    const char* getRegName(uint32_t id, uint32_t size);
+
     std::string createLabel();
 
     void updateSections(const char* name, const std::pair<std::string, std::string>& data);
@@ -208,6 +198,18 @@ private:
     std::unordered_map<std::string, int> stackOffsets;
     // Sections
     std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> sections;
+
+    static constexpr const char* memorySize[5] = {
+            "qword", "dword", "word", "byte", "byte"
+    };
+
+    static constexpr const char* dataSizeInitialized[5] = {
+            "dq", "dd", "dw", "db", "db"
+    };
+
+    static constexpr const char* dataSizeUninitialized[5] = {
+            "resq", "resd", "resw", "resb", "resb"
+    };
 };
 
 
