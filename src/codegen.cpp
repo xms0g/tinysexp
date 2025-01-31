@@ -238,8 +238,8 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
 
 void CodeGen::emitLet(const LetExpr& let) {
     for (auto& var: let.bindings) {
-        auto sizeInfo = getMemSize(var);
-        handleAssignment(var, sizeInfo.first);
+        auto memSize = getMemSize(var);
+        handleAssignment(var, memSize.first);
     }
 
     for (auto& sexpr: let.body) {
@@ -248,8 +248,8 @@ void CodeGen::emitLet(const LetExpr& let) {
 }
 
 void CodeGen::emitSetq(const SetqExpr& setq) {
-    auto sizeInfo = getMemSize(setq.pair);
-    handleAssignment(setq.pair, sizeInfo.first);
+    auto memSize = getMemSize(setq.pair);
+    handleAssignment(setq.pair, memSize.first);
 }
 
 void CodeGen::emitDefvar(const DefvarExpr& defvar) {
@@ -406,12 +406,12 @@ void CodeGen::emitSection(const ExprPtr& var) {
         updateSections("\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data, quadDirective("dq", emitHex(hex))));
     } else if (cast::toVar(var_->value)) {
-        auto sizeInfo = getMemSize(var_);
+        auto memSize = getMemSize(var_);
 
         updateSections("\nsection .data\n",
-                       std::make_pair(cast::toString(var_->name)->data, sizeInfo.second));
+                       std::make_pair(cast::toString(var_->name)->data, memSize.second));
 
-        handleAssignment(var, sizeInfo.first);
+        handleAssignment(var, memSize.first);
     } else if (auto str = cast::toString(var_->value)) {
         updateSections("\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data, strDirective(str->data)));
@@ -701,10 +701,10 @@ std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint3
                 stackOffsets.emplace(varName, currentStackOffset);
                 currentStackOffset += 8;
             }
-            return std::format("{} [rbp - {}]", dataSize[size], stackOffset);
+            return std::format("{} [rbp - {}]", memorySize[size], stackOffset);
         }
         case SymbolType::GLOBAL:
-            return std::format("{} [rel {}]", dataSize[size], varName);
+            return std::format("{} [rip + {}]", memorySize[size], varName);
         case SymbolType::PARAM:
             throw std::runtime_error("PARAM handling not implemented.");
         default:

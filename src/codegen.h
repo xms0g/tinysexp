@@ -31,7 +31,7 @@ enum RegisterSize {
     REG64, REG32, REG16, REG8H, REG8L
 };
 
-static constexpr const char* dataSize[5] = {
+static constexpr const char* memorySize[5] = {
         "qword", "dword", "word", "byte", "byte"
 };
 
