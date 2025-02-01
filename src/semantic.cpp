@@ -109,8 +109,8 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 }
 
 ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
-    ExprPtr lhs = numberResolve(binop.lhs);
-    ExprPtr rhs = numberResolve(binop.rhs);
+    ExprPtr lhs = numberResolve(binop.lhs, binop.opToken.type);
+    ExprPtr rhs = numberResolve(binop.rhs,  binop.opToken.type);
 
     if (binop.opToken.type == TokenType::LOGAND ||
         binop.opToken.type == TokenType::LOGIOR ||
@@ -276,11 +276,12 @@ void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
 }
 
 void SemanticAnalyzer::ifResolve(const IfExpr& if_) {
-    if (const auto test = cast::toString(if_.test)) {
-        Symbol sym = stracker.lookup(test->data);
+    if (const auto test = cast::toVar(if_.test)) {
+        const std::string name = cast::toString(test->name)->data;
+        Symbol sym = stracker.lookup(name);
 
         if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
     } else {
         exprResolve(if_.test);
@@ -288,17 +289,18 @@ void SemanticAnalyzer::ifResolve(const IfExpr& if_) {
 
     exprResolve(if_.then);
 
-    if (!cast::toNIL(if_.else_)) {
+    if (!cast::toUninitialized(if_.else_)) {
         exprResolve(if_.else_);
     }
 }
 
 void SemanticAnalyzer::whenResolve(const WhenExpr& when) {
-    if (const auto test = cast::toString(when.test)) {
-        Symbol sym = stracker.lookup(test->data);
+    if (const auto test = cast::toVar(when.test)) {
+        const std::string name = cast::toString(test->name)->data;
+        Symbol sym = stracker.lookup(name);
 
         if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
     } else {
         exprResolve(when.test);
@@ -311,11 +313,12 @@ void SemanticAnalyzer::whenResolve(const WhenExpr& when) {
 
 void SemanticAnalyzer::condResolve(const CondExpr& cond) {
     for (auto& variant: cond.variants) {
-        if (auto test = cast::toString(variant.first)) {
-            Symbol sym = stracker.lookup(test->data);
+        if (const auto test = cast::toVar(variant.first)) {
+            const std::string name = cast::toString(test->name)->data;
+            Symbol sym = stracker.lookup(name);
 
             if (!sym.value) {
-                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, test->data), 0);
+                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
         } else {
             exprResolve(variant.first);
@@ -338,7 +341,10 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     }
 }
 
-void SemanticAnalyzer::checkBool(const ExprPtr& var) {
+void SemanticAnalyzer::checkBool(const ExprPtr& var, TokenType ttype) {
+    if (ttype == TokenType::AND || ttype == TokenType::OR || ttype == TokenType::NOT)
+        return;
+
     if (cast::toT(var)) {
         throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
     }
@@ -377,12 +383,12 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
     }
 }
 
-ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n) {
+ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
     if (cast::toInt(n) || cast::toDouble(n) || cast::toUninitialized(n)) {
         return n;
     }
 
-    checkBool(n);
+    checkBool(n, ttype);
 
     if (auto binop = cast::toBinop(n)) {
         return binopResolve(*binop);
@@ -398,10 +404,12 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n) {
 
         auto innerVar = cast::toVar(sym.value);
         do {
-            checkBool(innerVar->value);
+            checkBool(innerVar->value, ttype);
             // loop sym value until finding a primitive. Update var.
             if (cast::toInt(innerVar->value) ||
-                cast::toDouble(innerVar->value)) {
+                cast::toDouble(innerVar->value) ||
+                cast::toNIL(innerVar->value) ||
+                cast::toT(innerVar->value)) {
                 ExprPtr name_ = cast::toString(var_->name);
                 ExprPtr value_ = innerVar->value;
                 n = std::make_shared<VarExpr>(name_, value_, sym.sType);

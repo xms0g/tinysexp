@@ -70,13 +70,13 @@ private:
 
     void checkConstantVar(const ExprPtr& var);
 
-    void checkBool(const ExprPtr& var);
+    void checkBool(const ExprPtr& var, TokenType ttype);
 
     bool checkDouble(const ExprPtr& n);
 
     std::variant<int, double> getValue(const ExprPtr& n);
 
-    ExprPtr numberResolve(ExprPtr& n);
+    ExprPtr numberResolve(ExprPtr& n, TokenType ttype);
 
     void valueResolve(const ExprPtr& var, bool isConstant = false);
 
