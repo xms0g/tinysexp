@@ -11,13 +11,14 @@
 #define pop(id) emitInstr1op("pop", getRegName(id, REG64))
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movd(d, s) emitInstr2op("movsd", d, s)
+#define movzx(d, s) emitInstr2op("movzx", d, s)
 #define strDirective(s) std::format("db \"{}\", 10", s)
 #define memDirective(d, n) std::format("{} {}", d, n)
 #define ret() generatedCode += "\tret\n"
 
 #define emitSet8L(op, rp) \
     emitInstr1op(op, getRegName(rp->id, REG8L)); \
-    emitInstr2op("movzx", getRegName(rp->id, REG64), getRegName(rp->id, REG8L));
+    movzx(getRegName(rp->id, REG64), getRegName(rp->id, REG8L));
 
 #define checkRType(type, t) ((type) & (t))
 
@@ -584,7 +585,7 @@ Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
     emitInstr1op("setne", setReg28LStr);
 
     emitInstr2op(op, setReg18LStr, setReg28LStr);
-    emitInstr2op("movzx", setReg1Str, setReg18LStr);
+    movzx(setReg1Str, setReg18LStr);
 
     if (checkRType(rp1->rType, SSE)) {
         emitInstr2op("cvtsi2sd", getRegName(rp1->id, REG64), setReg1Str);
@@ -675,7 +676,7 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& v
         emitInstr2op("lea", getRegName(rp->id, REG64), getAddr(valueName, value.sType, size));
     } else if (cast::toNIL(value.value) || cast::toT(value.value)) {
         rp = register_alloc(SCRATCH);
-        emitInstr2op("movzx", getRegName(rp->id, REG64), getAddr(valueName, value.sType, size));
+        movzx(getRegName(rp->id, REG64), getAddr(valueName, value.sType, size));
     }
 
     return rp;
@@ -705,7 +706,7 @@ std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint3
             return std::format("{} [rbp - {}]", memorySize[size], stackOffset);
         }
         case SymbolType::GLOBAL:
-            return std::format("{} [rip + {}]", memorySize[size], varName);
+            return std::format("{} [rel {}]", memorySize[size], varName);
         case SymbolType::PARAM:
             throw std::runtime_error("PARAM handling not implemented.");
         default:
