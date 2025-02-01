@@ -266,15 +266,15 @@ void CodeGen::emitIf(const IfExpr& if_) {
     // Emit then
     emitAST(if_.then);
     // Emit else
-    if (cast::toNIL(if_.else_)) {
+    if (!cast::toUninitialized(if_.else_)) {
+        std::string done = createLabel();
+        emitJump("jmp", done);
         emitLabel(elseLabel);
-        return;
+        emitAST(if_.else_);
+        emitLabel(done);
+    } else {
+        emitLabel(elseLabel);
     }
-    std::string done = createLabel();
-    emitJump("jmp", done);
-    emitLabel(elseLabel);
-    emitAST(if_.else_);
-    emitLabel(done);
 }
 
 void CodeGen::emitWhen(const WhenExpr& when) {
@@ -496,6 +496,9 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
         emitJump("je", elseLabel);
     } else if (cast::toNIL(test)) {
         emitJump("jmp", elseLabel);
+    } else if (cast::toT(test)) {
+        emitJump("jmp", trueLabel);
+        emitLabel(trueLabel);
     }
 }
 
