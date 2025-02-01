@@ -115,7 +115,7 @@ ExprPtr Parser::parseSExpr() {
         right = parseAtom();
     }
 
-    if (token.type == TokenType::NOT && !cast::toNIL(right)) {
+    if (token.type == TokenType::NOT && !cast::toUninitialized(right)) {
         throw InvalidSyntaxError(mFileName, ERROR(OP_INVALID_NUMBER_OF_ARGS_ERROR, "NOT", 2), 0);
     }
 
@@ -123,8 +123,8 @@ ExprPtr Parser::parseSExpr() {
 }
 
 ExprPtr Parser::parseDotimes() {
-    std::vector<ExprPtr> statements;
     ExprPtr var, value;
+    std::vector<ExprPtr> statements;
 
     advance();
 
