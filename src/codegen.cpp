@@ -561,7 +561,7 @@ Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
     }
 
     const char* setReg1Str = getRegName(setReg1->id, REG64);
-    const char* setReg18LStr = getRegName(setReg1->id, REG64);
+    const char* setReg18LStr = getRegName(setReg1->id, REG8L);
 
     emitInstr2op("xor", setReg1Str, setReg1Str);
     emitInstr1op("setne", setReg18LStr);
@@ -575,7 +575,7 @@ Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
     }
 
     const char* setReg2Str = getRegName(setReg2->id, REG64);
-    const char* setReg28LStr = getRegName(setReg2->id, REG64);
+    const char* setReg28LStr = getRegName(setReg2->id, REG8L);
 
     emitInstr2op("xor", setReg2Str, setReg2Str);
     emitInstr1op("setne", setReg28LStr);
