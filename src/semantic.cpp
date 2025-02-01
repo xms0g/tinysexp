@@ -156,8 +156,11 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
         auto innerVar = cast::toVar(sym.value);
         do {
             checkBool(innerVar);
-            // Check out if the sym value is int,double or var. Update var.
-            if (cast::toInt(innerVar->value) || cast::toDouble(innerVar->value)) {
+            // loop sym value until finding a primitive. Update var.
+            if (cast::toInt(innerVar->value) ||
+                cast::toDouble(innerVar->value) ||
+                cast::toNIL(innerVar->value) ||
+                cast::toT(innerVar->value)) {
                 ExprPtr name_ = cast::toString(var_->name);
                 ExprPtr value_ = innerVar->value;
                 var = std::make_shared<VarExpr>(name_, value_, sym.sType);
@@ -446,7 +449,7 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
 }
 
 ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n) {
-    if (!cast::toNIL(n) && !cast::toInt(n) && !cast::toDouble(n)) {
+    if (!cast::toNIL(n) && !cast::toInt(n) && !cast::toDouble(n) && !cast::toUninitialized(n)) {
         return varResolve(n);
     }
 
