@@ -138,76 +138,6 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 
 }
 
-ExprPtr SemanticAnalyzer::varResolve(ExprPtr& var) {
-    checkBool(var);
-
-    if (auto binop = cast::toBinop(var)) {
-        return binopResolve(*binop);
-    } else {
-        const auto var_ = cast::toVar(var);
-        const std::string name = cast::toString(var_->name)->data;
-
-        Symbol sym = stracker.lookup(name);
-
-        if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
-        }
-
-        auto innerVar = cast::toVar(sym.value);
-        do {
-            checkBool(innerVar);
-            // loop sym value until finding a primitive. Update var.
-            if (cast::toInt(innerVar->value) ||
-                cast::toDouble(innerVar->value) ||
-                cast::toNIL(innerVar->value) ||
-                cast::toT(innerVar->value)) {
-                ExprPtr name_ = cast::toString(var_->name);
-                ExprPtr value_ = innerVar->value;
-                var = std::make_shared<VarExpr>(name_, value_, sym.sType);
-                return var;
-            } else {
-                innerVar = cast::toVar(innerVar->value);
-            }
-        } while (cast::toVar(innerVar));
-
-        if (!innerVar) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
-        }
-    }
-}
-
-void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
-    const auto var_ = cast::toVar(var);
-    const std::string varName = cast::toString(var_->name)->data;
-
-    if (const auto value = cast::toVar(var_->value)) {
-        const std::string valueName = cast::toString(value->name)->data;
-        Symbol sym = stracker.lookup(valueName);
-
-        if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
-        }
-        // Update value
-        var_->value = sym.value;
-        stracker.bind(varName, {varName, var, var_->sType, isConstant});
-    } else if (cast::toInt(var_->value) ||
-               cast::toDouble(var_->value) ||
-               cast::toNIL(var_->value) ||
-               cast::toT(var_->value) ||
-               cast::toString(var_->value) ||
-               cast::toUninitialized(var_->value)) {
-        ExprPtr name_ = var_->name;
-        ExprPtr value_ = var_->value;
-        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
-        stracker.bind(varName, {varName, new_var, var_->sType, isConstant});
-    } else {
-        ExprPtr name_ = var_->name;
-        ExprPtr value_ = exprResolve(var_->value);
-        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
-        stracker.bind(varName, {varName, new_var, var_->sType, isConstant});
-    }
-}
-
 void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     stracker.enter();
     checkConstantVar(dotimes.iterationCount);
@@ -429,7 +359,6 @@ bool SemanticAnalyzer::checkDouble(const ExprPtr& n) {
     return false;
 }
 
-
 std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
     auto getPrimitive = [&](const ExprPtr& n) -> std::variant<int, double> {
         if (auto double_ = cast::toDouble(n))
@@ -449,9 +378,73 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
 }
 
 ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n) {
-    if (!cast::toNIL(n) && !cast::toInt(n) && !cast::toDouble(n) && !cast::toUninitialized(n)) {
-        return varResolve(n);
+    if (cast::toInt(n) || cast::toDouble(n) || cast::toUninitialized(n)) {
+        return n;
     }
 
-    return n;
+    checkBool(n);
+
+    if (auto binop = cast::toBinop(n)) {
+        return binopResolve(*binop);
+    } else {
+        const auto var_ = cast::toVar(n);
+        const std::string name = cast::toString(var_->name)->data;
+
+        Symbol sym = stracker.lookup(name);
+
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        }
+
+        auto innerVar = cast::toVar(sym.value);
+        do {
+            checkBool(innerVar->value);
+            // loop sym value until finding a primitive. Update var.
+            if (cast::toInt(innerVar->value) ||
+                cast::toDouble(innerVar->value)) {
+                ExprPtr name_ = cast::toString(var_->name);
+                ExprPtr value_ = innerVar->value;
+                n = std::make_shared<VarExpr>(name_, value_, sym.sType);
+                return n;
+            } else {
+                innerVar = cast::toVar(innerVar->value);
+            }
+        } while (cast::toVar(innerVar));
+
+        if (!innerVar) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        }
+    }
+}
+
+void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
+    const auto var_ = cast::toVar(var);
+    const std::string varName = cast::toString(var_->name)->data;
+
+    if (const auto value = cast::toVar(var_->value)) {
+        const std::string valueName = cast::toString(value->name)->data;
+        Symbol sym = stracker.lookup(valueName);
+
+        if (!sym.value) {
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
+        }
+        // Update value
+        var_->value = sym.value;
+        stracker.bind(varName, {varName, var, var_->sType, isConstant});
+    } else if (cast::toInt(var_->value) ||
+               cast::toDouble(var_->value) ||
+               cast::toNIL(var_->value) ||
+               cast::toT(var_->value) ||
+               cast::toString(var_->value) ||
+               cast::toUninitialized(var_->value)) {
+        ExprPtr name_ = var_->name;
+        ExprPtr value_ = var_->value;
+        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
+        stracker.bind(varName, {varName, new_var, var_->sType, isConstant});
+    } else {
+        ExprPtr name_ = var_->name;
+        ExprPtr value_ = exprResolve(var_->value);
+        ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
+        stracker.bind(varName, {varName, new_var, var_->sType, isConstant});
+    }
 }

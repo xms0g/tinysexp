@@ -44,10 +44,6 @@ private:
 
     ExprPtr binopResolve(BinOpExpr& binop);
 
-    ExprPtr varResolve(ExprPtr& var);
-
-    void valueResolve(const ExprPtr& var, bool isConstant = false);
-
     void dotimesResolve(const DotimesExpr& dotimes);
 
     void loopResolve(const LoopExpr& loop);
@@ -81,6 +77,8 @@ private:
     std::variant<int, double> getValue(const ExprPtr& n);
 
     ExprPtr numberResolve(ExprPtr& n);
+
+    void valueResolve(const ExprPtr& var, bool isConstant = false);
 
     ScopeTracker stracker;
     /* File Name */
