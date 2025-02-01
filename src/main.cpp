@@ -8,7 +8,7 @@
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 8
-#define VERSION_PATCH 17
+#define VERSION_PATCH 18
 
 #define STRINGIFY0(s) # s
 #define STRINGIFY(s) STRINGIFY0(s)
