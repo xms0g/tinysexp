@@ -110,21 +110,7 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 
 ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
     ExprPtr lhs = numberResolve(binop.lhs, binop.opToken.type);
-    ExprPtr rhs = numberResolve(binop.rhs,  binop.opToken.type);
-
-    if (binop.opToken.type == TokenType::LOGAND ||
-        binop.opToken.type == TokenType::LOGIOR ||
-        binop.opToken.type == TokenType::LOGXOR ||
-        binop.opToken.type == TokenType::LOGNOR) {
-
-        if (checkDouble(lhs)) {
-            throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(lhs))), 0);
-        }
-
-        if (checkDouble(rhs)) {
-            throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(rhs))), 0);
-        }
-    }
+    ExprPtr rhs = numberResolve(binop.rhs, binop.opToken.type);
 
     if (checkDouble(lhs)) {
         return lhs;
@@ -365,6 +351,15 @@ bool SemanticAnalyzer::checkDouble(const ExprPtr& n) {
     return false;
 }
 
+void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, TokenType ttype) {
+    if (ttype == TokenType::LOGAND ||
+        ttype == TokenType::LOGIOR ||
+        ttype == TokenType::LOGXOR ||
+        ttype == TokenType::LOGNOR) {
+        throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(n))), 0);
+    }
+}
+
 std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
     auto getPrimitive = [&](const ExprPtr& n) -> std::variant<int, double> {
         if (auto double_ = cast::toDouble(n))
@@ -385,9 +380,14 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& n) {
 
 ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
     if (cast::toInt(n) || cast::toDouble(n) || cast::toUninitialized(n)) {
+        if (cast::toDouble(n)) {
+            checkBitwiseOp(n, ttype);
+        }
+
         return n;
     }
 
+    // If var is t/nil and token type is different than and/or/not raise error.
     checkBool(n, ttype);
 
     if (auto binop = cast::toBinop(n)) {
@@ -410,6 +410,10 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
                 cast::toDouble(innerVar->value) ||
                 cast::toNIL(innerVar->value) ||
                 cast::toT(innerVar->value)) {
+                if (cast::toDouble(innerVar->value)) {
+                    checkBitwiseOp(innerVar->value, ttype);
+                }
+
                 ExprPtr name_ = cast::toString(var_->name);
                 ExprPtr value_ = innerVar->value;
                 n = std::make_shared<VarExpr>(name_, value_, sym.sType);

@@ -74,6 +74,8 @@ private:
 
     bool checkDouble(const ExprPtr& n);
 
+    void checkBitwiseOp(const ExprPtr& n, TokenType ttype);
+
     std::variant<int, double> getValue(const ExprPtr& n);
 
     ExprPtr numberResolve(ExprPtr& n, TokenType ttype);
