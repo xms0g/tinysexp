@@ -16,8 +16,7 @@ A subset of Lisp, including:
 - Local Variables: with `let` and `setq`.
 - Global Variables: with `defvar`.
 - Constant Variables: with `defconstant`.
-## Calling Conventions
-- Result value is always in the first cell.
+## ABI
 ## Usage
 
 ## Example
