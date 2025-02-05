@@ -18,7 +18,7 @@ enum RegisterID : uint32_t {
     RDI, RSI, R8,
     R9, R10, R11,
     RBX, R12, R13,
-    R14, R15, RSP, RBP,
+    R14, R15,
     xmm0, xmm1, xmm2,
     xmm3, xmm4, xmm5,
     xmm6, xmm7, xmm8,
@@ -36,7 +36,8 @@ enum RegisterType : uint8_t {
     SCRATCH = 1 << 1,
     PRESERVED = 1 << 2,
     PARAM = 1 << 3,
-    CHAIN = 1 << 4
+    CHAIN = 1 << 4,
+    INUSE = 1 << 5
 };
 
 class RegisterTracker {
@@ -48,7 +49,7 @@ public:
     const char* name(uint32_t id, int size);
 
 private:
-    static constexpr int REGISTER_COUNT = 32;
+    static constexpr int REGISTER_COUNT = 30;
 
     Register registers[REGISTER_COUNT] = {
             {RAX,   SCRATCH,         false},
@@ -65,8 +66,6 @@ private:
             {R13,   PRESERVED,       false},
             {R14,   PRESERVED,       false},
             {R15,   PRESERVED,       false},
-            {RSP,   PRESERVED,       false},
-            {RBP,   PRESERVED,       false},
             {xmm0,  SSE | PARAM,     false},
             {xmm1,  SSE | PARAM,     false},
             {xmm2,  SSE | PARAM,     false},
@@ -100,8 +99,6 @@ private:
             {"r13",   "r13d", "r13w", "",   "r13b"},
             {"r14",   "r14d", "r14w", "",   "r14b"},
             {"r15",   "r15d", "r15w", "",   "r15b"},
-            {"rsp",   "esp",  "sp",   "",   "spl"},
-            {"rbp",   "ebp",  "bp",   "",   "bpl"},
             {"xmm0",  "",     "",     "",   ""},
             {"xmm1",  "",     "",     "",   ""},
             {"xmm2",  "",     "",     "",   ""},

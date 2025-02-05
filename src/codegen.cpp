@@ -17,8 +17,8 @@
 #define ret() generatedCode += "\tret\n"
 
 #define emitSet8L(op, rp) \
-    emitInstr1op(op, getRegName(rp->id, REG8L)); \
-    movzx(getRegName(rp->id, REG64), getRegName(rp->id, REG8L));
+emitInstr1op(op, getRegName(rp->id, REG8L)); \
+movzx(getRegName(rp->id, REG64), getRegName(rp->id, REG8L));
 
 #define checkRType(type, t) ((type) & (t))
 
@@ -68,8 +68,8 @@ std::string CodeGen::emit(const ExprPtr& ast) {
             "\tglobal _start\n"
             "_start:\n";
 
-    push(RBP);
-    mov(getRegName(RBP, REG64), getRegName(RSP, REG64));
+    emitInstr1op("push", "rbp");
+    mov("rbp", "rsp");
 
     auto next = ast;
     while (next != nullptr) {
@@ -77,7 +77,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
         next = next->child;
     }
 
-    pop(RBP);
+    emitInstr1op("pop", "rbp");
     ret();
 
     for (auto& section: sections) {
@@ -730,11 +730,16 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 
 const char* CodeGen::getRegName(uint32_t id, uint32_t size) {
     switch (size) {
-        case REG64: return rtracker.name(id, REG64);
-        case REG32: return rtracker.name(id, REG32);
-        case REG16: return rtracker.name(id, REG16);
-        case REG8H: return rtracker.name(id, REG8H);
-        case REG8L: return rtracker.name(id, REG8L);
+        case REG64:
+            return rtracker.name(id, REG64);
+        case REG32:
+            return rtracker.name(id, REG32);
+        case REG16:
+            return rtracker.name(id, REG16);
+        case REG8H:
+            return rtracker.name(id, REG8H);
+        case REG8L:
+            return rtracker.name(id, REG8L);
     }
 }
 
