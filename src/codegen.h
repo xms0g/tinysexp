@@ -36,8 +36,7 @@ enum RegisterType : uint8_t {
     SCRATCH = 1 << 1,
     PRESERVED = 1 << 2,
     PARAM = 1 << 3,
-    CHAIN = 1 << 4,
-    INUSE = 1 << 5
+    CHAIN = 1 << 4
 };
 
 class RegisterTracker {
