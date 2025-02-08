@@ -70,7 +70,7 @@ private:
 
     void checkConstantVar(const ExprPtr& var);
 
-    void checkBool(const ExprPtr& var, TokenType ttype);
+    void checkBool(const ExprPtr& var, TokenType ttype) const;
 
     bool checkDouble(const ExprPtr& n);
 
