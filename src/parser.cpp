@@ -1,17 +1,17 @@
 #include "parser.h"
 #include "exceptions.hpp"
 
-Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {}
+Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {
+}
 
 ExprPtr Parser::parse() {
-    ExprPtr root, currentExpr, prevExpr;
     advance();
 
-    root = parseExpr();
-    prevExpr = root;
+    ExprPtr root = parseExpr();
+    ExprPtr prevExpr = root;
 
     while (mCurrentToken.type != TokenType::EOF_) {
-        currentExpr = parseExpr();
+        ExprPtr currentExpr = parseExpr();
         prevExpr->child = currentExpr;
         prevExpr = std::move(currentExpr);
     }
@@ -123,13 +123,13 @@ ExprPtr Parser::parseSExpr() {
 }
 
 ExprPtr Parser::parseDotimes() {
-    ExprPtr var, value;
+    ExprPtr value;
     std::vector<ExprPtr> statements;
 
     advance();
 
     consume(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DOTIMES"));
-    var = parseAtom();
+    ExprPtr var = parseAtom();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         value = parseExpr();
@@ -178,9 +178,6 @@ ExprPtr Parser::parseLet() {
             bindings.emplace_back(var);
         }
 
-        if (mCurrentToken.type == TokenType::RPAREN)
-            break;
-
         // Check out (let ((x 11)) )
         while (mCurrentToken.type == TokenType::LPAREN) {
             consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
@@ -226,13 +223,12 @@ ExprPtr Parser::parseDefconst() {
 }
 
 ExprPtr Parser::parseDefun() {
-    ExprPtr name;
     std::vector<ExprPtr> args;
     std::vector<ExprPtr> forms;
 
     advance();
 
-    name = parseAtom();
+    ExprPtr name = parseAtom();
 
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     while (mCurrentToken.type == TokenType::VAR) {
@@ -248,10 +244,9 @@ ExprPtr Parser::parseDefun() {
 }
 
 ExprPtr Parser::parseFuncCall() {
-    ExprPtr name;
     std::vector<ExprPtr> args;
 
-    name = parseAtom();
+    ExprPtr name = parseAtom();
 
     while (mCurrentToken.type == TokenType::INT ||
            mCurrentToken.type == TokenType::DOUBLE ||
@@ -265,11 +260,9 @@ ExprPtr Parser::parseFuncCall() {
 }
 
 ExprPtr Parser::parseReturn() {
-    ExprPtr arg;
-
     advance();
 
-    arg = parseAtom();
+    ExprPtr arg = parseAtom();
 
     return std::make_shared<ReturnExpr>(arg);
 }
@@ -328,7 +321,7 @@ ExprPtr Parser::parseWhen() {
 
 ExprPtr Parser::parseCond() {
     ExprPtr test;
-    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> variants;
+    std::vector<std::pair<ExprPtr, std::vector<ExprPtr> > > variants;
 
     advance();
 
@@ -359,35 +352,44 @@ ExprPtr Parser::parseCond() {
 
 ExprPtr Parser::parseAtom() {
     if (mCurrentToken.type == TokenType::STRING) {
-        Token token = mCurrentToken;
+        auto token = mCurrentToken;
         advance();
         return std::make_shared<StringExpr>(token.value);
-    } else if (mCurrentToken.type == TokenType::VAR) {
-        Token token = mCurrentToken;
+    }
+
+    if (mCurrentToken.type == TokenType::VAR) {
+        auto token = mCurrentToken;
         advance();
         ExprPtr name = std::make_shared<StringExpr>(token.value);
         ExprPtr value = std::make_shared<Uninitialized>();
         return std::make_shared<VarExpr>(name, value);
-    } else if (mCurrentToken.type == TokenType::NIL) {
+    }
+
+    if (mCurrentToken.type == TokenType::NIL) {
         advance();
         return std::make_shared<NILExpr>();
-    } else if (mCurrentToken.type == TokenType::T) {
+    }
+
+    if (mCurrentToken.type == TokenType::T) {
         advance();
         return std::make_shared<TExpr>();
-    } else if (mCurrentToken.type == TokenType::RPAREN) {
-        return std::make_shared<Uninitialized>();
-    } else {
-        return parseNumber();
     }
+
+    if (mCurrentToken.type == TokenType::RPAREN) {
+        return std::make_shared<Uninitialized>();
+    }
+
+    return parseNumber();
 }
 
 ExprPtr Parser::parseNumber() {
-    Token token = mCurrentToken;
+    const auto token = mCurrentToken;
     advance();
 
     if (token.type == TokenType::INT) {
         return std::make_shared<IntExpr>(std::stoi(token.value));
-    } else if (token.type == TokenType::DOUBLE) {
+    }
+    if (token.type == TokenType::DOUBLE) {
         return std::make_shared<DoubleExpr>(std::stof(token.value));
     }
 
@@ -395,10 +397,10 @@ ExprPtr Parser::parseNumber() {
 }
 
 ExprPtr Parser::createVar(bool isConstant) {
-    ExprPtr var, value;
+    ExprPtr value;
     advance();
 
-    var = parseAtom();
+    ExprPtr var = parseAtom();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
         value = parseExpr();

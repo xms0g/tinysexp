@@ -29,7 +29,6 @@ void compile(const char* fn, std::string& program) {
         analyzer.analyze(ast);
 
         std::cout << cgen.emit(ast) << '\n';
-
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();
     } catch (InvalidSyntaxError& e) {

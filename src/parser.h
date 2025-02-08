@@ -19,157 +19,165 @@ struct IExpr {
 
 using ExprPtr = std::shared_ptr<IExpr>;
 
-struct IntExpr : IExpr {
+struct IntExpr final : IExpr {
     int n;
 
-    explicit IntExpr(int n_) : n(n_) {}
+    explicit IntExpr(int n_) : n(n_) {
+    }
 };
 
-struct DoubleExpr : IExpr {
+struct DoubleExpr final : IExpr {
     double n;
 
-    explicit DoubleExpr(double n_) : n(n_) {}
+    explicit DoubleExpr(double n_) : n(n_) {
+    }
 };
 
-struct StringExpr : IExpr {
+struct StringExpr final : IExpr {
     std::string data;
 
     StringExpr() = default;
 
-    explicit StringExpr(std::string& str) : data(str) {}
+    explicit StringExpr(std::string& str) : data(str) {
+    }
 };
 
-struct NILExpr : IExpr {
+struct NILExpr final : IExpr {
     const bool value{false};
 
     NILExpr() = default;
 };
 
-struct TExpr : IExpr {
+struct TExpr final : IExpr {
     const bool value{true};
 
     TExpr() = default;
 };
 
-struct BinOpExpr : IExpr {
+struct BinOpExpr final : IExpr {
     ExprPtr lhs;
     ExprPtr rhs;
     Token opToken;
 
-    BinOpExpr(ExprPtr& lhs_, ExprPtr& rhs_, Token opTok) :
-            lhs(std::move(lhs_)),
-            rhs(std::move(rhs_)),
-            opToken(std::move(opTok)) {}
+    BinOpExpr(ExprPtr& lhs_, ExprPtr& rhs_, Token opTok) : lhs(std::move(lhs_)),
+                                                           rhs(std::move(rhs_)),
+                                                           opToken(std::move(opTok)) {
+    }
 };
 
-struct DotimesExpr : IExpr {
+struct DotimesExpr final : IExpr {
     ExprPtr iterationCount;
     std::vector<ExprPtr> statements;
 
-    DotimesExpr(ExprPtr& iterationCount_, std::vector<ExprPtr>& statements_) :
-            iterationCount(std::move(iterationCount_)),
-            statements(std::move(statements_)) {}
+    DotimesExpr(ExprPtr& iterationCount_, std::vector<ExprPtr>& statements_) : iterationCount(
+                                                                                   std::move(iterationCount_)),
+                                                                               statements(std::move(statements_)) {
+    }
 };
 
-struct LoopExpr : IExpr {
+struct LoopExpr final : IExpr {
     std::vector<ExprPtr> sexprs;
 
-    LoopExpr(std::vector<ExprPtr>& sexprs_) : sexprs(std::move(sexprs_)) {}
+    explicit LoopExpr(std::vector<ExprPtr>& sexprs_) : sexprs(std::move(sexprs_)) {
+    }
 };
 
-struct LetExpr : IExpr {
+struct LetExpr final : IExpr {
     std::vector<ExprPtr> bindings;
     std::vector<ExprPtr> body;
 
-    LetExpr(std::vector<ExprPtr>& bindings_, std::vector<ExprPtr>& body_) :
-            body(std::move(body_)),
-            bindings(std::move(bindings_)) {}
+    LetExpr(std::vector<ExprPtr>& bindings_, std::vector<ExprPtr>& body_) : body(std::move(body_)),
+                                                                            bindings(std::move(bindings_)) {
+    }
 };
 
-struct SetqExpr : IExpr {
+struct SetqExpr final : IExpr {
     ExprPtr pair;
 
-    explicit SetqExpr(ExprPtr& pair_) :
-            pair(std::move(pair_)) {}
+    explicit SetqExpr(ExprPtr& pair_) : pair(std::move(pair_)) {
+    }
 };
 
-struct DefvarExpr : IExpr {
+struct DefvarExpr final : IExpr {
     ExprPtr pair;
 
-    explicit DefvarExpr(ExprPtr& pair_) :
-            pair(std::move(pair_)) {}
+    explicit DefvarExpr(ExprPtr& pair_) : pair(std::move(pair_)) {
+    }
 };
 
-struct DefconstExpr : IExpr {
+struct DefconstExpr final : IExpr {
     ExprPtr pair;
 
-    explicit DefconstExpr(ExprPtr& pair_) :
-            pair(std::move(pair_)) {}
+    explicit DefconstExpr(ExprPtr& pair_) : pair(std::move(pair_)) {
+    }
 };
 
-struct DefunExpr : IExpr {
+struct DefunExpr final : IExpr {
     ExprPtr name;
     std::vector<ExprPtr> args;
     std::vector<ExprPtr> forms;
 
-    DefunExpr(ExprPtr& name_, std::vector<ExprPtr>& params_, std::vector<ExprPtr>& body_) :
-            name(std::move(name_)),
-            args(std::move(params_)),
-            forms(std::move(body_)) {}
+    DefunExpr(ExprPtr& name_, std::vector<ExprPtr>& params_, std::vector<ExprPtr>& body_) : name(std::move(name_)),
+        args(std::move(params_)),
+        forms(std::move(body_)) {
+    }
 };
 
-struct FuncCallExpr : IExpr {
+struct FuncCallExpr final : IExpr {
     ExprPtr name;
     std::vector<ExprPtr> args;
 
-    FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr>& params_) :
-            name(std::move(name_)),
-            args(std::move(params_)) {}
+    FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr>& params_) : name(std::move(name_)),
+                                                                  args(std::move(params_)) {
+    }
 };
 
-struct ReturnExpr : IExpr {
+struct ReturnExpr final : IExpr {
     ExprPtr arg;
 
-    ReturnExpr(ExprPtr& arg_) : arg(std::move(arg_)) {}
+    explicit ReturnExpr(ExprPtr& arg_) : arg(std::move(arg_)) {
+    }
 };
 
-struct IfExpr : IExpr {
+struct IfExpr final : IExpr {
     ExprPtr test, then, else_;
 
-    IfExpr(ExprPtr& test_, ExprPtr& then_, ExprPtr e = nullptr) :
-            test(std::move(test_)),
-            then(std::move(then_)),
-            else_(std::move(e)) {}
+    IfExpr(ExprPtr& test_, ExprPtr& then_, ExprPtr e = nullptr) : test(std::move(test_)),
+                                                                  then(std::move(then_)),
+                                                                  else_(std::move(e)) {
+    }
 };
 
-struct WhenExpr : IExpr {
+struct WhenExpr final : IExpr {
     ExprPtr test;
     std::vector<ExprPtr> then;
 
-    WhenExpr(ExprPtr& test_, std::vector<ExprPtr>& then_) :
-            test(std::move(test_)),
-            then(std::move(then_)) {}
+    WhenExpr(ExprPtr& test_, std::vector<ExprPtr>& then_) : test(std::move(test_)),
+                                                            then(std::move(then_)) {
+    }
 };
 
-struct CondExpr : IExpr {
-    std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>> variants;
+struct CondExpr final : IExpr {
+    std::vector<std::pair<ExprPtr, std::vector<ExprPtr> > > variants;
 
-    explicit CondExpr(std::vector<std::pair<ExprPtr, std::vector<ExprPtr>>>& variants_) :
-            variants(std::move(variants_)) {}
+    explicit CondExpr(std::vector<std::pair<ExprPtr, std::vector<ExprPtr> > >& variants_) : variants(
+        std::move(variants_)) {
+    }
 };
 
-struct VarExpr : IExpr {
+struct VarExpr final : IExpr {
     ExprPtr name;
     ExprPtr value;
     SymbolType sType;
 
-    VarExpr(ExprPtr& name_, ExprPtr& value_, SymbolType type = SymbolType::GLOBAL) :
-            name(std::move(name_)),
-            value(std::move(value_)),
-            sType(type) {}
+    VarExpr(ExprPtr& name_, ExprPtr& value_, SymbolType type = SymbolType::GLOBAL) : name(std::move(name_)),
+        value(std::move(value_)),
+        sType(type) {
+    }
 };
 
-struct Uninitialized : IExpr {};
+struct Uninitialized final : IExpr {
+};
 
 class Parser {
 public:
