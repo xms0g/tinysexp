@@ -230,12 +230,15 @@ ExprPtr Parser::parseDefun() {
 
     ExprPtr name = parseAtom();
 
+    // Parse params
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
     while (mCurrentToken.type == TokenType::VAR) {
-        args.emplace_back(parseAtom());
+        ExprPtr arg = parseAtom();
+        cast::toVar(arg)->sType = SymbolType::PARAM;
+        args.emplace_back(arg);
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-
+    // Parse body
     while (mCurrentToken.type == TokenType::LPAREN) {
         forms.emplace_back(parseExpr());
     }
