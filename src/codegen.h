@@ -2,10 +2,11 @@
 #define TINYSEXP_CODEGEN_H
 
 #include <string>
-#include <unordered_set>
 #include <unordered_map>
-#include <stack>
 #include "parser.h"
+
+static constexpr int REGISTER_COUNT = 30;
+static constexpr int SIZE_COUNT = 5;
 
 struct Register {
     uint32_t id;
@@ -48,7 +49,6 @@ public:
     const char* name(uint32_t id, int size);
 
 private:
-    static constexpr int REGISTER_COUNT = 30;
 
     Register registers[REGISTER_COUNT] = {
             {RAX,   SCRATCH,         false},
@@ -83,7 +83,7 @@ private:
             {xmm15, SSE,             false},
     };
 
-    static constexpr const char* registerNames[REGISTER_COUNT][5] = {
+    static constexpr const char* registerNames[REGISTER_COUNT][SIZE_COUNT] = {
             {"rax",   "eax",  "ax",   "ah", "al"},
             {"rcx",   "ecx",  "cx",   "ch", "cl"},
             {"rdx",   "edx",  "dx",   "dh", "dl"},
@@ -195,18 +195,17 @@ private:
     // Sections
     std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> sections;
 
-    static constexpr const char* memorySize[5] = {
+    static constexpr const char* memorySize[SIZE_COUNT] = {
             "qword", "dword", "word", "byte", "byte"
     };
 
-    static constexpr const char* dataSizeInitialized[5] = {
+    static constexpr const char* dataSizeInitialized[SIZE_COUNT] = {
             "dq", "dd", "dw", "db", "db"
     };
 
-    static constexpr const char* dataSizeUninitialized[5] = {
+    static constexpr const char* dataSizeUninitialized[SIZE_COUNT] = {
             "resq", "resd", "resw", "resb", "resb"
     };
 };
-
 
 #endif
