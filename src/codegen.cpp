@@ -443,32 +443,39 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
                 rp = emitBinop(*binop);
                 emitInstr2op("cmp", getRegName(rp->id, REG64), 0);
                 emitJump("je", elseLabel);
+                register_free(rp)
                 break;
             }
             case TokenType::EQUAL:
             case TokenType::NOT:
                 rp = emitBinop(*binop);
                 emitJump("jne", elseLabel);
+                register_free(rp)
                 break;
             case TokenType::NEQUAL:
                 rp = emitBinop(*binop);
                 emitJump("je", elseLabel);
+                register_free(rp)
                 break;
             case TokenType::GREATER_THEN:
                 rp = emitBinop(*binop);
                 emitJump("jle", elseLabel);
+                register_free(rp)
                 break;
             case TokenType::LESS_THEN:
                 rp = emitBinop(*binop);
                 emitJump("jge", elseLabel);
+                register_free(rp)
                 break;
             case TokenType::GREATER_THEN_EQ:
                 rp = emitBinop(*binop);
                 emitJump("jl", elseLabel);
+                register_free(rp)
                 break;
             case TokenType::LESS_THEN_EQ:
                 rp = emitBinop(*binop);
                 emitJump("jg", elseLabel);
+                register_free(rp)
                 break;
             case TokenType::AND: {
                 const ExprPtr zero = std::make_shared<IntExpr>(0);
@@ -499,7 +506,6 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
             default:
                 break;
         }
-        register_free(rp)
     } else if (auto funcCall = cast::toFuncCall(test)) {
         rp = emitFuncCall(*funcCall);
         register_free(rp)
