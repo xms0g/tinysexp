@@ -15,8 +15,8 @@ struct Register {
 };
 
 enum RegisterID : uint32_t {
-    RAX, RCX, RDX,
-    RDI, RSI, R8,
+    RAX, RDI, RSI,
+    RCX, RDX, R8,
     R9, R10, R11,
     RBX, R12, R13,
     R14, R15,
@@ -46,15 +46,17 @@ public:
 
     void free(Register* reg);
 
+    [[nodiscard]] bool isInUse(const uint32_t id) const { return registers[id].inUse; }
+
     const char* name(uint32_t id, int size);
 
 private:
     Register registers[REGISTER_COUNT] = {
         {RAX, SCRATCH, false},
-        {RCX, SCRATCH | PARAM, false},
-        {RDX, SCRATCH | PARAM, false},
         {RDI, SCRATCH | PARAM, false},
         {RSI, SCRATCH | PARAM, false},
+        {RCX, SCRATCH | PARAM, false},
+        {RDX, SCRATCH | PARAM, false},
         {R8, SCRATCH | PARAM, false},
         {R9, SCRATCH | PARAM, false},
         {R10, SCRATCH | CHAIN, false},
@@ -84,10 +86,10 @@ private:
 
     static constexpr const char* registerNames[REGISTER_COUNT][SIZE_COUNT] = {
         {"rax", "eax", "ax", "ah", "al"},
-        {"rcx", "ecx", "cx", "ch", "cl"},
-        {"rdx", "edx", "dx", "dh", "dl"},
         {"rdi", "edi", "di", "", "dil"},
         {"rsi", "esi", "si", "", "sil"},
+        {"rcx", "ecx", "cx", "ch", "cl"},
+        {"rdx", "edx", "dx", "dh", "dl"},
         {"r8", "r8d", "r8w", "", "r8b"},
         {"r9", "r9d", "r9w", "", "r9b"},
         {"r10", "r10d", "r10w", "", "r10b"},

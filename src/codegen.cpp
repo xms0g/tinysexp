@@ -37,12 +37,11 @@
 
 Register* RegisterTracker::alloc(uint8_t rtype) {
     for (auto& register_: registers) {
-        if (checkRType(rtype, SSE)) {
-            if (!checkRType(register_.rType, SSE))
-                continue;
-        } else if (checkRType(rtype, PARAM)) {
-            if (!checkRType(register_.rType, PARAM))
-                continue;
+        if (checkRType(rtype, SSE) && !checkRType(register_.rType, SSE)) {
+            continue;
+        }
+        if (checkRType(rtype, PARAM) && !checkRType(register_.rType, PARAM)) {
+            continue;
         }
 
         if (!register_.inUse) {
