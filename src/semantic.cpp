@@ -236,7 +236,8 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
 }
 
 void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
-    const std::string funcName = cast::toString(funcCall.name)->data;
+    const auto var = cast::toVar(funcCall.name);
+    const std::string funcName = cast::toString(var->name)->data;
 
     const Symbol sym = symbolTracker.lookup(funcName);
 
@@ -404,15 +405,14 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
     var->sType = sym.sType;
     auto innerVar = cast::toVar(sym.value);
     do {
+        checkBool(innerVar->value, ttype);
         // If the value is param
         if (cast::toUninitialized(innerVar->value)) {
             ExprPtr name_ = cast::toString(var->name);
-            ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
+            ExprPtr value_ = std::make_shared<IntExpr>(0);
             n = std::make_shared<VarExpr>(name_, value_, sym.sType);
             return n;
         }
-
-        checkBool(innerVar->value, ttype);
         // loop sym value until finding a primitive. Update var.
         if (cast::toInt(innerVar->value) ||
             cast::toDouble(innerVar->value) ||
