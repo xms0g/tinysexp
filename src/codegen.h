@@ -170,11 +170,11 @@ private:
 
     void handleAssignment(const ExprPtr& var, uint32_t size);
 
-    void handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr, const std::string& value);
+    void handlePrimitive(const VarExpr& var, const char* instr, const std::string& value);
 
-    void handleVariable(const VarExpr& var, const std::string& varName, uint32_t size);
+    void handleVariable(const VarExpr& var, uint32_t size);
 
-    Register* emitLoadRegFromMem(const VarExpr& value, const std::string& valueName, uint32_t size);
+    Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
 
     void emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size);
 

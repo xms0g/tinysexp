@@ -328,8 +328,8 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
 
     const auto var = cast::toVar(n);
     const std::string varName = cast::toString(var->name)->data;
-
-    return emitLoadRegFromMem(*var, varName, REG64);
+    
+    return emitLoadRegFromMem(*var, REG64);
 }
 
 Register* CodeGen::emitNode(const ExprPtr& node) {
@@ -624,16 +624,16 @@ void CodeGen::handleAssignment(const ExprPtr& var, uint32_t size) {
     const std::string varName = cast::toString(var_->name)->data;
 
     if (const auto int_ = cast::toInt(var_->value)) {
-        handlePrimitive(*var_, varName, "mov", std::to_string(int_->n));
+        handlePrimitive(*var_, "mov", std::to_string(int_->n));
     } else if (const auto double_ = cast::toDouble(var_->value)) {
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-        handlePrimitive(*var_, varName, "movsd", emitHex(hex));
+        handlePrimitive(*var_, "movsd", emitHex(hex));
     } else if (cast::toVar(var_->value)) {
-        handleVariable(*var_, varName, size);
+        handleVariable(*var_, size);
     } else if (cast::toNIL(var_->value)) {
-        handlePrimitive(*var_, varName, "mov", std::to_string(0));
+        handlePrimitive(*var_, "mov", std::to_string(0));
     } else if (cast::toT(var_->value)) {
-        handlePrimitive(*var_, varName, "mov", std::to_string(1));
+        handlePrimitive(*var_, "mov", std::to_string(1));
     } else if (cast::toUninitialized(var_->value) && var_->sType == SymbolType::LOCAL) {
         getAddr(varName, var_->sType, REG64);
     } else if (const auto str = cast::toString(var_->value)) {
@@ -657,19 +657,20 @@ void CodeGen::handleAssignment(const ExprPtr& var, uint32_t size) {
     }
 }
 
-void CodeGen::handlePrimitive(const VarExpr& var, const std::string& varName, const char* instr,
-                              const std::string& value) {
+void CodeGen::handlePrimitive(const VarExpr& var, const char* instr, const std::string& value) {
+    const std::string varName = cast::toString(var.name)->data;
     emitInstr2op(instr, getAddr(varName, var.sType, REG64), value);
 }
 
-void CodeGen::handleVariable(const VarExpr& var, const std::string& varName, uint32_t size) {
+void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
+    const std::string varName = cast::toString(var.name)->data;
     auto value = cast::toVar(var.value);
     const std::string valueName = cast::toString(value->name)->data;
 
     Register* rp;
 
     do {
-        rp = emitLoadRegFromMem(*value, valueName, size);
+        rp = emitLoadRegFromMem(*value, size);
 
         if (rp) {
             emitStoreMemFromReg(varName, var.sType, rp, size);
@@ -681,21 +682,22 @@ void CodeGen::handleVariable(const VarExpr& var, const std::string& varName, uin
     register_free(rp)
 }
 
-Register* CodeGen::emitLoadRegFromMem(const VarExpr& value, const std::string& valueName, uint32_t size) {
+Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
     Register* rp = nullptr;
+    const std::string& valueName = cast::toString(var.name)->data;
 
-    if (cast::toInt(value.value)) {
+    if (cast::toInt(var.value)) {
         rp = register_alloc(SCRATCH);
-        mov(getRegName(rp->id, REG64), getAddr(valueName, value.sType, size));
-    } else if (cast::toDouble(value.value)) {
+        mov(getRegName(rp->id, REG64), getAddr(valueName, var.sType, size));
+    } else if (cast::toDouble(var.value)) {
         rp = rtracker.alloc(SSE);
-        movd(getRegName(rp->id, REG64), getAddr(valueName, value.sType, size));
-    } else if (cast::toString(value.value)) {
+        movd(getRegName(rp->id, REG64), getAddr(valueName, var.sType, size));
+    } else if (cast::toString(var.value)) {
         rp = register_alloc(SCRATCH);
-        emitInstr2op("lea", getRegName(rp->id, REG64), getAddr(valueName, value.sType, size));
-    } else if (cast::toNIL(value.value) || cast::toT(value.value)) {
+        emitInstr2op("lea", getRegName(rp->id, REG64), getAddr(valueName, var.sType, size));
+    } else if (cast::toNIL(var.value) || cast::toT(var.value)) {
         rp = register_alloc(SCRATCH);
-        movzx(getRegName(rp->id, REG64), getAddr(valueName, value.sType, size));
+        movzx(getRegName(rp->id, REG64), getAddr(valueName, var.sType, size));
     }
 
     return rp;
