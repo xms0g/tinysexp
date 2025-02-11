@@ -92,29 +92,29 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 }
 
 void CodeGen::emitAST(const ExprPtr& ast) {
-    if (auto binop = cast::toBinop(ast)) {
+    if (const auto binop = cast::toBinop(ast)) {
         emitBinop(*binop);
-    } else if (auto dotimes = cast::toDotimes(ast)) {
+    } else if (const auto dotimes = cast::toDotimes(ast)) {
         emitDotimes(*dotimes);
-    } else if (auto loop = cast::toLoop(ast)) {
+    } else if (const auto loop = cast::toLoop(ast)) {
         emitLoop(*loop);
-    } else if (auto let = cast::toLet(ast)) {
+    } else if (const auto let = cast::toLet(ast)) {
         emitLet(*let);
-    } else if (auto setq = cast::toSetq(ast)) {
+    } else if (const auto setq = cast::toSetq(ast)) {
         emitSetq(*setq);
-    } else if (auto defvar = cast::toDefvar(ast)) {
+    } else if (const auto defvar = cast::toDefvar(ast)) {
         emitDefvar(*defvar);
-    } else if (auto defconst = cast::toDefconstant(ast)) {
+    } else if (const auto defconst = cast::toDefconstant(ast)) {
         emitDefconst(*defconst);
     } else if (auto defun = cast::toDefun(ast)) {
         emitDefun(*defun);
     } else if (auto funcCall = cast::toFuncCall(ast)) {
         emitFuncCall(*funcCall);
-    } else if (auto if_ = cast::toIf(ast)) {
+    } else if (const auto if_ = cast::toIf(ast)) {
         emitIf(*if_);
-    } else if (auto when = cast::toWhen(ast)) {
+    } else if (const auto when = cast::toWhen(ast)) {
         emitWhen(*when);
-    } else if (auto cond = cast::toCond(ast)) {
+    } else if (const auto cond = cast::toCond(ast)) {
         emitCond(*cond);
     }
 }
@@ -524,6 +524,15 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 
     if (const auto binop = cast::toBinop(set)) {
         switch (binop->opToken.type) {
+            case TokenType::PLUS:
+            case TokenType::MINUS:
+            case TokenType::DIV:
+            case TokenType::MUL:
+            case TokenType::LOGAND:
+            case TokenType::LOGIOR:
+            case TokenType::LOGXOR:
+                setReg = emitBinop(*binop);
+                break;
             case TokenType::EQUAL:
             case TokenType::NOT:
                 setReg = emitSetReg(*binop);
