@@ -136,7 +136,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::LOGXOR:
             return emitExpr(binop.lhs, binop.rhs, {"xor", nullptr});
         case TokenType::LOGNOR: {
-            ExprPtr negOne = std::make_shared<IntExpr>(-1);
+            const ExprPtr negOne = std::make_shared<IntExpr>(-1);
             // Bitwise NOT seperately
             Register* rp1 = emitExpr(binop.lhs, negOne, {"xor", nullptr});
             Register* rp2 = emitExpr(binop.rhs, negOne, {"xor", nullptr});
@@ -145,7 +145,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
             return rp1;
         }
         case TokenType::NOT: {
-            ExprPtr zero = std::make_shared<IntExpr>(0);
+            const ExprPtr zero = std::make_shared<IntExpr>(0);
             return emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
         }
         case TokenType::EQUAL:
@@ -155,7 +155,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::GREATER_THEN_EQ:
         case TokenType::LESS_THEN_EQ:
         case TokenType::AND:
-        case TokenType::OR: //TODO: Check this
+        case TokenType::OR:
             return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
         default:
             return nullptr;
@@ -328,7 +328,7 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
 
     const auto var = cast::toVar(n);
     const std::string varName = cast::toString(var->name)->data;
-    
+
     return emitLoadRegFromMem(*var, REG64);
 }
 
@@ -438,7 +438,8 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
             case TokenType::MUL:
             case TokenType::LOGAND:
             case TokenType::LOGIOR:
-            case TokenType::LOGXOR: {
+            case TokenType::LOGXOR:
+            case TokenType::LOGNOR: {
                 rp = emitBinop(*binop);
                 emitInstr2op("cmp", getRegName(rp->id, REG64), 0);
                 emitJump("je", elseLabel);
@@ -531,6 +532,7 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
             case TokenType::LOGAND:
             case TokenType::LOGIOR:
             case TokenType::LOGXOR:
+            case TokenType::LOGNOR:
                 setReg = emitBinop(*binop);
                 break;
             case TokenType::EQUAL:
