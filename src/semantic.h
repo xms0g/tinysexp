@@ -18,7 +18,7 @@ public:
 
     void exit();
 
-    size_t level();
+    size_t level() const;
 
     void bind(const std::string& name, const Symbol& symbol);
 
@@ -82,7 +82,7 @@ private:
 
     void valueResolve(const ExprPtr& var, bool isConstant = false);
 
-    ScopeTracker stracker;
+    ScopeTracker symbolTracker;
     /* File Name */
     const char* mFileName;
 };
