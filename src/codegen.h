@@ -192,7 +192,7 @@ private:
     // Label
     int currentLabelCount;
     // Register
-    RegisterTracker rtracker;
+    RegisterTracker registerTracker;
     // Stack
     int currentStackOffset;
     std::unordered_map<std::string, int> stackOffsets;

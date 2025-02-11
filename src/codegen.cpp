@@ -23,14 +23,14 @@
 #define checkRType(type, t) ((type) & (t))
 
 #define register_alloc(type) ([&]() {                       \
-    auto* rp = rtracker.alloc(type);                        \
+    auto* rp = registerTracker.alloc(type);                 \
     if (checkRType(rp->rType, PRESERVED)) {                 \
         push(rp->id);                                       \
     }                                                       \
     return rp;                                              \
     }())
 #define register_free(rp)                                   \
-    rtracker.free(rp);                                      \
+    registerTracker.free(rp);                               \
     if (checkRType(rp->rType, PRESERVED)) {                 \
         pop(rp->id);                                        \
     }
@@ -320,7 +320,7 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
     }
 
     if (const auto double_ = cast::toDouble(n)) {
-        auto* rp = rtracker.alloc(SSE);
+        auto* rp = register_alloc(SSE);
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
         movd(getRegName(rp->id, REG64), emitHex(hex));
         return rp;
@@ -349,19 +349,19 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     Register* reg2 = emitNode(rhs);
 
     if (checkRType(reg1->rType, SSE) && (checkRType(reg2->rType, SCRATCH) || checkRType(reg2->rType, PRESERVED))) {
-        auto* newRP = rtracker.alloc(SSE);
+        auto* newRP = register_alloc(SSE);
         const char* newRPStr = getRegName(newRP->id, REG64);
 
         emitInstr2op("cvtsi2sd", newRPStr, getRegName(reg2->id, REG64));
         register_free(reg2)
 
         emitInstr2op(op.second, getRegName(reg1->id, REG64), newRPStr);
-        rtracker.free(newRP);
+        register_free(newRP);
         return reg1;
     }
     if ((checkRType(reg1->rType, SCRATCH) || checkRType(reg1->rType, PRESERVED)) &&
         checkRType(reg2->rType, SSE)) {
-        auto* newRP = rtracker.alloc(SSE);
+        auto* newRP = register_alloc(SSE);
         const char* newRPStr = getRegName(newRP->id, REG64);
         const char* reg2Str = getRegName(reg2->id, REG64);
 
@@ -370,12 +370,12 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 
         emitInstr2op(op.second, newRPStr, reg2Str);
         movd(reg2Str, newRPStr);
-        rtracker.free(newRP);
+        register_free(newRP);
         return reg2;
     }
     if (checkRType(reg1->rType, SSE) && checkRType(reg2->rType, SSE)) {
         emitInstr2op(op.second, getRegName(reg1->id, REG64), getRegName(reg2->id, REG64));
-        rtracker.free(reg2);
+        register_free(reg2);
         return reg1;
     }
     emitInstr2op(op.first, getRegName(reg1->id, REG64), getRegName(reg2->id, REG64));
@@ -701,7 +701,7 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
         rp = register_alloc(SCRATCH);
         mov(getRegName(rp->id, REG64), getAddr(valueName, var.sType, size));
     } else if (cast::toDouble(var.value)) {
-        rp = rtracker.alloc(SSE);
+        rp = register_alloc(SSE);
         movd(getRegName(rp->id, REG64), getAddr(valueName, var.sType, size));
     } else if (cast::toString(var.value)) {
         rp = register_alloc(SCRATCH);
@@ -767,15 +767,15 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 const char* CodeGen::getRegName(uint32_t id, uint32_t size) {
     switch (size) {
         case REG64:
-            return rtracker.name(id, REG64);
+            return registerTracker.name(id, REG64);
         case REG32:
-            return rtracker.name(id, REG32);
+            return registerTracker.name(id, REG32);
         case REG16:
-            return rtracker.name(id, REG16);
+            return registerTracker.name(id, REG16);
         case REG8H:
-            return rtracker.name(id, REG8H);
+            return registerTracker.name(id, REG8H);
         case REG8L:
-            return rtracker.name(id, REG8L);
+            return registerTracker.name(id, REG8L);
         default:
             return "";
     }
