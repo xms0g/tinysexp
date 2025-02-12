@@ -250,6 +250,15 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
 }
 
 void CodeGen::emitLet(const LetExpr& let) {
+    uint32_t requiredStackMem = 0;
+
+    for (auto& var: let.bindings) {
+        const int size = memorySizeInBytes[getMemSize(var)];
+        requiredStackMem += size;
+    }
+
+    emitInstr2op("sub", "rsp", requiredStackMem);
+
     for (auto& var: let.bindings) {
         const auto memSize = getMemSize(var);
         handleAssignment(var, memSize);
@@ -640,6 +649,7 @@ Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
 
 Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
     const auto rp = emitBinop(binop);
+
     if (checkRType(rp->rType, SSE)) {
         return register_alloc(SCRATCH);
     }

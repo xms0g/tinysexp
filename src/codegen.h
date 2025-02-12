@@ -215,6 +215,10 @@ private:
     static constexpr const char* dataSizeUninitialized[SIZE_COUNT] = {
         "resq", "resd", "resw", "resb", "resb"
     };
+
+    static constexpr int memorySizeInBytes[SIZE_COUNT] = {
+        8, 4, 2, 1, 1
+    };
 };
 
 #endif
