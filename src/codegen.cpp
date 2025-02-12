@@ -23,7 +23,7 @@
 #define checkRType(type, t) ((type) & (t))
 
 #define register_alloc(type) ([&]() {                       \
-    auto* rp = registerTracker.alloc(type);                 \
+    auto* rp = registerAllocator.alloc(type);               \
     if (rp && checkRType(rp->rType, PRESERVED)) {           \
         push(rp);                                           \
     }                                                       \
@@ -31,13 +31,13 @@
     }())
 #define register_free(rp)                                   \
     if (rp) {                                               \
-        registerTracker.free(rp);                           \
+        registerAllocator.free(rp);                         \
         if (checkRType(rp->rType, PRESERVED)) {             \
             pop(rp);                                        \
         }                                                   \
     }
 
-Register* RegisterTracker::alloc(uint8_t rtype) {
+Register* RegisterAllocator::alloc(uint8_t rtype) {
     for (auto& register_: registers) {
         if ((checkRType(rtype, SSE) && !checkRType(register_.rType, SSE)) ||
             (checkRType(rtype, PARAM) && !checkRType(register_.rType, PARAM))) {
@@ -53,16 +53,16 @@ Register* RegisterTracker::alloc(uint8_t rtype) {
     return nullptr;
 }
 
-void RegisterTracker::free(Register* reg) {
+void RegisterAllocator::free(Register* reg) {
     reg->inUse = false;
 }
 
-const char* RegisterTracker::nameFromReg(const Register* reg, int size) {
+const char* RegisterAllocator::nameFromReg(const Register* reg, int size) {
     return registerNames[reg->id][size];
 }
 
-Register* RegisterTracker::regFromName(const char* name, int size) {
-    for (int i = 0; i < 30; i++) {
+Register* RegisterAllocator::regFromName(const char* name, int size) {
+    for (int i = 0; i < REGISTER_COUNT; i++) {
         if (std::strcmp(name, registerNames[i][size]) == 0) {
             return &registers[i];
         }
@@ -71,7 +71,7 @@ Register* RegisterTracker::regFromName(const char* name, int size) {
     return nullptr;
 }
 
-Register* RegisterTracker::regFromID(uint32_t id) {
+Register* RegisterAllocator::regFromID(uint32_t id) {
     return &registers[id];
 }
 
@@ -791,15 +791,15 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 const char* CodeGen::getRegName(const Register* reg, uint32_t size) {
     switch (size) {
         case REG64:
-            return registerTracker.nameFromReg(reg, REG64);
+            return registerAllocator.nameFromReg(reg, REG64);
         case REG32:
-            return registerTracker.nameFromReg(reg, REG32);
+            return registerAllocator.nameFromReg(reg, REG32);
         case REG16:
-            return registerTracker.nameFromReg(reg, REG16);
+            return registerAllocator.nameFromReg(reg, REG16);
         case REG8H:
-            return registerTracker.nameFromReg(reg, REG8H);
+            return registerAllocator.nameFromReg(reg, REG8H);
         case REG8L:
-            return registerTracker.nameFromReg(reg, REG8L);
+            return registerAllocator.nameFromReg(reg, REG8L);
         default:
             return "";
     }

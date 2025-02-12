@@ -40,7 +40,7 @@ enum RegisterType : uint8_t {
     CHAIN = 1 << 4
 };
 
-class RegisterTracker {
+class RegisterAllocator {
 public:
     Register* alloc(uint8_t rtype);
 
@@ -197,7 +197,7 @@ private:
     // Label
     int currentLabelCount;
     // Register
-    RegisterTracker registerTracker;
+    RegisterAllocator registerAllocator;
     // Stack
     int currentStackOffset;
     std::unordered_map<std::string, int> stackOffsets;
