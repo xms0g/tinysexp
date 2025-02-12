@@ -39,10 +39,8 @@
 
 Register* RegisterTracker::alloc(uint8_t rtype) {
     for (auto& register_: registers) {
-        if (checkRType(rtype, SSE) && !checkRType(register_.rType, SSE)) {
-            continue;
-        }
-        if (checkRType(rtype, PARAM) && !checkRType(register_.rType, PARAM)) {
+        if ((checkRType(rtype, SSE) && !checkRType(register_.rType, SSE)) ||
+            (checkRType(rtype, PARAM) && !checkRType(register_.rType, PARAM))) {
             continue;
         }
 
