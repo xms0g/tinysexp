@@ -235,7 +235,7 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     symbolTracker.exit();
 }
 
-void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
+void SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     const auto var = cast::toVar(funcCall.name);
     const std::string funcName = cast::toString(var->name)->data;
 
@@ -245,10 +245,25 @@ void SemanticAnalyzer::funcCallResolve(const FuncCallExpr& funcCall) {
         throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
     }
 
-    if (const auto func = cast::toDefun(sym.value); funcCall.args.size() != func->args.size()) {
+    const auto func = cast::toDefun(sym.value);
+
+    if (funcCall.args.size() != func->args.size()) {
         throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
     }
-    //TODO: resolve expression param type
+
+    // Match the param names to values
+    std::vector<ExprPtr> args;
+    for (int i = 0; i < func->args.size(); ++i) {
+        const auto argVar = cast::toVar(func->args[i]);
+        const std::string argName = cast::toString(argVar->name)->data;
+
+        ExprPtr name = argVar->name;
+        ExprPtr value = funcCall.args[i];
+
+        args.emplace_back(std::make_shared<VarExpr>(name, value, argVar->sType));
+    }
+
+    funcCall.args = std::move(args);
 }
 
 void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {

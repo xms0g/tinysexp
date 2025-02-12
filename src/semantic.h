@@ -58,7 +58,7 @@ private:
 
     void defunResolve(const DefunExpr& defun);
 
-    void funcCallResolve(const FuncCallExpr& funcCall);
+    void funcCallResolve(FuncCallExpr& funcCall);
 
     void returnResolve(const ReturnExpr& return_);
 
