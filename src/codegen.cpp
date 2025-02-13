@@ -54,6 +54,10 @@ const char* RegisterAllocator::nameFromReg(const Register* reg, int size) {
     return registerNames[reg->id][size];
 }
 
+const char* RegisterAllocator::nameFromID(uint32_t id, int size) {
+    return registerNames[id][size];
+}
+
 Register* RegisterAllocator::regFromName(const char* name, int size) {
     for (int i = 0; i < REGISTER_COUNT; i++) {
         if (std::strcmp(name, registerNames[i][size]) == 0) {
@@ -358,7 +362,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     emitInstr1op("call", funcName);
     emitInstr2op("add", "rsp", 16);
 
-    for (int i = 0; i < funcCall.args.size(); ++i) {
+    for (int i = 0; i < argCount; ++i) {
         if (i > 5) break;
 
         if (registerAllocator.isInUse(paramRegisters[i])) {
@@ -466,6 +470,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 
         emitInstr2op(op.second, getRegName(reg1, REG64), newRPStr);
         register_free(newRP);
+
         return reg1;
     }
     if (reg1->rType & (SCRATCH | PRESERVED) && reg2->rType & SSE) {
