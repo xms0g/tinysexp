@@ -37,7 +37,6 @@ enum RegisterType : uint8_t {
     SCRATCH = 1 << 1,
     PRESERVED = 1 << 2,
     PARAM = 1 << 3,
-    CHAIN = 1 << 4
 };
 
 class RegisterAllocator {
@@ -64,7 +63,7 @@ private:
         {RDX, SCRATCH | PARAM, false},
         {R8, SCRATCH | PARAM, false},
         {R9, SCRATCH | PARAM, false},
-        {R10, SCRATCH | CHAIN, false},
+        {R10, SCRATCH, false},
         {R11, SCRATCH, false},
         {RBX, PRESERVED, false},
         {R12, PRESERVED, false},
@@ -125,9 +124,11 @@ private:
 
 class StackAllocator {
 public:
-    StackAllocator(): currentVarStackOffset(8), currentParamStackOffset(8) {}
+    StackAllocator(): currentVarStackOffset(8), currentParamStackOffset(16) {
+    }
 
     int alloc(const std::string& name, SymbolType stype);
+
 private:
     int currentVarStackOffset, currentParamStackOffset;
     std::unordered_map<std::string, int> stackOffsets;
@@ -135,7 +136,7 @@ private:
 
 class CodeGen {
 public:
-    CodeGen() : currentStackOffset(8), currentLabelCount(0) {
+    CodeGen() : currentLabelCount(0) {
     }
 
     std::string emit(const ExprPtr& ast);
