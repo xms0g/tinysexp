@@ -16,7 +16,7 @@ struct Register {
 
 enum RegisterID : uint32_t {
     RAX, RDI, RSI,
-    RCX, RDX, R8,
+    RDX, RCX, R8,
     R9, R10, R11,
     RBX, R12, R13,
     R14, R15,
@@ -60,8 +60,8 @@ private:
         {RAX, SCRATCH, false},
         {RDI, SCRATCH | PARAM, false},
         {RSI, SCRATCH | PARAM, false},
+{RDX, SCRATCH | PARAM, false},
         {RCX, SCRATCH | PARAM, false},
-        {RDX, SCRATCH | PARAM, false},
         {R8, SCRATCH | PARAM, false},
         {R9, SCRATCH | PARAM, false},
         {R10, SCRATCH, false},
@@ -93,8 +93,8 @@ private:
         {"rax", "eax", "ax", "ah", "al"},
         {"rdi", "edi", "di", "", "dil"},
         {"rsi", "esi", "si", "", "sil"},
+{"rdx", "edx", "dx", "dh", "dl"},
         {"rcx", "ecx", "cx", "ch", "cl"},
-        {"rdx", "edx", "dx", "dh", "dl"},
         {"r8", "r8d", "r8w", "", "r8b"},
         {"r9", "r9d", "r9w", "", "r9b"},
         {"r10", "r10d", "r10w", "", "r10b"},

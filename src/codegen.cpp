@@ -323,7 +323,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     const std::string funcName = cast::toString(func->name)->data;
     const size_t argCount = funcCall.args.size();
 
-    constexpr int paramRegisters[] = {RDI, RSI, RCX, RDX, R8, R9};
+    constexpr int paramRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
 
     emitInstr2op("sub", "rsp", 16);
     for (int i = 0; i < argCount; ++i) {
