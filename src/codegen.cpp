@@ -362,7 +362,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     emitInstr1op("call", funcName);
     emitInstr2op("add", "rsp", 16);
 
-    for (int i = 0; i < argCount; ++i) {
+    for (int i = 0; i < funcCall.args.size(); ++i) {
         if (i > 5) break;
 
         if (registerAllocator.isInUse(paramRegisters[i])) {
@@ -470,7 +470,6 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 
         emitInstr2op(op.second, getRegName(reg1, REG64), newRPStr);
         register_free(newRP);
-
         return reg1;
     }
     if (reg1->rType & (SCRATCH | PRESERVED) && reg2->rType & SSE) {
@@ -891,7 +890,20 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 }
 
 const char* CodeGen::getRegName(const Register* reg, uint32_t size) {
-    return registerAllocator.nameFromReg(reg, size);
+    switch (size) {
+        case REG64:
+            return registerAllocator.nameFromReg(reg, REG64);
+        case REG32:
+            return registerAllocator.nameFromReg(reg, REG32);
+        case REG16:
+            return registerAllocator.nameFromReg(reg, REG16);
+        case REG8H:
+            return registerAllocator.nameFromReg(reg, REG8H);
+        case REG8L:
+            return registerAllocator.nameFromReg(reg, REG8L);
+        default:
+            return "";
+    }
 }
 
 std::string CodeGen::createLabel() {
