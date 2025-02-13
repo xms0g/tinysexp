@@ -50,11 +50,15 @@ void RegisterAllocator::free(Register* reg) {
     reg->inUse = false;
 }
 
-const char* RegisterAllocator::nameFromReg(const Register* reg, int size) {
+const char* RegisterAllocator::nameFromReg(const Register* reg, uint32_t size) {
     return registerNames[reg->id][size];
 }
 
-Register* RegisterAllocator::regFromName(const char* name, int size) {
+const char* RegisterAllocator::nameFromID(uint32_t id, uint32_t size) {
+    return registerNames[id][size];
+}
+
+Register* RegisterAllocator::regFromName(const char* name, uint32_t size) {
     for (int i = 0; i < REGISTER_COUNT; i++) {
         if (std::strcmp(name, registerNames[i][size]) == 0) {
             return &registers[i];
@@ -358,7 +362,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     emitInstr1op("call", funcName);
     emitInstr2op("add", "rsp", 16);
 
-    for (int i = 0; i < funcCall.args.size(); ++i) {
+    for (int i = 0; i < argCount; ++i) {
         if (i > 5) break;
 
         if (registerAllocator.isInUse(paramRegisters[i])) {
@@ -466,6 +470,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 
         emitInstr2op(op.second, getRegName(reg1, REG64), newRPStr);
         register_free(newRP);
+
         return reg1;
     }
     if (reg1->rType & (SCRATCH | PRESERVED) && reg2->rType & SSE) {
@@ -886,20 +891,7 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 }
 
 const char* CodeGen::getRegName(const Register* reg, uint32_t size) {
-    switch (size) {
-        case REG64:
-            return registerAllocator.nameFromReg(reg, REG64);
-        case REG32:
-            return registerAllocator.nameFromReg(reg, REG32);
-        case REG16:
-            return registerAllocator.nameFromReg(reg, REG16);
-        case REG8H:
-            return registerAllocator.nameFromReg(reg, REG8H);
-        case REG8L:
-            return registerAllocator.nameFromReg(reg, REG8L);
-        default:
-            return "";
-    }
+    return registerAllocator.nameFromReg(reg, size);
 }
 
 std::string CodeGen::createLabel() {

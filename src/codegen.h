@@ -47,9 +47,11 @@ public:
 
     [[nodiscard]] bool isInUse(const uint32_t id) const { return registers[id].inUse; }
 
-    const char* nameFromReg(const Register* reg, int size);
+    const char* nameFromReg(const Register* reg, uint32_t size);
 
-    Register* regFromName(const char* name, int size);
+    const char* nameFromID(uint32_t id, uint32_t size);
+
+    Register* regFromName(const char* name, uint32_t size);
 
     Register* regFromID(uint32_t id);
 
