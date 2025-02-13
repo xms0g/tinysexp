@@ -191,6 +191,8 @@ private:
 
     Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
 
+    Register* emitParamReg(const VarExpr& var);
+
     void emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size);
 
     std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
@@ -212,6 +214,8 @@ private:
     StackAllocator stackAllocator;
     // Sections
     std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > sections;
+    // Functions
+    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > functions;
 
     static constexpr const char* memorySize[SIZE_COUNT] = {
         "qword", "dword", "word", "byte", "byte"

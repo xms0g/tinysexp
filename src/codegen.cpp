@@ -7,6 +7,7 @@
 #define emitInstr2op(op, d, s) generatedCode += std::format("\t{} {}, {}\n", op, d, s)
 #define emitJump(jmp, label) emitInstr1op(jmp, label)
 #define ret() generatedCode += "\tret\n"
+#define newLine() generatedCode += "\n";
 
 #define push(r) emitInstr1op("push", getRegName(r, REG64))
 #define pop(r) emitInstr1op("pop", getRegName(r, REG64))
@@ -105,6 +106,10 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     emitInstr1op("pop", "rbp");
     ret();
 
+    for (auto& [func, param]: functions) {
+        (this->*func)(param);
+    }
+
     for (auto& [section, data]: sections) {
         generatedCode += section;
 
@@ -131,9 +136,9 @@ void CodeGen::emitAST(const ExprPtr& ast) {
         emitDefvar(*defvar);
     } else if (const auto defconst = cast::toDefconstant(ast)) {
         emitDefconst(*defconst);
-    } else if (auto defun = cast::toDefun(ast)) {
-        emitDefun(*defun);
-    } else if (auto funcCall = cast::toFuncCall(ast)) {
+    } else if (const auto defun = cast::toDefun(ast)) {
+        functions.emplace_back(&CodeGen::emitDefun, *defun);
+    } else if (const auto funcCall = cast::toFuncCall(ast)) {
         emitFuncCall(*funcCall);
     } else if (const auto if_ = cast::toIf(ast)) {
         emitIf(*if_);
@@ -267,7 +272,7 @@ void CodeGen::emitLet(const LetExpr& let) {
         requiredStackMem += size;
     }
 
-    emitInstr2op("sub", "rsp", requiredStackMem % 16 == 0 ? requiredStackMem: 16);
+    emitInstr2op("sub", "rsp", requiredStackMem);
 
     for (auto& var: let.bindings) {
         const auto memSize = getMemSize(var);
@@ -293,9 +298,75 @@ void CodeGen::emitDefconst(const DefconstExpr& defconst) {
 }
 
 void CodeGen::emitDefun(const DefunExpr& defun) {
+    const auto func = cast::toVar(defun.name);
+    const std::string funcName = cast::toString(func->name)->data;
+
+    newLine();
+    emitLabel(funcName);
+    emitInstr1op("push", "rbp");
+    mov("rbp", "rsp");
+
+    for (auto& form: defun.forms) {
+        emitAST(form);
+    }
+
+    emitInstr1op("pop", "rbp");
+    ret();
 }
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
+    const auto func = cast::toVar(funcCall.name);
+    const std::string funcName = cast::toString(func->name)->data;
+    const size_t argCount = funcCall.args.size();
+
+    constexpr int paramRegisters[] = {RDI, RSI, RCX, RDX, R8, R9};
+
+    emitInstr2op("sub", "rsp", 16);
+    for (int i = 0; i < argCount; ++i) {
+        const auto arg = cast::toVar(funcCall.args[i]);
+        int iarg;
+        //TODO: we dont know value type
+        // If param size > 5, push the remained param onto stack
+        if (i > 5) {
+            for (int j = 6; j < argCount; ++j) {
+                const auto arg_ = cast::toVar(funcCall.args[j]);
+                const std::string argName = cast::toString(arg_->name)->data;
+
+                stackAllocator.alloc(argName, arg_->sType);
+            }
+
+            for (size_t j = argCount - 1; j > 5; --j) {
+                const auto arg_ = cast::toVar(funcCall.args[j]);
+                const std::string argName = cast::toString(arg_->name)->data;
+
+                iarg = cast::toInt(arg_->value)->n;
+                emitInstr1op("push", iarg);
+            }
+
+            break;
+        }
+
+        iarg = cast::toInt(arg->value)->n;
+
+        if (registerAllocator.isInUse(paramRegisters[i])) {
+            push(registerAllocator.regFromID(paramRegisters[i]));
+        }
+
+        mov(getRegName(registerAllocator.regFromID(paramRegisters[i]), REG64), iarg);
+    }
+
+    emitInstr1op("call", funcName);
+    emitInstr2op("add", "rsp", 16);
+
+    for (int i = 0; i < funcCall.args.size(); ++i) {
+        if (i > 5) break;
+
+        if (registerAllocator.isInUse(paramRegisters[i])) {
+            pop(registerAllocator.regFromID(paramRegisters[i]));
+        }
+    }
+
+    return registerAllocator.regFromID(RAX);
 }
 
 void CodeGen::emitIf(const IfExpr& if_) {
@@ -364,6 +435,9 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
     const auto var = cast::toVar(n);
     const std::string varName = cast::toString(var->name)->data;
 
+    if (var->sType == SymbolType::PARAM) {
+        return emitParamReg(*var);
+    }
     return emitLoadRegFromMem(*var, REG64);
 }
 
@@ -749,6 +823,17 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
     return rp;
 }
 
+Register* CodeGen::emitParamReg(const VarExpr& var) {
+    if (cast::toDouble(var.value)) {
+        return registerAllocator.alloc(SSE | PARAM);
+    }
+
+    const std::string paramName = cast::toString(var.name)->data;
+    const auto rp = getAddr(paramName, var.sType, REG64);
+
+    return registerAllocator.regFromName(rp.c_str(), REG64);
+}
+
 void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size) {
     const char* rpStr = getRegName(rp, size);
 
@@ -767,8 +852,16 @@ std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint3
         }
         case SymbolType::GLOBAL:
             return std::format("{} [rel {}]", memorySize[size], varName);
-        case SymbolType::PARAM:
-            throw std::runtime_error("PARAM handling not implemented.");
+        case SymbolType::PARAM: {
+            const auto* rp = register_alloc(SCRATCH | PARAM, 0, 0);
+
+            if (!rp) {
+                int stackOffset = stackAllocator.alloc(varName, stype);
+                rp = register_alloc(SCRATCH, PRESERVED, 0);
+                mov(getRegName(rp, REG64), std::format("{} [rbp + {}]", memorySize[size], stackOffset));
+            }
+            return getRegName(rp, size);
+        }
         default:
             throw std::runtime_error("Unknown SymbolType.");
     }
