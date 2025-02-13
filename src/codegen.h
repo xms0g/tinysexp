@@ -123,6 +123,16 @@ private:
     };
 };
 
+class StackAllocator {
+public:
+    StackAllocator(): currentVarStackOffset(8), currentParamStackOffset(8) {}
+
+    int alloc(const std::string& name, SymbolType stype);
+private:
+    int currentVarStackOffset, currentParamStackOffset;
+    std::unordered_map<std::string, int> stackOffsets;
+};
+
 class CodeGen {
 public:
     CodeGen() : currentStackOffset(8), currentLabelCount(0) {
@@ -199,8 +209,7 @@ private:
     // Register
     RegisterAllocator registerAllocator;
     // Stack
-    int currentStackOffset;
-    std::unordered_map<std::string, int> stackOffsets;
+    StackAllocator stackAllocator;
     // Sections
     std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > sections;
 

@@ -75,6 +75,25 @@ Register* RegisterAllocator::regFromID(uint32_t id) {
     return &registers[id];
 }
 
+int StackAllocator::alloc(const std::string& name, SymbolType stype) {
+    int stackOffset;
+
+    if (stackOffsets.contains(name)) {
+        stackOffset = stackOffsets.at(name);
+    } else {
+        stackOffset = stype == SymbolType::LOCAL ? currentVarStackOffset : currentParamStackOffset;
+        stackOffsets.emplace(name, stackOffset);
+
+        if (stype == SymbolType::LOCAL) {
+            currentVarStackOffset += 8;
+        } else {
+            currentParamStackOffset += 8;
+        }
+    }
+    return stackOffset;
+}
+
+
 std::string CodeGen::emit(const ExprPtr& ast) {
     generatedCode =
             "[bits 64]\n"
