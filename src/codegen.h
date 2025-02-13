@@ -41,7 +41,7 @@ enum RegisterType : uint8_t {
 
 class RegisterAllocator {
 public:
-    Register* alloc(uint8_t rtype);
+    Register* alloc(uint8_t rt1, uint8_t rt2 = 0, uint8_t rt3 = 0);
 
     void free(Register* reg);
 
@@ -52,7 +52,6 @@ public:
     Register* regFromName(const char* name, int size);
 
     Register* regFromID(uint32_t id);
-
 
 private:
     Register registers[REGISTER_COUNT] = {
@@ -124,13 +123,13 @@ private:
 
 class StackAllocator {
 public:
-    StackAllocator(): currentVarStackOffset(8), currentParamStackOffset(16) {
+    StackAllocator(): currentVarOffset(8), currentParamOffset(16) {
     }
 
     int alloc(const std::string& name, SymbolType stype);
 
 private:
-    int currentVarStackOffset, currentParamStackOffset;
+    int currentVarOffset, currentParamOffset;
     std::unordered_map<std::string, int> stackOffsets;
 };
 

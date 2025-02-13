@@ -73,13 +73,13 @@ int StackAllocator::alloc(const std::string& name, SymbolType stype) {
     if (stackOffsets.contains(name)) {
         stackOffset = stackOffsets.at(name);
     } else {
-        stackOffset = stype == SymbolType::LOCAL ? currentVarStackOffset : currentParamStackOffset;
+        stackOffset = stype == SymbolType::LOCAL ? currentVarOffset : currentParamOffset;
         stackOffsets.emplace(name, stackOffset);
 
         if (stype == SymbolType::LOCAL) {
-            currentVarStackOffset += 8;
+            currentVarOffset += 8;
         } else {
-            currentParamStackOffset += 8;
+            currentParamOffset += 8;
         }
     }
     return stackOffset;
