@@ -20,8 +20,8 @@
     emitInstr1op(op, getRegName(rp, REG8L)); \
     movzx(getRegName(rp, REG64), getRegName(rp, REG8L));
 
-#define register_alloc(type) ([&]() {                       \
-    auto* rp = registerAllocator.alloc(type);               \
+#define register_alloc(t1, t2, t3) ([&]() {                 \
+    auto* rp = registerAllocator.alloc(t1, t2, t3);         \
     if (rp && (rp->rType & PRESERVED)) {                    \
         push(rp);                                           \
     }                                                       \
@@ -35,9 +35,9 @@
         }                                                   \
     }
 
-Register* RegisterAllocator::alloc(uint8_t rtype) {
+Register* RegisterAllocator::alloc(uint8_t rt1, uint8_t rt2, uint8_t rt3) {
     for (auto& register_: registers) {
-        if (rtype == register_.rType && !register_.inUse) {
+        if ((rt1 == register_.rType || rt2 == register_.rType || rt3 == register_.rType) && !register_.inUse) {
             register_.inUse = true;
             return &register_;
         }
@@ -214,7 +214,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
         emitAST(statement);
     }
     // Increment iteration count
-    auto* rp = register_alloc(SCRATCH);
+    auto* rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
 
     mov(getRegName(rp, REG64), iterVarAddr);
     emitInstr2op("add", getRegName(rp, REG64), 1);
@@ -349,13 +349,13 @@ void CodeGen::emitCond(const CondExpr& cond) {
 
 Register* CodeGen::emitNumb(const ExprPtr& n) {
     if (const auto int_ = cast::toInt(n)) {
-        auto* rp = register_alloc(SCRATCH);
+        auto* rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
         mov(getRegName(rp, REG64), int_->n);
         return rp;
     }
 
     if (const auto double_ = cast::toDouble(n)) {
-        auto* rp = registerAllocator.alloc(SSE);
+        auto* rp = registerAllocator.alloc(SSE | PARAM, SSE);
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
         movd(getRegName(rp, REG64), emitHex(hex));
         return rp;
@@ -383,8 +383,8 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     Register* reg1 = emitNode(lhs);
     Register* reg2 = emitNode(rhs);
 
-    if (reg1->rType & SSE && (reg2->rType & SCRATCH || reg2->rType & PRESERVED)) {
-        auto* newRP = registerAllocator.alloc(SSE);
+    if (reg1->rType & SSE && reg2->rType & (SCRATCH | PRESERVED)) {
+        auto* newRP = registerAllocator.alloc(SSE | PARAM, SSE);
         const char* newRPStr = getRegName(newRP, REG64);
 
         emitInstr2op("cvtsi2sd", newRPStr, getRegName(reg2, REG64));
@@ -394,8 +394,8 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
         register_free(newRP);
         return reg1;
     }
-    if ((reg1->rType & SCRATCH || reg1->rType & PRESERVED) && reg2->rType & SSE) {
-        auto* newRP = registerAllocator.alloc(SSE);
+    if (reg1->rType & (SCRATCH | PRESERVED) && reg2->rType & SSE) {
+        auto* newRP = registerAllocator.alloc(SSE | PARAM, SSE);
         const char* newRPStr = getRegName(newRP, REG64);
         const char* reg2Str = getRegName(reg2, REG64);
 
@@ -615,7 +615,7 @@ Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
     auto* rp1 = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
 
     if (rp1->rType & SSE) {
-        setReg1 = register_alloc(SCRATCH);
+        setReg1 = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
     } else {
         setReg1 = rp1;
     }
@@ -629,7 +629,7 @@ Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
     auto* rp2 = emitExpr(binop.rhs, zero, {"cmp", "ucomisd"});
 
     if (rp2->rType & SSE) {
-        setReg2 = register_alloc(SCRATCH);
+        setReg2 = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
     } else {
         setReg2 = rp2;
     }
@@ -660,7 +660,7 @@ Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
     const auto rp = emitBinop(binop);
 
     if (rp->rType & SSE) {
-        return register_alloc(SCRATCH);
+        return register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
     }
     return rp;
 }
@@ -690,7 +690,7 @@ void CodeGen::handleAssignment(const ExprPtr& var, uint32_t size) {
         updateSections("\nsection .data\n",
                        std::make_pair(label, strDirective(str->data)));
 
-        auto* rp = register_alloc(SCRATCH);
+        auto* rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
         const char* rpStr = getRegName(rp, REG64);
 
         emitInstr2op("lea", rpStr, labelAddr);
@@ -733,16 +733,16 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
     const std::string valueName = cast::toString(var.name)->data;
 
     if (cast::toInt(var.value)) {
-        rp = register_alloc(SCRATCH);
+        rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
         mov(getRegName(rp, REG64), getAddr(valueName, var.sType, size));
     } else if (cast::toDouble(var.value)) {
-        rp = registerAllocator.alloc(SSE);
+        rp = registerAllocator.alloc(SSE | PARAM, SSE);
         movd(getRegName(rp, REG64), getAddr(valueName, var.sType, size));
     } else if (cast::toString(var.value)) {
-        rp = register_alloc(SCRATCH);
+        rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
         emitInstr2op("lea", getRegName(rp, REG64), getAddr(valueName, var.sType, size));
     } else if (cast::toNIL(var.value) || cast::toT(var.value)) {
-        rp = register_alloc(SCRATCH);
+        rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
         movzx(getRegName(rp, REG64), getAddr(valueName, var.sType, size));
     }
 
