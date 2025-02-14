@@ -193,8 +193,6 @@ private:
 
     Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
 
-    Register* emitParamReg(const VarExpr& var);
-
     void emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size);
 
     std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);

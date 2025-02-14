@@ -437,11 +437,6 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
     }
 
     const auto var = cast::toVar(n);
-    const std::string varName = cast::toString(var->name)->data;
-
-    if (var->sType == SymbolType::PARAM) {
-        return emitParamReg(*var);
-    }
     return emitLoadRegFromMem(*var, REG64);
 }
 
@@ -808,34 +803,41 @@ void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
 
 Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
     Register* rp = nullptr;
-    const std::string valueName = cast::toString(var.name)->data;
+    const std::string varName = cast::toString(var.name)->data;
 
-    if (cast::toInt(var.value)) {
-        rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
-        mov(getRegName(rp, REG64), getAddr(valueName, var.sType, size));
-    } else if (cast::toDouble(var.value)) {
-        rp = registerAllocator.alloc(SSE | PARAM, SSE);
-        movd(getRegName(rp, REG64), getAddr(valueName, var.sType, size));
-    } else if (cast::toString(var.value)) {
-        rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
-        emitInstr2op("lea", getRegName(rp, REG64), getAddr(valueName, var.sType, size));
-    } else if (cast::toNIL(var.value) || cast::toT(var.value)) {
-        rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
-        movzx(getRegName(rp, REG64), getAddr(valueName, var.sType, size));
+    switch (var.sType) {
+        case SymbolType::PARAM: {
+            if (cast::toDouble(var.value)) {
+                return registerAllocator.alloc(SSE | PARAM);
+            }
+
+            rp = register_alloc(SCRATCH | PARAM, 0, 0);
+            if (!rp) {
+                rp = register_alloc(SCRATCH, PRESERVED, 0);
+                mov(getRegName(rp, REG64), getAddr(varName, var.sType, size));
+            }
+            break;
+        }
+        case SymbolType::LOCAL:
+        case SymbolType::GLOBAL: {
+            if (cast::toInt(var.value)) {
+                rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
+                mov(getRegName(rp, REG64), getAddr(varName, var.sType, size));
+            } else if (cast::toDouble(var.value)) {
+                rp = registerAllocator.alloc(SSE | PARAM, SSE);
+                movd(getRegName(rp, REG64), getAddr(varName, var.sType, size));
+            } else if (cast::toString(var.value)) {
+                rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
+                emitInstr2op("lea", getRegName(rp, REG64), getAddr(varName, var.sType, size));
+            } else if (cast::toNIL(var.value) || cast::toT(var.value)) {
+                rp = register_alloc(SCRATCH, SCRATCH | PARAM, PRESERVED);
+                movzx(getRegName(rp, REG64), getAddr(varName, var.sType, size));
+            }
+            break;
+        }
     }
 
     return rp;
-}
-
-Register* CodeGen::emitParamReg(const VarExpr& var) {
-    if (cast::toDouble(var.value)) {
-        return registerAllocator.alloc(SSE | PARAM);
-    }
-
-    const std::string paramName = cast::toString(var.name)->data;
-    const auto rp = getAddr(paramName, var.sType, REG64);
-
-    return registerAllocator.regFromName(rp.c_str(), REG64);
 }
 
 void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size) {
@@ -850,22 +852,12 @@ void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, 
 
 std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint32_t size) {
     switch (stype) {
-        case SymbolType::LOCAL: {
-            int stackOffset = stackAllocator.alloc(varName, stype);
-            return std::format("{} [rbp - {}]", memorySize[size], stackOffset);
-        }
         case SymbolType::GLOBAL:
             return std::format("{} [rel {}]", memorySize[size], varName);
-        case SymbolType::PARAM: {
-            const auto* rp = register_alloc(SCRATCH | PARAM, 0, 0);
-
-            if (!rp) {
-                int stackOffset = stackAllocator.alloc(varName, stype);
-                rp = register_alloc(SCRATCH, PRESERVED, 0);
-                mov(getRegName(rp, REG64), std::format("{} [rbp + {}]", memorySize[size], stackOffset));
-            }
-            return getRegName(rp, size);
-        }
+        case SymbolType::LOCAL:
+            return std::format("{} [rbp - {}]", memorySize[size], stackAllocator.alloc(varName, stype));
+        case SymbolType::PARAM:
+            return std::format("{} [rbp + {}]", memorySize[size], stackAllocator.alloc(varName, stype));
         default:
             throw std::runtime_error("Unknown SymbolType.");
     }
