@@ -212,7 +212,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
     // Address of iter var
     std::string iterVarAddr = getAddr(iterVarName, SymbolType::LOCAL, REG64);
-    emitInstr2op("sub", "rsp", 16);
+    emitInstr2op("sub", "rsp", 8);
     // Set 0 to iter var
     mov(iterVarAddr, 0);
     // Loop label
@@ -784,21 +784,18 @@ void CodeGen::handlePrimitive(const VarExpr& var, const char* instr, const std::
 void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
     const std::string varName = cast::toString(var.name)->data;
     auto value = cast::toVar(var.value);
-    const std::string valueName = cast::toString(value->name)->data;
-
-    Register* rp;
 
     do {
-        rp = emitLoadRegFromMem(*value, size);
-
-        if (rp) {
+        if (Register* rp = emitLoadRegFromMem(*value, size)) {
             emitStoreMemFromReg(varName, var.sType, rp, size);
+
+            if (value->sType != SymbolType::PARAM) {
+                register_free(rp)
+            }
         }
 
         value = cast::toVar(value->value);
     } while (cast::toVar(value));
-
-    register_free(rp)
 }
 
 Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
