@@ -32,6 +32,7 @@
     }                                                       \
     return rp;                                              \
     }())
+
 #define register_free(rp)                                   \
     if (rp) {                                               \
         registerAllocator.free(rp);                         \
@@ -142,7 +143,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
             "_start:\n";
 
     push(registerAllocator.regFromID(RBP))
-    mov(registerAllocator.nameFromID(RBP, REG64), registerAllocator.nameFromID(RSP, REG64));
+    mov(getRegNameByID(RBP, REG64), getRegNameByID(RSP, REG64));
 
     auto next = ast;
     while (next != nullptr) {
@@ -171,7 +172,8 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
 void CodeGen::emitAST(const ExprPtr& ast) {
     if (const auto binop = cast::toBinop(ast)) {
-        emitBinop(*binop);
+        Register* rp = emitBinop(*binop);
+        register_free(rp)
     } else if (const auto dotimes = cast::toDotimes(ast)) {
         emitDotimes(*dotimes);
     } else if (const auto loop = cast::toLoop(ast)) {
@@ -357,7 +359,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     newLine();
     emitLabel(funcName);
     push(registerAllocator.regFromID(RBP))
-    mov(registerAllocator.nameFromID(RBP, REG64), registerAllocator.nameFromID(RSP, REG64));
+    mov(getRegNameByID(RBP, REG64), getRegNameByID(RSP, REG64));
 
     for (auto& form: defun.forms) {
         emitAST(form);
@@ -376,12 +378,10 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     const auto func = cast::toVar(funcCall.name);
     const std::string funcName = cast::toString(func->name)->data;
     const size_t argCount = funcCall.args.size();
-    bool stackAligned{false};
 
-    if (stackAllocator.getOffset() % 16 != 0) {
-        stack_alloc(memorySizeInBytes[REG16])
-        stackAligned = true;
-    }
+    const uint32_t stackOffset = stackAllocator.getOffset();
+    uint32_t stackAlignedSize = stackOffset < 16 ? 16 : stackOffset + 8;
+    stack_alloc(stackAlignedSize)
 
     for (int i = 0; i < argCount; ++i) {
         const auto arg = cast::toVar(funcCall.args[i]);
@@ -412,14 +412,11 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
             push(registerAllocator.regFromID(paramRegisters[i]));
         }
 
-        mov(getRegName(registerAllocator.regFromID(paramRegisters[i]), REG64), iarg);
+        paramToRegisters.emplace(funcName + cast::toString(arg->name)->data, paramRegisters[i]);
+        mov(getRegNameByID(paramRegisters[i], REG64), iarg);
     }
 
     emitInstr1op("call", funcName);
-
-    if (stackAligned) {
-        stack_dealloc(memorySizeInBytes[REG16])
-    }
 
     for (int i = 0; i < funcCall.args.size(); ++i) {
         if (i > 5) break;
@@ -428,6 +425,8 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
             pop(registerAllocator.regFromID(paramRegisters[i]));
         }
     }
+
+    stack_dealloc(stackAlignedSize)
 
     return registerAllocator.regFromID(RAX);
 }
@@ -840,7 +839,12 @@ void CodeGen::handleAssignment(const ExprPtr& var, uint32_t size) {
 void CodeGen::handlePrimitive(const VarExpr& var, const char* instr, const std::string& value) {
     const std::string varName = cast::toString(var.name)->data;
 
-    emitInstr2op(instr, getAddr(varName, var.sType, REG64), value);
+    if (const std::string key = currentScope + varName; paramToRegisters.contains(key)) {
+        const uint32_t rid = paramToRegisters.at(key);
+        emitInstr2op(instr, registerAllocator.nameFromID(rid, REG64), value);
+    } else {
+        emitInstr2op(instr, getAddr(varName, var.sType, REG64), value);
+    }
 }
 
 void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
@@ -870,8 +874,10 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
                 return registerAllocator.alloc(SSE | PARAM);
             }
 
-            rp = register_alloc(SCRATCH | PARAM, 0, 0);
-            if (!rp) {
+            if (const std::string key = currentScope + varName; paramToRegisters.contains(key)) {
+                const uint32_t rid = paramToRegisters.at(key);
+                rp = registerAllocator.regFromID(rid);
+            } else {
                 rp = register_alloc(SCRATCH, PRESERVED, 0);
                 mov(getRegName(rp, REG64), getAddr(varName, var.sType, size));
             }
@@ -946,6 +952,10 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 
 const char* CodeGen::getRegName(const Register* reg, uint32_t size) {
     return registerAllocator.nameFromReg(reg, size);
+}
+
+const char* CodeGen::getRegNameByID(uint32_t id, uint32_t size) {
+    return registerAllocator.nameFromID(id, size);
 }
 
 std::string CodeGen::createLabel() {

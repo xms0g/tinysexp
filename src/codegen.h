@@ -215,6 +215,8 @@ private:
 
     const char* getRegName(const Register* reg, uint32_t size);
 
+    const char* getRegNameByID(uint32_t id, uint32_t size);
+
     std::string createLabel();
 
     void updateSections(const char* name, const std::pair<std::string, std::string>& data);
@@ -226,12 +228,13 @@ private:
     std::string currentScope;
     // Register
     RegisterAllocator registerAllocator;
+    std::unordered_map<std::string, uint32_t> paramToRegisters;
     // Stack
     StackAllocator stackAllocator;
     // Sections
-    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > sections;
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> sections;
     // Functions
-    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > functions;
+    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&>> functions;
 
     static constexpr const char* memorySize[SIZE_COUNT] = {
         "qword", "dword", "word", "byte", "byte"
