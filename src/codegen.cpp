@@ -256,7 +256,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
     // Address of iter var
     std::string iterVarAddr = getAddr(iterVarName, SymbolType::LOCAL, REG64);
-    stack_alloc(8)
+    stack_alloc(memorySizeInBytes[REG64])
     // Set 0 to iter var
     mov(iterVarAddr, 0);
     // Loop label
@@ -278,7 +278,7 @@ void CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     emitJump("jmp", loopLabel);
     emitLabel(doneLabel);
 
-    stack_dealloc(8)
+    stack_dealloc(memorySizeInBytes[REG64])
 }
 
 void CodeGen::emitLoop(const LoopExpr& loop) {
@@ -379,7 +379,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     bool stackAligned{false};
 
     if (stackAllocator.getOffset() % 16 != 0) {
-        stack_alloc(16)
+        stack_alloc(memorySizeInBytes[REG16])
         stackAligned = true;
     }
 
@@ -418,7 +418,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     emitInstr1op("call", funcName);
 
     if (stackAligned) {
-        stack_dealloc(16)
+        stack_dealloc(memorySizeInBytes[REG16])
     }
 
     for (int i = 0; i < funcCall.args.size(); ++i) {
@@ -514,6 +514,8 @@ Register* CodeGen::emitNode(const ExprPtr& node) {
 Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op) {
     Register* reg1 = emitNode(lhs);
     Register* reg2 = emitNode(rhs);
+
+    //TODO: Be sure returned register is rax
 
     if (reg1->rType & SSE && reg2->rType & (SCRATCH | PRESERVED)) {
         auto* newRP = registerAllocator.alloc(SSE | PARAM, SSE);
