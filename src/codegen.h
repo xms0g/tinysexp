@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include "parser.h"
 
-static constexpr int REGISTER_COUNT = 30;
+static constexpr int REGISTER_COUNT = 32;
 static constexpr int SIZE_COUNT = 5;
 
 struct Register {
@@ -18,8 +18,8 @@ enum RegisterID : uint32_t {
     RAX, RDI, RSI,
     RDX, RCX, R8,
     R9, R10, R11,
-    RBX, R12, R13,
-    R14, R15,
+    RBP, RSP, RBX,
+    R12, R13, R14, R15,
     xmm0, xmm1, xmm2,
     xmm3, xmm4, xmm5,
     xmm6, xmm7, xmm8,
@@ -60,12 +60,14 @@ private:
         {RAX, SCRATCH, false},
         {RDI, SCRATCH | PARAM, false},
         {RSI, SCRATCH | PARAM, false},
-{RDX, SCRATCH | PARAM, false},
+        {RDX, SCRATCH | PARAM, false},
         {RCX, SCRATCH | PARAM, false},
         {R8, SCRATCH | PARAM, false},
         {R9, SCRATCH | PARAM, false},
         {R10, SCRATCH, false},
         {R11, SCRATCH, false},
+        {RBP, PRESERVED, true},
+        {RSP, PRESERVED, true},
         {RBX, PRESERVED, false},
         {R12, PRESERVED, false},
         {R13, PRESERVED, false},
@@ -93,12 +95,14 @@ private:
         {"rax", "eax", "ax", "ah", "al"},
         {"rdi", "edi", "di", "", "dil"},
         {"rsi", "esi", "si", "", "sil"},
-{"rdx", "edx", "dx", "dh", "dl"},
+        {"rdx", "edx", "dx", "dh", "dl"},
         {"rcx", "ecx", "cx", "ch", "cl"},
         {"r8", "r8d", "r8w", "", "r8b"},
         {"r9", "r9d", "r9w", "", "r9b"},
         {"r10", "r10d", "r10w", "", "r10b"},
         {"r11", "r11d", "r11w", "", "r11b"},
+        {"rbp", "ebp", "bp", "", "bpl"},
+        {"rsp", "esp", "sp", "bh", "spl"},
         {"rbx", "ebx", "bx", "bh", "bl"},
         {"r12", "r12d", "r12w", "", "r12b"},
         {"r13", "r13d", "r13w", "", "r13b"},
@@ -125,19 +129,29 @@ private:
 
 class StackAllocator {
 public:
-    StackAllocator(): currentVarOffset(8), currentParamOffset(16) {
-    }
+    void alloc(uint32_t size);
 
-    int alloc(const std::string& name, SymbolType stype);
+    void dealloc(uint32_t size);
+
+    uint32_t getOffset() const { return stackOffset; }
+
+    int pushStackFrame(const std::string& funcName, const std::string& varName, SymbolType stype);
 
 private:
-    int currentVarOffset, currentParamOffset;
-    std::unordered_map<std::string, int> stackOffsets;
+    struct StackFrame {
+        int currentVarOffset{8}, currentParamOffset{16};
+        std::unordered_map<std::string, int> offsets;
+    };
+
+    int updateStackFrame(StackFrame* sf, const std::string& varName, SymbolType stype);
+
+    std::unordered_map<std::string, StackFrame> stack{};
+    uint32_t stackOffset{0};
 };
 
 class CodeGen {
 public:
-    CodeGen() : currentLabelCount(0) {
+    CodeGen() : currentLabelCount(0), currentScope("main") {
     }
 
     std::string emit(const ExprPtr& ast);
@@ -208,6 +222,8 @@ private:
     std::string generatedCode;
     // Label
     int currentLabelCount;
+    // Scope
+    std::string currentScope;
     // Register
     RegisterAllocator registerAllocator;
     // Stack
@@ -232,6 +248,8 @@ private:
     static constexpr int memorySizeInBytes[SIZE_COUNT] = {
         8, 4, 2, 1, 1
     };
+
+    static constexpr int paramRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
 };
 
 #endif
