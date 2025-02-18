@@ -9,12 +9,12 @@
 #define ret() generatedCode += "\tret\n"
 #define newLine() generatedCode += "\n";
 
-#define push(r) \
-    emitInstr1op("push", getRegName(r, REG64)); \
+#define push(v) \
+    emitInstr1op("push", v); \
     stackAllocator.alloc(8);
 
-#define pop(r) \
-    emitInstr1op("pop", getRegName(r, REG64)); \
+#define pop(rn) \
+    emitInstr1op("pop", rn); \
     stackAllocator.dealloc(8);
 
 #define mov(d, s) emitInstr2op("mov", d, s)
@@ -30,18 +30,18 @@
 #define register_alloc(t1, t2, t3) ([&]() {                 \
     auto* rp = registerAllocator.alloc(t1, t2, t3);         \
     if (rp && (rp->rType >> PRESERVED_IDX & 1)) {           \
-        push(rp)                                            \
+        push(getRegName(rp, REG64))                         \
     }                                                       \
     return rp;                                              \
     }())
 
 #define register_free(rp)                                   \
-    if (rp && !(rp->status >> INUSE_FOR_PARAM_IDX & 1)) {     \
+    if (rp && !(rp->status >> INUSE_FOR_PARAM_IDX & 1)) {   \
             registerAllocator.free(rp);                     \
             if (rp->rType >> PRESERVED_IDX & 1) {           \
                 pop(rp)                                     \
             }                                               \
-                                                           \
+                                                            \
     }
 
 #define stack_alloc(size) \
@@ -148,7 +148,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
             "\tglobal _start\n"
             "_start:\n";
 
-    push(registerAllocator.regFromID(RBP))
+    push(getRegNameByID(RBP, REG64))
     mov("rbp", "rsp");
 
     auto next = ast;
@@ -157,7 +157,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
         next = next->child;
     }
 
-    pop(registerAllocator.regFromID(RBP))
+    pop(getRegNameByID(RBP, REG64))
     ret();
 
     // Function definitions
@@ -364,7 +364,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 
     newLine();
     emitLabel(funcName);
-    push(registerAllocator.regFromID(RBP))
+    push(getRegNameByID(RBP, REG64))
     mov("rbp", "rsp");
 
     for (auto& form: defun.forms) {
@@ -376,7 +376,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         reg->status &= ~INUSE_FOR_PARAM;
     }
 
-    pop(registerAllocator.regFromID(RBP))
+    pop(getRegNameByID(RBP, REG64))
     ret();
 }
 
@@ -401,7 +401,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 
             for (size_t j = argCount - 1; j > 5; --j) {
                 const auto arg_ = cast::toVar(funcCall.args[j]);
-                emitInstr1op("push", cast::toInt(arg_->value)->n);
+                push(cast::toInt(arg_->value)->n)
             }
 
             break;
@@ -412,7 +412,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
         if (const auto int_ = cast::toInt(arg->value)) {
             auto* reg = registerAllocator.regFromID(paramRegisters[i]);
             if (reg->status >> INUSE_IDX & 1) {
-                push(reg);
+                push(getRegName(reg, REG64));
             }
             reg->status &= ~NO_USE;
             reg->status |= INUSE_FOR_PARAM;
@@ -426,11 +426,9 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 
     emitInstr1op("call", funcName);
 
-    for (int i = 0; i < funcCall.args.size(); ++i) {
-        if (i > 5) break;
-
+    for (int i = 0; i < 6; ++i) {
         if (const auto* reg = registerAllocator.regFromID(paramRegisters[i]); reg->status >> INUSE_IDX & 1) {
-            pop(reg);
+            pop(getRegName(reg, REG64));
         }
     }
 
