@@ -48,14 +48,14 @@ enum RegisterTypeIndex {
 
 enum RegisterStatus : uint8_t {
     NO_USE = 1 << 0,
-    INUSE_IN_FUNC = 1 << 1,
-    INUSE_OUT_FUNC = 1 << 2
+    INUSE_FOR_PARAM = 1 << 1,
+    INUSE = 1 << 2
 };
 
 enum RegisterStatusIndex {
     NO_USE_IDX,
-    INUSE_IN_FUNC_IDX,
-    INUSE_OUT_FUNC_IDX,
+    INUSE_FOR_PARAM_IDX,
+    INUSE_IDX,
 };
 
 class RegisterAllocator {
@@ -85,8 +85,8 @@ private:
         {R9, SCRATCH | PARAM, NO_USE},
         {R10, SCRATCH, NO_USE},
         {R11, SCRATCH, NO_USE},
-        {RBP, PRESERVED, INUSE_OUT_FUNC},
-        {RSP, PRESERVED, INUSE_OUT_FUNC},
+        {RBP, PRESERVED, INUSE},
+        {RSP, PRESERVED, INUSE},
         {RBX, PRESERVED, NO_USE},
         {R12, PRESERVED, NO_USE},
         {R13, PRESERVED, NO_USE},

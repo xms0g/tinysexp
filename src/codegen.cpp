@@ -36,7 +36,7 @@
     }())
 
 #define register_free(rp)                                   \
-    if (rp && !(rp->status >> INUSE_IN_FUNC_IDX & 1)) {     \
+    if (rp && !(rp->status >> INUSE_FOR_PARAM_IDX & 1)) {     \
             registerAllocator.free(rp);                     \
             if (rp->rType >> PRESERVED_IDX & 1) {           \
                 pop(rp)                                     \
@@ -58,7 +58,7 @@ Register* RegisterAllocator::alloc(uint8_t rt1, uint8_t rt2, uint8_t rt3) {
              rt2 == register_.rType ||
              rt3 == register_.rType) && register_.status >> NO_USE_IDX & 1) {
             register_.status &= ~NO_USE;
-            register_.status |= INUSE_OUT_FUNC;
+            register_.status |= INUSE;
             return &register_;
         }
     }
@@ -373,7 +373,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 
     for (int i = 0; i < 6; ++i) {
         auto* reg = registerAllocator.regFromID(paramRegisters[i]);
-        reg->status &= ~INUSE_IN_FUNC;
+        reg->status &= ~INUSE_FOR_PARAM;
     }
 
     pop(registerAllocator.regFromID(RBP))
@@ -411,11 +411,11 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 
         if (const auto int_ = cast::toInt(arg->value)) {
             auto* reg = registerAllocator.regFromID(paramRegisters[i]);
-            if (reg->status >> INUSE_OUT_FUNC_IDX & 1) {
+            if (reg->status >> INUSE_IDX & 1) {
                 push(reg);
             }
             reg->status &= ~NO_USE;
-            reg->status |= INUSE_IN_FUNC;
+            reg->status |= INUSE_FOR_PARAM;
 
             paramToRegisters.emplace(funcName + cast::toString(arg->name)->data, reg->id);
             mov(getRegNameByID(paramRegisters[i], REG64), int_->n);
@@ -429,7 +429,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     for (int i = 0; i < funcCall.args.size(); ++i) {
         if (i > 5) break;
 
-        if (const auto* reg = registerAllocator.regFromID(paramRegisters[i]); reg->status >> INUSE_OUT_FUNC_IDX & 1) {
+        if (const auto* reg = registerAllocator.regFromID(paramRegisters[i]); reg->status >> INUSE_IDX & 1) {
             pop(reg);
         }
     }
