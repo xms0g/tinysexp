@@ -11,7 +11,7 @@ static constexpr int SIZE_COUNT = 5;
 struct Register {
     uint32_t id;
     uint8_t rType;
-    bool inUse;
+    uint8_t status;
 };
 
 enum RegisterID : uint32_t {
@@ -39,13 +39,32 @@ enum RegisterType : uint8_t {
     PARAM = 1 << 3,
 };
 
+enum RegisterTypeIndex {
+    SSE_IDX,
+    SCRATCH_IDX,
+    PRESERVED_IDX,
+    PARAM_IDX,
+};
+
+enum RegisterStatus : uint8_t {
+    NO_USE = 1 << 0,
+    INUSE_IN_FUNC = 1 << 1,
+    INUSE_OUT_FUNC = 1 << 2
+};
+
+enum RegisterStatusIndex {
+    NO_USE_IDX,
+    INUSE_IN_FUNC_IDX,
+    INUSE_OUT_FUNC_IDX,
+};
+
 class RegisterAllocator {
 public:
     Register* alloc(uint8_t rt1, uint8_t rt2 = 0, uint8_t rt3 = 0);
 
     void free(Register* reg);
 
-    [[nodiscard]] bool isInUse(const uint32_t id) const { return registers[id].inUse; }
+    [[nodiscard]] bool status(const uint32_t id) const { return registers[id].status; }
 
     const char* nameFromReg(const Register* reg, uint32_t size);
 
@@ -57,38 +76,38 @@ public:
 
 private:
     Register registers[REGISTER_COUNT] = {
-        {RAX, SCRATCH, false},
-        {RDI, SCRATCH | PARAM, false},
-        {RSI, SCRATCH | PARAM, false},
-        {RDX, SCRATCH | PARAM, false},
-        {RCX, SCRATCH | PARAM, false},
-        {R8, SCRATCH | PARAM, false},
-        {R9, SCRATCH | PARAM, false},
-        {R10, SCRATCH, false},
-        {R11, SCRATCH, false},
-        {RBP, PRESERVED, true},
-        {RSP, PRESERVED, true},
-        {RBX, PRESERVED, false},
-        {R12, PRESERVED, false},
-        {R13, PRESERVED, false},
-        {R14, PRESERVED, false},
-        {R15, PRESERVED, false},
-        {xmm0, SSE | PARAM, false},
-        {xmm1, SSE | PARAM, false},
-        {xmm2, SSE | PARAM, false},
-        {xmm3, SSE | PARAM, false},
-        {xmm4, SSE | PARAM, false},
-        {xmm5, SSE | PARAM, false},
-        {xmm6, SSE | PARAM, false},
-        {xmm7, SSE | PARAM, false},
-        {xmm8, SSE, false},
-        {xmm9, SSE, false},
-        {xmm10, SSE, false},
-        {xmm11, SSE, false},
-        {xmm12, SSE, false},
-        {xmm13, SSE, false},
-        {xmm14, SSE, false},
-        {xmm15, SSE, false},
+        {RAX, SCRATCH, NO_USE},
+        {RDI, SCRATCH | PARAM, NO_USE},
+        {RSI, SCRATCH | PARAM, NO_USE},
+        {RDX, SCRATCH | PARAM, NO_USE},
+        {RCX, SCRATCH | PARAM, NO_USE},
+        {R8, SCRATCH | PARAM, NO_USE},
+        {R9, SCRATCH | PARAM, NO_USE},
+        {R10, SCRATCH, NO_USE},
+        {R11, SCRATCH, NO_USE},
+        {RBP, PRESERVED, INUSE_OUT_FUNC},
+        {RSP, PRESERVED, INUSE_OUT_FUNC},
+        {RBX, PRESERVED, NO_USE},
+        {R12, PRESERVED, NO_USE},
+        {R13, PRESERVED, NO_USE},
+        {R14, PRESERVED, NO_USE},
+        {R15, PRESERVED, NO_USE},
+        {xmm0, SSE | PARAM, NO_USE},
+        {xmm1, SSE | PARAM, NO_USE},
+        {xmm2, SSE | PARAM, NO_USE},
+        {xmm3, SSE | PARAM, NO_USE},
+        {xmm4, SSE | PARAM, NO_USE},
+        {xmm5, SSE | PARAM, NO_USE},
+        {xmm6, SSE | PARAM, NO_USE},
+        {xmm7, SSE | PARAM, NO_USE},
+        {xmm8, SSE, NO_USE},
+        {xmm9, SSE, NO_USE},
+        {xmm10, SSE, NO_USE},
+        {xmm11, SSE, NO_USE},
+        {xmm12, SSE, NO_USE},
+        {xmm13, SSE, NO_USE},
+        {xmm14, SSE, NO_USE},
+        {xmm15, SSE, NO_USE},
     };
 
     static constexpr const char* registerNames[REGISTER_COUNT][SIZE_COUNT] = {
@@ -253,6 +272,8 @@ private:
     };
 
     static constexpr int paramRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
+
+    static constexpr int paramRegistersSSE[] = {xmm0, xmm1, xmm2,xmm3, xmm4, xmm5, xmm6, xmm7};
 };
 
 #endif
