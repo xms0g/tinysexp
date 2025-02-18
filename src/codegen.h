@@ -40,7 +40,7 @@ enum RegisterType : uint8_t {
 };
 
 enum RegisterTypeIndex {
-    SSE_IDX,
+    SSE_IDX = 0,
     SCRATCH_IDX,
     PRESERVED_IDX,
     PARAM_IDX,
@@ -53,18 +53,16 @@ enum RegisterStatus : uint8_t {
 };
 
 enum RegisterStatusIndex {
-    NO_USE_IDX,
+    NO_USE_IDX = 0,
     INUSE_FOR_PARAM_IDX,
     INUSE_IDX,
 };
 
 class RegisterAllocator {
 public:
-    Register* alloc(uint8_t rt1, uint8_t rt2 = 0, uint8_t rt3 = 0);
+    Register* alloc(uint8_t rt = 0);
 
     void free(Register* reg);
-
-    [[nodiscard]] bool status(const uint32_t id) const { return registers[id].status; }
 
     const char* nameFromReg(const Register* reg, uint32_t size);
 
@@ -75,6 +73,8 @@ public:
     Register* regFromID(uint32_t id);
 
 private:
+    Register* scan(const uint32_t* priorityOrder, int size);
+
     Register registers[REGISTER_COUNT] = {
         {RAX, SCRATCH, NO_USE},
         {RDI, SCRATCH | PARAM, NO_USE},
@@ -144,6 +144,10 @@ private:
         {"xmm14", "", "", "", ""},
         {"xmm15", "", "", "", ""},
     };
+
+    static constexpr uint32_t priorityOrder[3] = {SCRATCH, SCRATCH | PARAM, PRESERVED};
+
+    static constexpr uint32_t priorityOrderSSE[2] = {SSE | PARAM, SSE};
 };
 
 class StackAllocator {
