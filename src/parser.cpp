@@ -90,7 +90,7 @@ ExprPtr Parser::parseExpr() {
             expr = parseReturn();
             break;
         default:
-            throw InvalidSyntaxError(mFileName, mCurrentToken.value.c_str(), 0);
+            throw InvalidSyntaxError(mFileName, mCurrentToken.lexeme.c_str(), 0);
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
@@ -357,13 +357,13 @@ ExprPtr Parser::parseAtom() {
     if (mCurrentToken.type == TokenType::STRING) {
         auto token = mCurrentToken;
         advance();
-        return std::make_shared<StringExpr>(token.value);
+        return std::make_shared<StringExpr>(token.lexeme);
     }
 
     if (mCurrentToken.type == TokenType::VAR) {
         auto token = mCurrentToken;
         advance();
-        ExprPtr name = std::make_shared<StringExpr>(token.value);
+        ExprPtr name = std::make_shared<StringExpr>(token.lexeme);
         ExprPtr value = std::make_shared<Uninitialized>();
         return std::make_shared<VarExpr>(name, value);
     }
@@ -390,10 +390,10 @@ ExprPtr Parser::parseNumber() {
     advance();
 
     if (token.type == TokenType::INT) {
-        return std::make_shared<IntExpr>(std::stoi(token.value));
+        return std::make_shared<IntExpr>(std::stoi(token.lexeme));
     }
     if (token.type == TokenType::DOUBLE) {
-        return std::make_shared<DoubleExpr>(std::stof(token.value));
+        return std::make_shared<DoubleExpr>(std::stof(token.lexeme));
     }
 
     throw InvalidSyntaxError(mFileName, EXPECTED_NUMBER_ERROR, 0);

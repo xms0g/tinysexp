@@ -38,7 +38,7 @@ struct StringExpr final : IExpr {
 
     StringExpr() = default;
 
-    explicit StringExpr(std::string& str) : data(str) {
+    explicit StringExpr(std::string& str) : data(std::move(str)) {
     }
 };
 

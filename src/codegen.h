@@ -121,7 +121,7 @@ private:
         {"r10", "r10d", "r10w", "", "r10b"},
         {"r11", "r11d", "r11w", "", "r11b"},
         {"rbp", "ebp", "bp", "", "bpl"},
-        {"rsp", "esp", "sp", "bh", "spl"},
+        {"rsp", "esp", "sp", "", "spl"},
         {"rbx", "ebx", "bx", "bh", "bl"},
         {"r12", "r12d", "r12w", "", "r12b"},
         {"r13", "r13d", "r13w", "", "r13b"},
@@ -156,7 +156,7 @@ public:
 
     void dealloc(uint32_t size);
 
-    uint32_t getOffset() const { return stackOffset; }
+    [[nodiscard]] uint32_t getOffset() const { return stackOffset; }
 
     int pushStackFrame(const std::string& funcName, const std::string& varName, SymbolType stype);
 

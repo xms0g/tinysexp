@@ -32,11 +32,11 @@ enum class TokenType {
 
 struct Token {
     TokenType type{};
-    std::string value;
+    std::string lexeme;
 
     Token() = default;
 
-    explicit Token(TokenType type, std::string value = "") : type(type), value(std::move(value)) {}
+    explicit Token(TokenType type, std::string value = "") : type(type), lexeme(std::move(value)) {}
 };
 
 struct Position {
