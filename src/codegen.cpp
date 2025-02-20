@@ -587,17 +587,20 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 
     // rax -> dividend
     // idiv divisor[register/memory]
-    // We have to check out reg1 isn't rax and divisor is rax cases.
+    // We have to check out reg1 isn't rax and divisor is in rax cases.
     if (std::strcmp(op.first, "idiv") == 0) {
-        const bool raxInUse = registerAllocator.regFromID(RAX)->status >> INUSE_IDX & 1;
+        bool raxInUse{false};
 
         if (reg1->id != RAX) {
             if (reg2->id == RAX) {
                 auto* newRP = register_alloc();
                 mov(getRegName(newRP, REG64), "rax");
                 mov("rax", getRegName(reg1, REG64));
+                register_free(reg2);
                 reg2 = newRP;
             } else {
+                raxInUse = registerAllocator.regFromID(RAX)->status >> INUSE_IDX & 1;
+
                 if (raxInUse) {
                     push("rax")
                 }
