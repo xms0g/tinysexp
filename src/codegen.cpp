@@ -428,7 +428,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
             reg->status |= INUSE_FOR_PARAM;
 
             paramToRegisters.emplace(funcName + cast::toString(arg->name)->data, reg->id);
-            mov(getRegNameByID(paramRegisters[i], REG64), int_->n);
+            mov(getRegName(reg, REG64), int_->n);
         } else if (auto double_ = cast::toDouble(arg->value)) {
             paramToRegisters.emplace(funcName + cast::toString(arg->name)->data, paramRegistersSSE[i]);
         }
@@ -530,8 +530,6 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     Register* reg1 = emitNode(lhs);
     Register* reg2 = emitNode(rhs);
 
-    //TODO: Be sure returned register is rax
-
     if (reg1->rType >> SSE_IDX & 1 && (reg2->rType >> SCRATCH_IDX & 1 || reg2->rType >> PRESERVED_IDX & 1)) {
         auto* newRP = registerAllocator.alloc(SSE);
         const char* newRPStr = getRegName(newRP, REG64);
@@ -565,18 +563,36 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
         return reg1;
     }
 
+    // rax -> dividend
+    // idiv divisor[register/memory]
+    // We have to check out reg1 isn't rax and divisor is rax cases.
     if (std::strcmp(op.first, "idiv") == 0) {
+        const bool raxInUse = registerAllocator.regFromID(RAX)->status >> INUSE_IDX & 1;
+
         if (reg1->id != RAX) {
-            if (registerAllocator.regFromID(RAX)->status >> INUSE & 1) {
-                push("rax");
+            if (reg2->id == RAX) {
+                auto* newRP = register_alloc();
+                mov(getRegName(newRP, REG64), "rax");
                 mov("rax", getRegName(reg1, REG64));
-                pop("rax");
+                reg2 = newRP;
             } else {
+                if (raxInUse) {
+                    push("rax")
+                }
                 mov("rax", getRegName(reg1, REG64));
             }
         }
+
         cqo();
         emitInstr1op("idiv", getRegName(reg2, REG64));
+
+        if (reg1->id != RAX) {
+            mov(getRegName(reg1, REG64), "rax");
+        }
+
+        if (raxInUse) {
+            pop("rax")
+        }
     } else {
         emitInstr2op(op.first, getRegName(reg1, REG64), getRegName(reg2, REG64));
     }
