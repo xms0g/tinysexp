@@ -180,7 +180,7 @@ public:
     std::string emit(const ExprPtr& ast);
 
 private:
-    void emitAST(const ExprPtr& ast);
+    Register* emitAST(const ExprPtr& ast);
 
     Register* emitBinop(const BinOpExpr& binop);
 

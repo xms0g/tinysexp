@@ -186,11 +186,12 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     return generatedCode;
 }
 
-void CodeGen::emitAST(const ExprPtr& ast) {
+Register* CodeGen::emitAST(const ExprPtr& ast) {
     if (const auto binop = cast::toBinop(ast)) {
-        Register* rp = emitBinop(*binop);
-        register_free(rp)
-    } else if (const auto dotimes = cast::toDotimes(ast)) {
+        return emitBinop(*binop);
+    }
+
+    if (const auto dotimes = cast::toDotimes(ast)) {
         emitDotimes(*dotimes);
     } else if (const auto loop = cast::toLoop(ast)) {
         emitLoop(*loop);
@@ -205,7 +206,7 @@ void CodeGen::emitAST(const ExprPtr& ast) {
     } else if (const auto defun = cast::toDefun(ast)) {
         functions.emplace_back(&CodeGen::emitDefun, *defun);
     } else if (const auto funcCall = cast::toFuncCall(ast)) {
-        emitFuncCall(*funcCall);
+        return emitFuncCall(*funcCall);
     } else if (const auto if_ = cast::toIf(ast)) {
         emitIf(*if_);
     } else if (const auto when = cast::toWhen(ast)) {
@@ -213,6 +214,7 @@ void CodeGen::emitAST(const ExprPtr& ast) {
     } else if (const auto cond = cast::toCond(ast)) {
         emitCond(*cond);
     }
+    return nullptr;
 }
 
 Register* CodeGen::emitBinop(const BinOpExpr& binop) {
@@ -368,6 +370,7 @@ void CodeGen::emitDefconst(const DefconstExpr& defconst) {
 }
 
 void CodeGen::emitDefun(const DefunExpr& defun) {
+    const Register* rv = nullptr;
     const auto func = cast::toVar(defun.name);
     const std::string funcName = cast::toString(func->name)->data;
     currentScope = funcName;
@@ -378,12 +381,23 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     mov("rbp", "rsp");
 
     for (auto& form: defun.forms) {
-        emitAST(form);
+        rv = emitAST(form);
     }
 
-    for (int i = 0; i < 6; ++i) {
-        auto* reg = registerAllocator.regFromID(paramRegisters[i]);
+    for (const int paramRegister : paramRegisters) {
+        auto* reg = registerAllocator.regFromID(paramRegister);
         reg->status &= ~INUSE_FOR_PARAM;
+    }
+
+    for (const int sse : paramRegistersSSE) {
+        auto* reg = registerAllocator.regFromID(sse);
+        reg->status &= ~INUSE_FOR_PARAM;
+    }
+
+    if (rv->rType >> SSE_IDX & 1 && rv->id != xmm0) {
+        mov("xmm0", getRegName(rv, REG64));
+    } else if (!(rv->rType >> SSE_IDX & 1) && rv->id != RAX) {
+        mov("rax", getRegName(rv, REG64));
     }
 
     pop("rbp")
