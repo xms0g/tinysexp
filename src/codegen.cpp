@@ -10,6 +10,14 @@
 #define cqo() generatedCode += "\tcqo\n"
 #define newLine() generatedCode += "\n";
 
+#define stack_alloc(size) \
+    emitInstr2op("sub", "rsp", size); \
+    stackAllocator.alloc(size);
+
+#define stack_dealloc(size) \
+    emitInstr2op("add", "rsp", size); \
+    stackAllocator.dealloc(size);
+
 #define push(v) \
     emitInstr1op("push", v); \
     stackAllocator.alloc(8);
@@ -17,6 +25,14 @@
 #define pop(rn) \
     emitInstr1op("pop", rn); \
     stackAllocator.dealloc(8);
+
+#define pushxmm(xmm) \
+    stack_alloc(16) \
+    emitInstr2op("movdqu", "dqword [rsp]", xmm); \
+
+#define popxmm(xmm) \
+    emitInstr2op("movdqu", xmm, "dqword [rsp]"); \
+    stack_dealloc(16)
 
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movd(d, s) emitInstr2op("movsd", d, s)
@@ -44,14 +60,6 @@
             }                                               \
                                                             \
     }
-
-#define stack_alloc(size) \
-    emitInstr2op("sub", "rsp", size); \
-    stackAllocator.alloc(size);
-
-#define stack_dealloc(size) \
-    emitInstr2op("add", "rsp", size); \
-    stackAllocator.dealloc(size);
 
 Register* RegisterAllocator::alloc(uint8_t rt) {
     if (rt == SSE) {
