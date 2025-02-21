@@ -230,14 +230,14 @@ private:
 
     Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
 
-    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size);
+    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, const Register* rp, uint32_t size);
 
     std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
 
     uint32_t getMemSize(const ExprPtr& var);
 
     template<typename T>
-    void pushParamToRegister(std::string& paramName, uint32_t rid, T value);
+    void pushParamToRegister(const std::string& paramName, uint32_t rid, T value);
 
     void pushParamOntoStack(const VarExpr& param, int& stackIdx);
 

@@ -29,9 +29,18 @@
 #define pushxmm(xmm) \
     stack_alloc(16) \
     emitInstr2op("movdqu", "dqword [rsp]", xmm);
+
 #define popxmm(xmm) \
     emitInstr2op("movdqu", xmm, "dqword [rsp]"); \
     stack_dealloc(16)
+
+#define popInUseRegisters(registers, pop)                                   \
+    for (const int paramRegister: registers) {                              \
+        if (const auto* reg = registerAllocator.regFromID(paramRegister);   \
+            reg->status >> INUSE_IDX & 1) {                                 \
+            pop(getRegName(reg, REG64));                                    \
+        }                                                                   \
+    }
 
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movd(d, s) emitInstr2op("movsd", d, s)
@@ -329,6 +338,7 @@ void CodeGen::emitLoop(const LoopExpr& loop) {
                 emitAST(form);
                 continue;
             }
+
             emitTest(when->test, trueLabel, loopLabel);
             emitJump("jmp", doneLabel);
             hasReturn = true;
@@ -397,15 +407,15 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         mov("rax", getRegName(rv, REG64));
     }
 
-    for (const int paramRegister: paramRegisters) {
-        auto* reg = registerAllocator.regFromID(paramRegister);
-        reg->status &= ~INUSE_FOR_PARAM;
-    }
+    auto clearInUseParamBit = [&](const auto& registers) {
+        for (const int paramRegister: registers) {
+            auto* reg = registerAllocator.regFromID(paramRegister);
+            reg->status &= ~INUSE_FOR_PARAM;
+        }
+    };
 
-    for (const int sse: paramRegistersSSE) {
-        auto* reg = registerAllocator.regFromID(sse);
-        reg->status &= ~INUSE_FOR_PARAM;
-    }
+    clearInUseParamBit(paramRegisters);
+    clearInUseParamBit(paramRegistersSSE);
 
     pop("rbp")
     ret();
@@ -417,7 +427,8 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     currentScope = funcName;
 
     uint32_t stackAlignedSize;
-    if (const uint32_t stackOffset = stackAllocator.getOffset(); stackOffset % 16 != 0)
+    if (const uint32_t stackOffset = stackAllocator.getOffset();
+        stackOffset % 16 != 0)
         stackAlignedSize = stackOffset + 8;
 
     stack_alloc(stackAlignedSize)
@@ -425,35 +436,26 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     int scratchIdx = 0, sseIdx = 0, stackIdx = 0;
     for (const auto& arg: funcCall.args) {
         const auto& param = cast::toVar(arg);
+        const std::string paramName = cast::toString(param->name)->data;
 
         // If scratch param size > 5 or sse param size > 7, push the params onto stack
-        const bool needsStack = (scratchIdx > 5 && cast::toInt(param->value)) ||
-                                (sseIdx > 7 && cast::toDouble(param->value));
-        if (needsStack) {
+        if ((scratchIdx > 5 && cast::toInt(param->value)) ||
+            (sseIdx > 7 && cast::toDouble(param->value))) {
             pushParamOntoStack(*param, stackIdx);
             continue;
         }
-
+        // Push parameter to the appropriate register
         if (const auto int_ = cast::toInt(param->value)) {
-            pushParamToRegister(cast::toString(param->name)->data, paramRegisters[scratchIdx++], int_->n);
+            pushParamToRegister(paramName, paramRegisters[scratchIdx++], int_->n);
         } else if (const auto double_ = cast::toDouble(param->value)) {
-            pushParamToRegister(cast::toString(param->name)->data, paramRegistersSSE[sseIdx++], double_->n);
+            pushParamToRegister(paramName, paramRegistersSSE[sseIdx++], double_->n);
         }
     }
 
     emitInstr1op("call", funcName);
 
-    for (const int paramRegister: paramRegisters) {
-        if (const auto* reg = registerAllocator.regFromID(paramRegister); reg->status >> INUSE_IDX & 1) {
-            pop(getRegName(reg, REG64));
-        }
-    }
-
-    for (const int paramRegister: paramRegistersSSE) {
-        if (const auto* reg = registerAllocator.regFromID(paramRegister); reg->status >> INUSE_IDX & 1) {
-            popxmm(getRegName(reg, REG64));
-        }
-    }
+    popInUseRegisters(paramRegisters, pop);
+    popInUseRegisters(paramRegistersSSE, popxmm);
 
     stack_dealloc(stackAlignedSize)
 
@@ -810,7 +812,7 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
     Register* setReg1,* setReg2;
     const ExprPtr zero = std::make_shared<IntExpr>(0);
-
+    //TODO:: Refactor!!!
     auto* rp1 = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
 
     if (rp1->rType >> SSE_IDX & 1) {
@@ -905,7 +907,8 @@ void CodeGen::handleAssignment(const ExprPtr& var, uint32_t size) {
 void CodeGen::handlePrimitive(const VarExpr& var, const char* instr, const std::string& value) {
     const std::string varName = cast::toString(var.name)->data;
 
-    if (const std::string key = currentScope + varName; paramToRegisters.contains(key)) {
+    if (const std::string key = currentScope + varName;
+        paramToRegisters.contains(key)) {
         const uint32_t rid = paramToRegisters.at(key);
         emitInstr2op(instr, registerAllocator.nameFromID(rid, REG64), value);
     } else {
@@ -936,7 +939,8 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
 
     switch (var.sType) {
         case SymbolType::PARAM: {
-            if (const std::string key = currentScope + varName; paramToRegisters.contains(key)) {
+            if (const std::string key = currentScope + varName;
+                paramToRegisters.contains(key)) {
                 const uint32_t rid = paramToRegisters.at(key);
                 rp = registerAllocator.regFromID(rid);
             } else {
@@ -968,7 +972,7 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
     return rp;
 }
 
-void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, Register* rp, uint32_t size) {
+void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, const Register* rp, uint32_t size) {
     const char* rpStr = getRegName(rp, size);
 
     if (rp->rType >> SCRATCH_IDX & 1 || rp->rType >> PRESERVED_IDX & 1) {
@@ -1014,7 +1018,7 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 }
 
 template<typename T>
-void CodeGen::pushParamToRegister(std::string& paramName, uint32_t rid, T value) {
+void CodeGen::pushParamToRegister(const std::string& paramName, uint32_t rid, T value) {
     auto* reg = registerAllocator.regFromID(rid);
 
     if (reg->status >> INUSE_IDX & 1) {
