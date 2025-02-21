@@ -28,8 +28,7 @@
 
 #define pushxmm(xmm) \
     stack_alloc(16) \
-    emitInstr2op("movdqu", "dqword [rsp]", xmm); \
-
+    emitInstr2op("movdqu", "dqword [rsp]", xmm);
 #define popxmm(xmm) \
     emitInstr2op("movdqu", xmm, "dqword [rsp]"); \
     stack_dealloc(16)
@@ -590,13 +589,12 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     // We have to check out reg1 isn't rax and divisor is in rax cases.
     if (std::strcmp(op.first, "idiv") == 0) {
         bool raxInUse{false};
+        const bool isReg1NotRax = reg1->id != RAX;
 
-        if (reg1->id != RAX) {
+        if (isReg1NotRax) {
             if (reg2->id == RAX) {
                 auto* newRP = register_alloc();
                 mov(getRegName(newRP, REG64), "rax");
-                mov("rax", getRegName(reg1, REG64));
-                register_free(reg2);
                 reg2 = newRP;
             } else {
                 raxInUse = registerAllocator.regFromID(RAX)->status >> INUSE_IDX & 1;
@@ -606,12 +604,13 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
                 }
                 mov("rax", getRegName(reg1, REG64));
             }
+            mov("rax", getRegName(reg1, REG64));
         }
 
         cqo();
         emitInstr1op("idiv", getRegName(reg2, REG64));
 
-        if (reg1->id != RAX) {
+        if (isReg1NotRax) {
             mov(getRegName(reg1, REG64), "rax");
         }
 
