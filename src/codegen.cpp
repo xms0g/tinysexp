@@ -391,20 +391,20 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         rv = emitAST(form);
     }
 
-    for (const int paramRegister : paramRegisters) {
-        auto* reg = registerAllocator.regFromID(paramRegister);
-        reg->status &= ~INUSE_FOR_PARAM;
-    }
-
-    for (const int sse : paramRegistersSSE) {
-        auto* reg = registerAllocator.regFromID(sse);
-        reg->status &= ~INUSE_FOR_PARAM;
-    }
-
     if (rv->rType >> SSE_IDX & 1 && rv->id != xmm0) {
         mov("xmm0", getRegName(rv, REG64));
     } else if (!(rv->rType >> SSE_IDX & 1) && rv->id != RAX) {
         mov("rax", getRegName(rv, REG64));
+    }
+
+    for (const int paramRegister: paramRegisters) {
+        auto* reg = registerAllocator.regFromID(paramRegister);
+        reg->status &= ~INUSE_FOR_PARAM;
+    }
+
+    for (const int sse: paramRegistersSSE) {
+        auto* reg = registerAllocator.regFromID(sse);
+        reg->status &= ~INUSE_FOR_PARAM;
     }
 
     pop("rbp")
@@ -414,52 +414,44 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     const auto func = cast::toVar(funcCall.name);
     const std::string funcName = cast::toString(func->name)->data;
-    const size_t argCount = funcCall.args.size();
+    currentScope = funcName;
 
-    const uint32_t stackOffset = stackAllocator.getOffset();
-    uint32_t stackAlignedSize = stackOffset < 16 ? 16 : stackOffset + 8;
+    uint32_t stackAlignedSize;
+    if (const uint32_t stackOffset = stackAllocator.getOffset(); stackOffset % 16 != 0)
+        stackAlignedSize = stackOffset + 8;
+
     stack_alloc(stackAlignedSize)
 
-    for (int i = 0; i < argCount; ++i) {
-        // If param size > 5, push the params onto stack
-        if (i > 5) {
-            for (int j = 6; j < argCount; ++j) {
-                const auto arg_ = cast::toVar(funcCall.args[j]);
-                const std::string argName = cast::toString(arg_->name)->data;
+    int scratchIdx = 0, sseIdx = 0, stackIdx = 0;
+    for (const auto& arg: funcCall.args) {
+        const auto& param = cast::toVar(arg);
 
-                stackAllocator.pushStackFrame(funcName, argName, arg_->sType);
-            }
-
-            for (size_t j = argCount - 1; j > 5; --j) {
-                const auto arg_ = cast::toVar(funcCall.args[j]);
-                push(cast::toInt(arg_->value)->n)
-            }
-
-            break;
+        // If scratch param size > 5 or sse param size > 7, push the params onto stack
+        const bool needsStack = (scratchIdx > 5 && cast::toInt(param->value)) ||
+                                (sseIdx > 7 && cast::toDouble(param->value));
+        if (needsStack) {
+            pushParamOntoStack(*param, stackIdx);
+            continue;
         }
 
-        const auto arg = cast::toVar(funcCall.args[i]);
-
-        if (const auto int_ = cast::toInt(arg->value)) {
-            auto* reg = registerAllocator.regFromID(paramRegisters[i]);
-            if (reg->status >> INUSE_IDX & 1) {
-                push(getRegName(reg, REG64));
-            }
-            reg->status &= ~NO_USE;
-            reg->status |= INUSE_FOR_PARAM;
-
-            paramToRegisters.emplace(funcName + cast::toString(arg->name)->data, reg->id);
-            mov(getRegName(reg, REG64), int_->n);
-        } else if (auto double_ = cast::toDouble(arg->value)) {
-            paramToRegisters.emplace(funcName + cast::toString(arg->name)->data, paramRegistersSSE[i]);
+        if (const auto int_ = cast::toInt(param->value)) {
+            pushParamToRegister(cast::toString(param->name)->data, paramRegisters[scratchIdx++], int_->n);
+        } else if (const auto double_ = cast::toDouble(param->value)) {
+            pushParamToRegister(cast::toString(param->name)->data, paramRegistersSSE[sseIdx++], double_->n);
         }
     }
 
     emitInstr1op("call", funcName);
 
-    for (int i = 0; i < 6; ++i) {
-        if (const auto* reg = registerAllocator.regFromID(paramRegisters[i]); reg->status >> INUSE_IDX & 1) {
+    for (const int paramRegister: paramRegisters) {
+        if (const auto* reg = registerAllocator.regFromID(paramRegister); reg->status >> INUSE_IDX & 1) {
             pop(getRegName(reg, REG64));
+        }
+    }
+
+    for (const int paramRegister: paramRegistersSSE) {
+        if (const auto* reg = registerAllocator.regFromID(paramRegister); reg->status >> INUSE_IDX & 1) {
+            popxmm(getRegName(reg, REG64));
         }
     }
 
@@ -602,7 +594,6 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
                 if (raxInUse) {
                     push("rax")
                 }
-                mov("rax", getRegName(reg1, REG64));
             }
             mov("rax", getRegName(reg1, REG64));
         }
@@ -1017,9 +1008,44 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
         }
 
         var_ = cast::toVar(var_->value);
-    } while (cast::toVar(var_));
+    } while (var_);
 
     return 0;
+}
+
+template<typename T>
+void CodeGen::pushParamToRegister(std::string& argName, uint32_t rid, T value) {
+    auto* reg = registerAllocator.regFromID(rid);
+
+    if (reg->status >> INUSE_IDX & 1) {
+        if (reg->rType >> SSE_IDX & 1) {
+            pushxmm(getRegName(reg, REG64));
+        } else {
+            push(getRegName(reg, REG64));
+        }
+    }
+
+    reg->status &= ~NO_USE;
+    reg->status |= INUSE_FOR_PARAM;
+
+    mov(getRegName(reg, REG64), value);
+    paramToRegisters.emplace(currentScope + argName, reg->id);
+}
+
+void CodeGen::pushParamOntoStack(const VarExpr& param, int& stackIdx) {
+    const std::string paramName = cast::toString(param.name)->data;
+
+    stackAllocator.pushStackFrame(currentScope, paramName, param.sType);
+
+    const std::string addr = stackIdx ? std::format("qword [rsp + {}]", stackIdx) : "qword [rsp]";
+
+    if (const auto int_ = cast::toInt(param.value)) {
+        mov(addr, int_->n);
+    } else if (const auto double_ = cast::toDouble(param.value)) {
+        movd(addr, double_->n);
+    }
+
+    stackIdx += 8;
 }
 
 const char* CodeGen::getRegName(const Register* reg, uint32_t size) {
