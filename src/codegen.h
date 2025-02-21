@@ -237,7 +237,7 @@ private:
     uint32_t getMemSize(const ExprPtr& var);
 
     template<typename T>
-    void pushParamToRegister(std::string& argName, uint32_t rid, T value);
+    void pushParamToRegister(std::string& paramName, uint32_t rid, T value);
 
     void pushParamOntoStack(const VarExpr& param, int& stackIdx);
 

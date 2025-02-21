@@ -1014,7 +1014,7 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 }
 
 template<typename T>
-void CodeGen::pushParamToRegister(std::string& argName, uint32_t rid, T value) {
+void CodeGen::pushParamToRegister(std::string& paramName, uint32_t rid, T value) {
     auto* reg = registerAllocator.regFromID(rid);
 
     if (reg->status >> INUSE_IDX & 1) {
@@ -1029,7 +1029,7 @@ void CodeGen::pushParamToRegister(std::string& argName, uint32_t rid, T value) {
     reg->status |= INUSE_FOR_PARAM;
 
     mov(getRegName(reg, REG64), value);
-    paramToRegisters.emplace(currentScope + argName, reg->id);
+    paramToRegisters.emplace(currentScope + paramName, reg->id);
 }
 
 void CodeGen::pushParamOntoStack(const VarExpr& param, int& stackIdx) {
