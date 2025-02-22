@@ -66,7 +66,6 @@
             if (rp->rType >> PRESERVED_IDX & 1) {           \
                 pop(getRegName(rp, REG64))                  \
             }                                               \
-                                                            \
     }
 
 Register* RegisterAllocator::alloc(uint8_t rt) {
@@ -426,10 +425,13 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     const std::string funcName = cast::toString(func->name)->data;
     currentScope = funcName;
 
-    uint32_t stackAlignedSize;
-    if (const uint32_t stackOffset = stackAllocator.getOffset();
-        stackOffset % 16 != 0)
-        stackAlignedSize = stackOffset + 8;
+    // Calculate the proper stack size before function call
+    const size_t stackParamsSize = funcCall.args.size() - 6;
+    const uint32_t stackOffset = stackAllocator.getOffset();
+    uint32_t stackAlignedSize = stackOffset + stackParamsSize * 8;
+
+    if (stackAlignedSize % 16 != 0)
+        stackAlignedSize += 8;
 
     stack_alloc(stackAlignedSize)
 
