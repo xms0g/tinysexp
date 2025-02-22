@@ -426,7 +426,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     currentScope = funcName;
 
     // Calculate the proper stack size before function call
-    const size_t stackParamsSize = funcCall.args.size() - 6;
+    const size_t stackParamsSize = funcCall.args.size() > 6 ? funcCall.args.size() - 6 : 0;
     const uint32_t stackOffset = stackAllocator.getOffset();
     uint32_t stackAlignedSize = stackOffset + stackParamsSize * 8;
 
