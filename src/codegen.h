@@ -184,11 +184,11 @@ private:
 
     Register* emitBinop(const BinOpExpr& binop);
 
-    void emitDotimes(const DotimesExpr& dotimes);
+    Register* emitDotimes(const DotimesExpr& dotimes);
 
-    void emitLoop(const LoopExpr& loop);
+    Register* emitLoop(const LoopExpr& loop);
 
-    void emitLet(const LetExpr& let);
+    Register* emitLet(const LetExpr& let);
 
     void emitSetq(const SetqExpr& setq);
 
@@ -200,11 +200,11 @@ private:
 
     Register* emitFuncCall(const FuncCallExpr& funcCall);
 
-    void emitIf(const IfExpr& if_);
+    Register* emitIf(const IfExpr& if_);
 
-    void emitWhen(const WhenExpr& when);
+    Register* emitWhen(const WhenExpr& when);
 
-    void emitCond(const CondExpr& cond);
+    Register* emitCond(const CondExpr& cond);
 
     Register* emitNumb(const ExprPtr& n);
 
