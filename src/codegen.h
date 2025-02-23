@@ -180,6 +180,14 @@ public:
     std::string emit(const ExprPtr& ast);
 
 private:
+    bool isSSE(const uint8_t rtype) { return (rtype >> SSE_IDX) & 1; }
+
+    bool isSCRATCH(const uint8_t rtype) { return (rtype >> SCRATCH_IDX) & 1; }
+
+    bool isPRESERVED(const uint8_t rtype) { return (rtype >> PRESERVED_IDX) & 1; }
+
+    bool isInUse(const uint8_t status) { return (status >> INUSE_IDX) & 1; }
+
     Register* emitAST(const ExprPtr& ast);
 
     Register* emitBinop(const BinOpExpr& binop);
@@ -218,7 +226,7 @@ private:
 
     Register* emitSet(const ExprPtr& set);
 
-    Register* emitLogAO(const BinOpExpr& binop, const char* op);
+    Register* emitLogOp(const BinOpExpr& binop, const char* op);
 
     Register* emitSetReg(const BinOpExpr& binop);
 
@@ -260,9 +268,9 @@ private:
     // Stack
     StackAllocator stackAllocator;
     // Sections
-    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> sections;
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > sections;
     // Functions
-    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&>> functions;
+    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > functions;
 
     static constexpr const char* memorySize[SIZE_COUNT] = {
         "qword", "dword", "word", "byte", "byte"
@@ -282,7 +290,7 @@ private:
 
     static constexpr int paramRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
 
-    static constexpr int paramRegistersSSE[] = {xmm0, xmm1, xmm2,xmm3, xmm4, xmm5, xmm6, xmm7};
+    static constexpr int paramRegistersSSE[] = {xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7};
 };
 
 #endif

@@ -37,7 +37,7 @@
 #define popInUseRegisters(registers, pop)                                   \
     for (const int paramRegister: registers) {                              \
         if (const auto* reg = registerAllocator.regFromID(paramRegister);   \
-            reg->status >> INUSE_IDX & 1) {                                 \
+            isInUse(reg->status)) {                                         \
             pop(getRegName(reg, REG64));                                    \
         }                                                                   \
     }
@@ -54,7 +54,7 @@
 
 #define register_alloc() ([&]() {                           \
     auto* rp = registerAllocator.alloc();                   \
-    if (rp && (rp->rType >> PRESERVED_IDX & 1)) {           \
+    if (rp && isPRESERVED(rp->rType)) {                     \
         push(getRegName(rp, REG64))                         \
     }                                                       \
     return rp;                                              \
@@ -63,7 +63,7 @@
 #define register_free(rp)                                   \
     if (rp && !(rp->status >> INUSE_FOR_PARAM_IDX & 1)) {   \
             registerAllocator.free(rp);                     \
-            if (rp->rType >> PRESERVED_IDX & 1) {           \
+            if (isPRESERVED(rp->rType)) {                   \
                 pop(getRegName(rp, REG64))                  \
             }                                               \
     }
@@ -303,13 +303,14 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
         register_free(reg)
     }
     // Increment iteration count
-    auto* rp = register_alloc();
+    auto* tempReg = register_alloc();
+    const char* tempRegStr = getRegName(tempReg, REG64);
 
-    mov(getRegName(rp, REG64), iterVarAddr);
-    emitInstr2op("add", getRegName(rp, REG64), 1);
-    mov(iterVarAddr, getRegName(rp, REG64));
+    mov(tempRegStr, iterVarAddr);
+    emitInstr2op("add", tempRegStr, 1);
+    mov(iterVarAddr, tempRegStr);
 
-    register_free(rp)
+    register_free(tempReg)
 
     emitJump("jmp", loopLabel);
     emitLabel(doneLabel);
@@ -400,11 +401,10 @@ void CodeGen::emitDefconst(const DefconstExpr& defconst) {
 void CodeGen::emitDefun(const DefunExpr& defun) {
     const Register* reg = nullptr;
     const auto func = cast::toVar(defun.name);
-    const std::string funcName = cast::toString(func->name)->data;
-    currentScope = funcName;
+    currentScope = cast::toString(func->name)->data;
 
     newLine();
-    emitLabel(funcName);
+    emitLabel(currentScope);
     push("rbp")
     mov("rbp", "rsp");
 
@@ -412,9 +412,9 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         reg = emitAST(form);
     }
 
-    if (reg->rType >> SSE_IDX & 1 && reg->id != xmm0) {
+    if (reg && isSSE(reg->rType) && reg->id != xmm0) {
         mov("xmm0", getRegName(reg, REG64));
-    } else if (!(reg->rType >> SSE_IDX & 1) && reg->id != RAX) {
+    } else if (reg && !isSSE(reg->rType) && reg->id != RAX) {
         mov("rax", getRegName(reg, REG64));
     }
 
@@ -448,7 +448,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 
     int scratchIdx = 0, sseIdx = 0, stackIdx = 0;
     for (const auto& arg: funcCall.args) {
-        const auto& param = cast::toVar(arg);
+        const auto param = cast::toVar(arg);
         const std::string paramName = cast::toString(param->name)->data;
 
         // If scratch param size > 5 or sse param size > 7, push the params onto stack
@@ -494,6 +494,7 @@ Register* CodeGen::emitIf(const IfExpr& if_) {
         std::string done = createLabel();
         emitJump("jmp", done);
         emitLabel(elseLabel);
+
         reg = emitAST(if_.else_);
         emitLabel(done);
     } else {
@@ -572,80 +573,80 @@ Register* CodeGen::emitNode(const ExprPtr& node) {
 }
 
 Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op) {
-    Register* reg1 = emitNode(lhs);
-    Register* reg2 = emitNode(rhs);
+    Register* regLhs = emitNode(lhs);
+    Register* regRhs = emitNode(rhs);
 
-    if (reg1->rType >> SSE_IDX & 1 && (reg2->rType >> SCRATCH_IDX & 1 || reg2->rType >> PRESERVED_IDX & 1)) {
+    if (isSSE(regLhs->rType) && (isSCRATCH(regRhs->rType) || isPRESERVED(regRhs->rType))) {
         auto* newRP = registerAllocator.alloc(SSE);
         const char* newRPStr = getRegName(newRP, REG64);
 
-        emitInstr2op("cvtsi2sd", newRPStr, getRegName(reg2, REG64));
-        register_free(reg2)
+        emitInstr2op("cvtsi2sd", newRPStr, getRegName(regRhs, REG64));
+        register_free(regRhs)
 
-        emitInstr2op(op.second, getRegName(reg1, REG64), newRPStr);
+        emitInstr2op(op.second, getRegName(regLhs, REG64), newRPStr);
         register_free(newRP);
 
-        return reg1;
+        return regLhs;
     }
 
-    if ((reg1->rType >> SCRATCH_IDX & 1 || reg1->rType >> PRESERVED_IDX & 1) && reg2->rType >> SSE_IDX & 1) {
+    if ((isSCRATCH(regLhs->rType) || isPRESERVED(regLhs->rType)) && isSSE(regRhs->rType)) {
         auto* newRP = registerAllocator.alloc(SSE);
         const char* newRPStr = getRegName(newRP, REG64);
-        const char* reg2Str = getRegName(reg2, REG64);
+        const char* reg2Str = getRegName(regRhs, REG64);
 
-        emitInstr2op("cvtsi2sd", newRPStr, getRegName(reg1, REG64));
-        register_free(reg1)
+        emitInstr2op("cvtsi2sd", newRPStr, getRegName(regLhs, REG64));
+        register_free(regLhs)
 
         emitInstr2op(op.second, newRPStr, reg2Str);
         movd(reg2Str, newRPStr);
         register_free(newRP);
-        return reg2;
+        return regRhs;
     }
 
-    if (reg1->rType >> SSE_IDX & 1 && reg2->rType >> SSE_IDX & 1) {
-        emitInstr2op(op.second, getRegName(reg1, REG64), getRegName(reg2, REG64));
-        register_free(reg2);
-        return reg1;
+    if (isSSE(regLhs->rType) && isSSE(regRhs->rType)) {
+        emitInstr2op(op.second, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
+        register_free(regRhs);
+        return regLhs;
     }
 
     // rax -> dividend
     // idiv divisor[register/memory]
-    // We have to check out reg1 isn't rax and divisor is in rax cases.
+    // We have to check out lhs isn't rax and divisor is in rax cases.
     if (std::strcmp(op.first, "idiv") == 0) {
         bool raxInUse{false};
-        const bool isReg1NotRax = reg1->id != RAX;
+        const bool isReg1NotRax = regLhs->id != RAX;
 
         if (isReg1NotRax) {
-            if (reg2->id == RAX) {
+            if (regRhs->id == RAX) {
                 auto* newRP = register_alloc();
                 mov(getRegName(newRP, REG64), "rax");
-                reg2 = newRP;
+                regRhs = newRP;
             } else {
-                raxInUse = registerAllocator.regFromID(RAX)->status >> INUSE_IDX & 1;
+                raxInUse = isInUse(registerAllocator.regFromID(RAX)->status);
 
                 if (raxInUse) {
                     push("rax")
                 }
             }
-            mov("rax", getRegName(reg1, REG64));
+            mov("rax", getRegName(regLhs, REG64));
         }
 
         cqo();
-        emitInstr1op("idiv", getRegName(reg2, REG64));
+        emitInstr1op("idiv", getRegName(regRhs, REG64));
 
         if (isReg1NotRax) {
-            mov(getRegName(reg1, REG64), "rax");
+            mov(getRegName(regLhs, REG64), "rax");
         }
 
         if (raxInUse) {
             pop("rax")
         }
     } else {
-        emitInstr2op(op.first, getRegName(reg1, REG64), getRegName(reg2, REG64));
+        emitInstr2op(op.first, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
     }
 
-    register_free(reg2);
-    return reg1;
+    register_free(regRhs);
+    return regLhs;
 }
 
 void CodeGen::emitSection(const ExprPtr& var) {
@@ -771,7 +772,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
             default:
                 break;
         }
-    } else if (auto funcCall = cast::toFuncCall(test)) {
+    } else if (const auto funcCall = cast::toFuncCall(test)) {
         rp = emitFuncCall(*funcCall);
         register_free(rp)
     } else if (auto var = cast::toVar(test)) {
@@ -826,9 +827,9 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
                 emitSet8L("setle", setReg)
                 break;
             case TokenType::AND:
-                return emitLogAO(*binop, "and");
+                return emitLogOp(*binop, "and");
             case TokenType::OR:
-                return emitLogAO(*binop, "or");
+                return emitLogOp(*binop, "or");
             default:
                 break;
         }
@@ -839,58 +840,47 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
     return setReg;
 }
 
-Register* CodeGen::emitLogAO(const BinOpExpr& binop, const char* op) {
-    Register* setReg1,* setReg2;
+Register* CodeGen::emitLogOp(const BinOpExpr& binop, const char* op) {
     const ExprPtr zero = std::make_shared<IntExpr>(0);
-    //TODO:: Refactor!!!
-    auto* rp1 = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
 
-    if (rp1->rType >> SSE_IDX & 1) {
-        setReg1 = register_alloc();
-    } else {
-        setReg1 = rp1;
+    auto* regLhs = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
+    Register* setRegLhs = isSSE(regLhs->rType) ? register_alloc() : regLhs;
+
+    const char* setRegLhsStr = getRegName(setRegLhs, REG64);
+    const char* setRegLhs8LStr = getRegName(setRegLhs, REG8L);
+
+    emitInstr2op("xor", setRegLhsStr, setRegLhsStr);
+    emitInstr1op("setne", setRegLhs8LStr);
+
+    auto* regRhs = emitExpr(binop.rhs, zero, {"cmp", "ucomisd"});
+    Register* setRegRhs = isSSE(regRhs->rType) ? register_alloc() : regRhs;
+
+    const char* setRegRhsStr = getRegName(setRegRhs, REG64);
+    const char* setRegRhs8LStr = getRegName(setRegRhs, REG8L);
+
+    emitInstr2op("xor", setRegRhsStr, setRegRhsStr);
+    emitInstr1op("setne", setRegRhs8LStr);
+
+    emitInstr2op(op, setRegLhs8LStr, setRegRhs8LStr);
+    movzx(setRegLhsStr, setRegLhs8LStr);
+
+    if (isSSE(regLhs->rType)) {
+        emitInstr2op("cvtsi2sd", getRegName(regLhs, REG64), setRegLhsStr);
+        register_free(setRegLhs)
     }
 
-    const char* setReg1Str = getRegName(setReg1, REG64);
-    const char* setReg18LStr = getRegName(setReg1, REG8L);
-
-    emitInstr2op("xor", setReg1Str, setReg1Str);
-    emitInstr1op("setne", setReg18LStr);
-
-    auto* rp2 = emitExpr(binop.rhs, zero, {"cmp", "ucomisd"});
-
-    if (rp2->rType >> SSE_IDX & 1) {
-        setReg2 = register_alloc();
-    } else {
-        setReg2 = rp2;
+    if (isSSE(regRhs->rType)) {
+        register_free(setRegRhs)
     }
 
-    const char* setReg2Str = getRegName(setReg2, REG64);
-    const char* setReg28LStr = getRegName(setReg2, REG8L);
-
-    emitInstr2op("xor", setReg2Str, setReg2Str);
-    emitInstr1op("setne", setReg28LStr);
-
-    emitInstr2op(op, setReg18LStr, setReg28LStr);
-    movzx(setReg1Str, setReg18LStr);
-
-    if (rp1->rType >> SSE_IDX & 1) {
-        emitInstr2op("cvtsi2sd", getRegName(rp1, REG64), setReg1Str);
-        register_free(setReg1)
-    }
-
-    if (rp2->rType >> SSE_IDX & 1) {
-        register_free(setReg2)
-    }
-
-    register_free(rp2)
-    return rp1;
+    register_free(regRhs)
+    return regLhs;
 }
 
 Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
     const auto rp = emitBinop(binop);
 
-    if (rp->rType >> SSE_IDX & 1) {
+    if (isSSE(rp->rType)) {
         return register_alloc();
     }
     return rp;
@@ -1005,9 +995,9 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
 void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, const Register* rp, uint32_t size) {
     const char* rpStr = getRegName(rp, size);
 
-    if (rp->rType >> SCRATCH_IDX & 1 || rp->rType >> PRESERVED_IDX & 1) {
+    if (isSCRATCH(rp->rType) || isPRESERVED(rp->rType)) {
         mov(getAddr(varName, stype, size), rpStr);
-    } else if (rp->rType >> SSE_IDX & 1) {
+    } else if (isSSE(rp->rType)) {
         movd(getAddr(varName, stype, size), rpStr);
     }
 }
@@ -1051,8 +1041,8 @@ template<typename T>
 void CodeGen::pushParamToRegister(const std::string& paramName, uint32_t rid, T value) {
     auto* reg = registerAllocator.regFromID(rid);
 
-    if (reg->status >> INUSE_IDX & 1) {
-        if (reg->rType >> SSE_IDX & 1) {
+    if (isInUse(reg->status)) {
+        if (isSSE(reg->rType)) {
             pushxmm(getRegName(reg, REG64));
         } else {
             push(getRegName(reg, REG64));
