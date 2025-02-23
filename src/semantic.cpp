@@ -82,7 +82,7 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     if (auto binop = cast::toBinop(ast)) {
         return binopResolve(*binop);
     }
-    if (auto dotimes = cast::toDotimes(ast)) {
+    if (const auto dotimes = cast::toDotimes(ast)) {
         dotimesResolve(*dotimes);
     } else if (const auto loop = cast::toLoop(ast)) {
         loopResolve(*loop);
@@ -97,7 +97,7 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     } else if (const auto defun = cast::toDefun(ast)) {
         defunResolve(*defun);
     } else if (const auto funcCall = cast::toFuncCall(ast)) {
-        funcCallResolve(*funcCall);
+        return funcCallResolve(*funcCall);
     } else if (const auto return_ = cast::toReturn(ast)) {
         returnResolve(*return_);
     } else if (const auto if_ = cast::toIf(ast)) {
@@ -107,12 +107,13 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     } else if (const auto cond = cast::toCond(ast)) {
         condResolve(*cond);
     }
+
     return nullptr;
 }
 
 ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
-    ExprPtr lhs = numberResolve(binop.lhs, binop.opToken.type);
-    ExprPtr rhs = numberResolve(binop.rhs, binop.opToken.type);
+    ExprPtr lhs = nodeResolve(binop.lhs, binop.opToken.type);
+    ExprPtr rhs = nodeResolve(binop.rhs, binop.opToken.type);
 
     if (checkDouble(lhs)) {
         return lhs;
@@ -235,13 +236,13 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     symbolTracker.exit();
 }
 
-void SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
+ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     const auto var = cast::toVar(funcCall.name);
     const std::string funcName = cast::toString(var->name)->data;
 
     const Symbol sym = symbolTracker.lookup(funcName);
 
-    if (!sym.value) {
+    if (!sym.value || !cast::toDefun(sym.value)) {
         throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
     }
 
@@ -264,6 +265,13 @@ void SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     }
 
     funcCall.args = std::move(args);
+
+    ExprPtr result;
+    // for (auto& statement: func->forms) {
+    //     result = exprResolve(statement);
+    // }
+
+    return result;
 }
 
 void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
@@ -405,9 +413,6 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
     // If var is t/nil and token type is different from and/or/not raise error.
     checkBool(n, ttype);
 
-    if (auto binop = cast::toBinop(n)) {
-        return binopResolve(*binop);
-    }
     const auto var = cast::toVar(n);
     const std::string name = cast::toString(var->name)->data;
 
@@ -443,12 +448,25 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
             return n;
         }
         innerVar = cast::toVar(innerVar->value);
-    } while (cast::toVar(innerVar));
+    } while (innerVar);
 
     if (!innerVar) {
         throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
+
     return nullptr;
+}
+
+ExprPtr SemanticAnalyzer::nodeResolve(ExprPtr& n, TokenType ttype) {
+    if (const auto binop = cast::toBinop(n)) {
+        return binopResolve(*binop);
+    }
+
+    if (const auto funcCall = cast::toFuncCall(n)) {
+        return funcCallResolve(*funcCall);
+    }
+
+    return numberResolve(n, ttype);
 }
 
 void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
