@@ -1,5 +1,5 @@
-#ifndef TINYSEXP_SEMANTIC_H
-#define TINYSEXP_SEMANTIC_H
+#ifndef SEMANTIC_H
+#define SEMANTIC_H
 
 #include <stack>
 #include <unordered_map>
@@ -18,7 +18,7 @@ public:
 
     void exit();
 
-    size_t level() const;
+    [[nodiscard]] size_t level() const;
 
     void bind(const std::string& name, const Symbol& symbol);
 
@@ -89,4 +89,4 @@ private:
     const char* mFileName;
 };
 
-#endif //TINYSEXP_SEMANTIC_H
+#endif //SEMANTIC_H

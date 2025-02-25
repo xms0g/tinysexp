@@ -1,5 +1,5 @@
-#ifndef TINYSEXP_EXCEPTIONS_HPP
-#define TINYSEXP_EXCEPTIONS_HPP
+#ifndef EXCEPTIONS_HPP
+#define EXCEPTIONS_HPP
 
 #include <exception>
 #include <format>

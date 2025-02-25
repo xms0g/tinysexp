@@ -1,5 +1,5 @@
-#ifndef TINYSEXP_PARSER_H
-#define TINYSEXP_PARSER_H
+#ifndef PARSER_H
+#define PARSER_H
 
 #include <utility>
 #include <memory>
