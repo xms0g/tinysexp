@@ -10,6 +10,11 @@
 #define cqo() generatedCode += "\tcqo\n"
 #define newLine() generatedCode += "\n";
 
+#define isSSE(type) ((type >> SSE_IDX) & 1)
+#define isSCRATCH(type) ((type >> SCRATCH_IDX) & 1)
+#define isPRESERVED(type) ((type >> PRESERVED_IDX) & 1)
+#define isInUse(type) ((type >> INUSE_IDX) & 1)
+
 #define stack_alloc(size) \
     emitInstr2op("sub", "rsp", size); \
     stackAllocator.alloc(size);
@@ -67,104 +72,6 @@
                 pop(getRegName(rp, REG64))                  \
             }                                               \
     }
-
-Register* RegisterAllocator::alloc(uint8_t rt) {
-    if (rt == SSE) {
-        return scan(priorityOrderSSE, 2);
-    }
-
-    return scan(priorityOrder, 3);
-}
-
-void RegisterAllocator::free(Register* reg) {
-    reg->status = NO_USE;
-}
-
-const char* RegisterAllocator::nameFromReg(const Register* reg, uint32_t size) {
-    return registerNames[reg->id][size];
-}
-
-const char* RegisterAllocator::nameFromID(uint32_t id, uint32_t size) {
-    return registerNames[id][size];
-}
-
-Register* RegisterAllocator::regFromName(const char* name, uint32_t size) {
-    for (int i = 0; i < REGISTER_COUNT; i++) {
-        if (std::strcmp(name, registerNames[i][size]) == 0) {
-            return &registers[i];
-        }
-    }
-
-    return nullptr;
-}
-
-Register* RegisterAllocator::regFromID(uint32_t id) {
-    return &registers[id];
-}
-
-Register* RegisterAllocator::scan(const uint32_t* priorityOrder, int size) {
-    for (int i = 0; i < size; ++i) {
-        for (auto& register_: registers) {
-            if (priorityOrder[i] == register_.rType && register_.status >> NO_USE_IDX & 1) {
-                register_.status &= ~NO_USE;
-                register_.status |= INUSE;
-                return &register_;
-            }
-        }
-    }
-
-    return nullptr;
-}
-
-void StackAllocator::alloc(uint32_t size) {
-    stackOffset += size;
-}
-
-void StackAllocator::dealloc(uint32_t size) {
-    stackOffset -= size;
-}
-
-int StackAllocator::pushStackFrame(const std::string& funcName, const std::string& varName, SymbolType stype) {
-    StackFrame* sf = nullptr;
-
-    if (stack.contains(funcName)) {
-        sf = &stack.at(funcName);
-
-        if (sf->offsets.contains(varName)) {
-            return sf->offsets.at(varName);
-        }
-    }
-
-    if (!sf) {
-        StackFrame stackFrame;
-
-        const int offset = updateStackFrame(&stackFrame, varName, stype);
-        stack.emplace(funcName, stackFrame);
-
-        return offset;
-    }
-
-    return updateStackFrame(sf, varName, stype);
-}
-
-int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName, SymbolType stype) {
-    int offset;
-
-    if (stype == SymbolType::LOCAL) {
-        offset = sf->currentVarOffset;
-        sf->currentVarOffset += 8;
-    } else {
-        offset = sf->currentParamOffset;
-        sf->currentParamOffset += 8;
-    }
-
-    sf->offsets.emplace(varName, offset);
-
-    stackOffset += 8;
-
-    return offset;
-}
-
 
 std::string CodeGen::emit(const ExprPtr& ast) {
     generatedCode =
@@ -437,13 +344,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     currentScope = cast::toString(func->name)->data;
 
     // Calculate the proper stack size before function call
-    const size_t stackParamsSize = funcCall.args.size() > 6 ? funcCall.args.size() - 6 : 0;
-    const uint32_t stackOffset = stackAllocator.getOffset();
-    uint32_t stackAlignedSize = stackOffset + stackParamsSize * 8;
-
-    if (stackAlignedSize % 16 != 0)
-        stackAlignedSize += 8;
-
+    uint32_t stackAlignedSize = stackAllocator.calculateRequiredStackSize(funcCall.args);
     stack_alloc(stackAlignedSize)
 
     int scratchIdx = 0, sseIdx = 0, stackIdx = 0;
@@ -1040,19 +941,26 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 template<typename T>
 void CodeGen::pushParamToRegister(const std::string& paramName, uint32_t rid, T value) {
     auto* reg = registerAllocator.regFromID(rid);
+    const char* regStr = getRegName(reg, REG64);
 
     if (isInUse(reg->status)) {
         if (isSSE(reg->rType)) {
-            pushxmm(getRegName(reg, REG64));
+            pushxmm(regStr)
         } else {
-            push(getRegName(reg, REG64));
+            push(regStr)
         }
     }
 
     reg->status &= ~NO_USE;
     reg->status |= INUSE_FOR_PARAM;
 
-    mov(getRegName(reg, REG64), value);
+    if (isSSE(reg->rType)) {
+        uint64_t hex = *reinterpret_cast<uint64_t*>(&value);
+        movd(regStr, emitHex(hex));
+    } else {
+        mov(regStr, value);
+    }
+
     paramToRegisters.emplace(currentScope + paramName, reg->id);
 }
 

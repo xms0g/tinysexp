@@ -1,10 +1,10 @@
 #include <iostream>
 #include <fstream>
-#include "lexer.h"
-#include "parser.h"
-#include "semantic.h"
-#include "codegen.h"
-#include "exceptions.hpp"
+#include "frontend/lexer.h"
+#include "frontend/parser.h"
+#include "frontend/semantic.h"
+#include "backend/codegen.h"
+#include "frontend/exceptions.hpp"
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 8
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
             file.open(fn, std::ios::in);
 
             file.seekg(0, std::ios::end);
-            std::size_t length = file.tellg();
+            const std::size_t length = file.tellg();
             file.seekg(0, std::ios::beg);
 
             program.resize(length);

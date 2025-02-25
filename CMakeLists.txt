@@ -8,9 +8,12 @@ if (APPLE)
 endif ()
 
 set(SOURCES
-        src/lexer.cpp src/lexer.h
-        src/parser.cpp src/parser.h
-        src/semantic.cpp src/semantic.h
-        src/codegen.cpp src/codegen.h)
+        src/frontend/lexer.cpp src/frontend/lexer.h
+        src/frontend/parser.cpp src/frontend/parser.h
+        src/frontend/semantic.cpp src/frontend/semantic.h
+        src/backend/stack.cpp  src/backend/stack.h
+        src/backend/register.cpp  src/backend/register.h
+        src/backend/codegen.cpp src/backend/codegen.h
+)
 
 add_executable(${PROJECT_NAME} src/main.cpp ${SOURCES})
