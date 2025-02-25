@@ -13,7 +13,7 @@
 #define isSSE(type) ((type >> SSE_IDX) & 1)
 #define isSCRATCH(type) ((type >> SCRATCH_IDX) & 1)
 #define isPRESERVED(type) ((type >> PRESERVED_IDX) & 1)
-#define isInUse(type) ((type >> INUSE_IDX) & 1)
+#define isINUSE(type) ((type >> INUSE_IDX) & 1)
 
 #define stack_alloc(size) \
     emitInstr2op("sub", "rsp", size); \
@@ -42,7 +42,7 @@
 #define popInUseRegisters(registers, pop)                                   \
     for (const int paramRegister: registers) {                              \
         if (const auto* reg = registerAllocator.regFromID(paramRegister);   \
-            isInUse(reg->status)) {                                         \
+            isINUSE(reg->status)) {                                         \
             pop(getRegName(reg, REG64));                                    \
         }                                                                   \
     }
@@ -523,7 +523,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
                 mov(getRegName(newRP, REG64), "rax");
                 regRhs = newRP;
             } else {
-                raxInUse = isInUse(registerAllocator.regFromID(RAX)->status);
+                raxInUse = isINUSE(registerAllocator.regFromID(RAX)->status);
 
                 if (raxInUse) {
                     push("rax")
@@ -943,7 +943,7 @@ void CodeGen::pushParamToRegister(const std::string& paramName, uint32_t rid, T 
     auto* reg = registerAllocator.regFromID(rid);
     const char* regStr = getRegName(reg, REG64);
 
-    if (isInUse(reg->status)) {
+    if (isINUSE(reg->status)) {
         if (isSSE(reg->rType)) {
             pushxmm(regStr)
         } else {

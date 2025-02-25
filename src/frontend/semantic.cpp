@@ -28,7 +28,7 @@ void ScopeTracker::bind(const std::string& name, const Symbol& symbol) {
 }
 
 Symbol ScopeTracker::lookup(const std::string& name) {
-    Symbol sym;
+    Symbol sym{};
     std::stack<ScopeType> scopes;
     const size_t level = mSymbolTable.size();
 
