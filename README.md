@@ -22,11 +22,7 @@ The System V ABI
 
 ## Example
 ```scheme
-(* 3 4)
-(dotimes (i 5) (+ 3 4))
-(print (* 2 (+ 3 (/ 9 3))))
-(let ((a 3) (b 4) (print (+ a b)))
-(let (a) (setq a 10))
+
 
 ```
 
