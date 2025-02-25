@@ -372,12 +372,8 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     popInUseRegisters(paramRegistersSSE, popxmm);
 
     stack_dealloc(stackAlignedSize)
-
-    auto* rax = registerAllocator.regFromID(RAX);
-    rax->status &= ~NO_USE;
-    rax->status |= INUSE;
-
-    return rax;
+    //TODO: we dont know where the return value, maybe in xmm0?
+    return registerAllocator.regFromID(RAX);
 }
 
 Register* CodeGen::emitIf(const IfExpr& if_) {
@@ -478,29 +474,29 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     Register* regRhs = emitNode(rhs);
 
     if (isSSE(regLhs->rType) && (isSCRATCH(regRhs->rType) || isPRESERVED(regRhs->rType))) {
-        auto* newRP = registerAllocator.alloc(SSE);
-        const char* newRPStr = getRegName(newRP, REG64);
+        auto* newReg = registerAllocator.alloc(SSE);
+        const char* newRegStr = getRegName(newReg, REG64);
 
-        emitInstr2op("cvtsi2sd", newRPStr, getRegName(regRhs, REG64));
+        emitInstr2op("cvtsi2sd", newRegStr, getRegName(regRhs, REG64));
         register_free(regRhs)
 
-        emitInstr2op(op.second, getRegName(regLhs, REG64), newRPStr);
-        register_free(newRP);
+        emitInstr2op(op.second, getRegName(regLhs, REG64), newRegStr);
+        register_free(newReg);
 
         return regLhs;
     }
 
     if ((isSCRATCH(regLhs->rType) || isPRESERVED(regLhs->rType)) && isSSE(regRhs->rType)) {
-        auto* newRP = registerAllocator.alloc(SSE);
-        const char* newRPStr = getRegName(newRP, REG64);
-        const char* reg2Str = getRegName(regRhs, REG64);
+        auto* newReg = registerAllocator.alloc(SSE);
+        const char* newRegStr = getRegName(newReg, REG64);
+        const char* regRhsStr = getRegName(regRhs, REG64);
 
-        emitInstr2op("cvtsi2sd", newRPStr, getRegName(regLhs, REG64));
+        emitInstr2op("cvtsi2sd", newRegStr, getRegName(regLhs, REG64));
         register_free(regLhs)
 
-        emitInstr2op(op.second, newRPStr, reg2Str);
-        movd(reg2Str, newRPStr);
-        register_free(newRP);
+        emitInstr2op(op.second, newRegStr, regRhsStr);
+        movd(regRhsStr, newRegStr);
+        register_free(newReg);
         return regRhs;
     }
 
@@ -515,13 +511,13 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     // We have to check out lhs isn't rax and divisor is in rax cases.
     if (std::strcmp(op.first, "idiv") == 0) {
         bool raxInUse{false};
-        const bool isReg1NotRax = regLhs->id != RAX;
+        const bool isRegLhsNotRax = regLhs->id != RAX;
 
-        if (isReg1NotRax) {
+        if (isRegLhsNotRax) {
             if (regRhs->id == RAX) {
-                auto* newRP = register_alloc();
-                mov(getRegName(newRP, REG64), "rax");
-                regRhs = newRP;
+                auto* newReg = register_alloc();
+                mov(getRegName(newReg, REG64), "rax");
+                regRhs = newReg;
             } else {
                 raxInUse = isINUSE(registerAllocator.regFromID(RAX)->status);
 
@@ -535,7 +531,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
         cqo();
         emitInstr1op("idiv", getRegName(regRhs, REG64));
 
-        if (isReg1NotRax) {
+        if (isRegLhsNotRax) {
             mov(getRegName(regLhs, REG64), "rax");
         }
 
@@ -674,9 +670,13 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
                 break;
         }
     } else if (const auto funcCall = cast::toFuncCall(test)) {
+        const ExprPtr zero = std::make_shared<IntExpr>(0);
         rp = emitFuncCall(*funcCall);
+        //TODO: We dont know what the return value is
+        emitInstr2op("cmp", getRegName(rp, REG64), 0);
+        emitJump("je", elseLabel);
         register_free(rp)
-    } else if (auto var = cast::toVar(test)) {
+    } else if (const auto var = cast::toVar(test)) {
         emitInstr2op("cmp", getAddr(cast::toString(var->name)->data, var->sType, REG64), 0);
         emitJump("je", elseLabel);
     } else if (cast::toNIL(test)) {
