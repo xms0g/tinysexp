@@ -1,10 +1,10 @@
 #include <iostream>
 #include <fstream>
-#include "frontend/lexer.h"
-#include "frontend/parser.h"
-#include "frontend/semantic.h"
-#include "backend/codegen.h"
-#include "frontend/exceptions.hpp"
+#include "lexer.h"
+#include "parser.h"
+#include "semantic.h"
+#include "codegen.h"
+#include "exceptions.hpp"
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 8

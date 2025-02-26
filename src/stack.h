@@ -3,7 +3,7 @@
 
 #include <string>
 #include <unordered_map>
-#include "../frontend/parser.h"
+#include "parser.h"
 
 class StackAllocator {
 public:
