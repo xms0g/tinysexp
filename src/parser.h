@@ -125,6 +125,7 @@ struct DefunExpr final : IExpr {
 
 struct FuncCallExpr final : IExpr {
     ExprPtr name;
+    ExprPtr returnType;
     std::vector<ExprPtr> args;
 
     FuncCallExpr(ExprPtr& name_, std::vector<ExprPtr>& params_) : name(std::move(name_)),

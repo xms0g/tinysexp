@@ -372,8 +372,18 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     popInUseRegisters(paramRegistersSSE, popxmm);
 
     stack_dealloc(stackAlignedSize)
-    //TODO: we dont know where the return value, maybe in xmm0?
-    return registerAllocator.regFromID(RAX);
+
+    auto makeInUseRegister = [&](const uint32_t id) {
+        const auto reg = registerAllocator.regFromID(id);
+        reg->status &= ~NO_USE;
+        reg->status |= INUSE;
+        return reg;
+    };
+
+    if (cast::toDouble(funcCall.returnType)) {
+        return makeInUseRegister(xmm0);
+    }
+    return makeInUseRegister(RAX);
 }
 
 Register* CodeGen::emitIf(const IfExpr& if_) {
@@ -386,18 +396,18 @@ Register* CodeGen::emitIf(const IfExpr& if_) {
     reg = emitAST(if_.then);
     // Emit else
     if (!cast::toUninitialized(if_.else_)) {
-        register_free(reg)
-
         std::string done = createLabel();
         emitJump("jmp", done);
         emitLabel(elseLabel);
 
+        register_free(reg)
         reg = emitAST(if_.else_);
         emitLabel(done);
     } else {
         emitLabel(elseLabel);
     }
 
+    register_free(reg)
     return reg;
 }
 
@@ -670,14 +680,13 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
                 break;
         }
     } else if (const auto funcCall = cast::toFuncCall(test)) {
-        const ExprPtr zero = std::make_shared<IntExpr>(0);
         rp = emitFuncCall(*funcCall);
-        //TODO: We dont know what the return value is
-        emitInstr2op("cmp", getRegName(rp, REG64), 0);
+        emitInstr2op((isSSE(rp->rType) ? "ucomisd" : "cmp"), getRegName(rp, REG64), 0);
         emitJump("je", elseLabel);
         register_free(rp)
     } else if (const auto var = cast::toVar(test)) {
-        emitInstr2op("cmp", getAddr(cast::toString(var->name)->data, var->sType, REG64), 0);
+        const std::string varName = cast::toString(var->name)->data;
+        emitInstr2op("cmp", getAddr(varName, var->sType, REG64), 0);
         emitJump("je", elseLabel);
     } else if (cast::toNIL(test)) {
         emitJump("jmp", elseLabel);
