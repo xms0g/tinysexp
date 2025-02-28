@@ -93,8 +93,14 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     ret();
 
     // Function definitions
-    for (auto& [func, param]: functions) {
-        (this->*func)(param);
+    for (auto& [func, defun]: functions) {
+        const auto var = cast::toVar(defun.name);
+        if (std::string funcName = cast::toString(var->name)->data;
+            !calledFunctions.contains(funcName)) {
+            continue;
+        }
+
+        (this->*func)(defun);
     }
     // Sections
     for (auto& [section, data]: sections) {
@@ -342,6 +348,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     const auto func = cast::toVar(funcCall.name);
     currentScope = cast::toString(func->name)->data;
+    calledFunctions.emplace(currentScope);
 
     // Calculate the proper stack size before function call
     uint32_t stackAlignedSize = stackAllocator.calculateRequiredStackSize(funcCall.args);
@@ -796,7 +803,7 @@ Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
     return rp;
 }
 
-void CodeGen::handleAssignment(const ExprPtr& var, uint32_t size) {
+void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
 
@@ -863,7 +870,7 @@ void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
     } while (value);
 }
 
-Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
+Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
     Register* rp = nullptr;
     const std::string varName = cast::toString(var.name)->data;
 
@@ -902,7 +909,10 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, uint32_t size) {
     return rp;
 }
 
-void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, const Register* rp, uint32_t size) {
+void CodeGen::emitStoreMemFromReg(const std::string& varName,
+                                  const SymbolType stype,
+                                  const Register* rp,
+                                  const uint32_t size) {
     const char* rpStr = getRegName(rp, size);
 
     if (isSCRATCH(rp->rType) || isPRESERVED(rp->rType)) {
@@ -912,7 +922,7 @@ void CodeGen::emitStoreMemFromReg(const std::string& varName, SymbolType stype, 
     }
 }
 
-std::string CodeGen::getAddr(const std::string& varName, SymbolType stype, uint32_t size) {
+std::string CodeGen::getAddr(const std::string& varName, const SymbolType stype, const uint32_t size) {
     switch (stype) {
         case SymbolType::GLOBAL:
             return std::format("{} [rel {}]", memorySize[size], varName);
@@ -948,7 +958,7 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 }
 
 template<typename T>
-void CodeGen::pushParamToRegister(const std::string& paramName, uint32_t rid, T value) {
+void CodeGen::pushParamToRegister(const std::string& paramName, const uint32_t rid, T value) {
     auto* reg = registerAllocator.regFromID(rid);
     const char* regStr = getRegName(reg, REG64);
 
@@ -989,7 +999,7 @@ void CodeGen::pushParamOntoStack(const VarExpr& param, int& stackIdx) {
     stackIdx += 8;
 }
 
-const char* CodeGen::getRegName(const Register* reg, uint32_t size) {
+const char* CodeGen::getRegName(const Register* reg, const uint32_t size) {
     return registerAllocator.nameFromReg(reg, size);
 }
 

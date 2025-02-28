@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include "parser.h"
 #include "stack.h"
 #include "register.h"
@@ -97,6 +98,7 @@ private:
     // Sections
     std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > sections;
     // Functions
+    std::unordered_set<std::string> calledFunctions;
     std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > functions;
 
     static constexpr const char* memorySize[SIZE_COUNT] = {
