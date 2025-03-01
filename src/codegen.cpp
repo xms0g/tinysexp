@@ -85,7 +85,8 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
     auto next = ast;
     while (next != nullptr) {
-        emitAST(next);
+        auto* reg = emitAST(next);
+        register_free(reg)
         next = next->child;
     }
 
@@ -695,6 +696,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
         reg = emitLoadRegFromMem(*var, REG64);
         emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
         emitJump("je", elseLabel);
+        register_free(reg)
     } else if (cast::toNIL(test)) {
         emitJump("jmp", elseLabel);
     } else if (cast::toT(test)) {
