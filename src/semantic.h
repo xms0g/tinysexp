@@ -44,11 +44,11 @@ private:
 
     ExprPtr binopResolve(BinOpExpr& binop);
 
-    void dotimesResolve(const DotimesExpr& dotimes);
+    ExprPtr dotimesResolve(const DotimesExpr& dotimes);
 
-    void loopResolve(const LoopExpr& loop);
+    ExprPtr loopResolve(const LoopExpr& loop);
 
-    void letResolve(const LetExpr& let);
+    ExprPtr letResolve(const LetExpr& let);
 
     void setqResolve(const SetqExpr& setq);
 
@@ -56,23 +56,21 @@ private:
 
     void defconstResolve(const DefconstExpr& defconst);
 
-    void defunResolve(const DefunExpr& defun);
+    ExprPtr defunResolve(const DefunExpr& defun);
 
     ExprPtr funcCallResolve(FuncCallExpr& funcCall);
 
     void returnResolve(const ReturnExpr& return_);
 
-    void ifResolve(const IfExpr& if_);
+    ExprPtr ifResolve(IfExpr& if_);
 
-    void whenResolve(const WhenExpr& when);
+    ExprPtr whenResolve(WhenExpr& when);
 
-    void condResolve(const CondExpr& cond);
+    ExprPtr condResolve(CondExpr& cond);
 
     void checkConstantVar(const ExprPtr& var);
 
     void checkBool(const ExprPtr& var, TokenType ttype) const;
-
-    bool checkDouble(const ExprPtr& n);
 
     void checkBitwiseOp(const ExprPtr& n, TokenType ttype);
 
@@ -85,6 +83,8 @@ private:
     void valueResolve(const ExprPtr& var, bool isConstant = false);
 
     ScopeTracker symbolTracker;
+
+    std::unordered_map<std::string, ExprPtr> symbolTypeTable;
     /* File Name */
     const char* mFileName;
 };

@@ -83,11 +83,11 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
         return binopResolve(*binop);
     }
     if (const auto dotimes = cast::toDotimes(ast)) {
-        dotimesResolve(*dotimes);
+        return dotimesResolve(*dotimes);
     } else if (const auto loop = cast::toLoop(ast)) {
-        loopResolve(*loop);
+        return loopResolve(*loop);
     } else if (const auto let = cast::toLet(ast)) {
-        letResolve(*let);
+        return letResolve(*let);
     } else if (const auto setq = cast::toSetq(ast)) {
         setqResolve(*setq);
     } else if (const auto defvar = cast::toDefvar(ast)) {
@@ -95,17 +95,17 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     } else if (const auto defconst = cast::toDefconstant(ast)) {
         defconstResolve(*defconst);
     } else if (const auto defun = cast::toDefun(ast)) {
-        defunResolve(*defun);
+        return defunResolve(*defun);
     } else if (const auto funcCall = cast::toFuncCall(ast)) {
         return funcCallResolve(*funcCall);
     } else if (const auto return_ = cast::toReturn(ast)) {
         returnResolve(*return_);
     } else if (const auto if_ = cast::toIf(ast)) {
-        ifResolve(*if_);
+        return ifResolve(*if_);
     } else if (const auto when = cast::toWhen(ast)) {
-        whenResolve(*when);
+        return whenResolve(*when);
     } else if (const auto cond = cast::toCond(ast)) {
-        condResolve(*cond);
+        return condResolve(*cond);
     }
 
     return nullptr;
@@ -115,18 +115,18 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
     ExprPtr lhs = nodeResolve(binop.lhs, binop.opToken.type);
     ExprPtr rhs = nodeResolve(binop.rhs, binop.opToken.type);
 
-    if (checkDouble(lhs)) {
+    if (cast::toDouble(lhs)) {
         return lhs;
     }
 
-    if (checkDouble(rhs)) {
+    if (cast::toDouble(rhs)) {
         return rhs;
     }
 
     return lhs;
 }
 
-void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
+ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     symbolTracker.enter();
     checkConstantVar(dotimes.iterationCount);
 
@@ -135,19 +135,26 @@ void SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     // If it's expr, resolve it.
     valueResolve(var);
 
+    ExprPtr result;
     for (auto& statement: dotimes.statements) {
-        exprResolve(statement);
+        result = exprResolve(statement);
     }
     symbolTracker.exit();
+
+    return result;
 }
 
-void SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
+ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
+    ExprPtr result;
+
     for (auto& sexpr: loop.sexprs) {
-        exprResolve(sexpr);
+        result = exprResolve(sexpr);
     }
+
+    return result;
 }
 
-void SemanticAnalyzer::letResolve(const LetExpr& let) {
+ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
     symbolTracker.enter();
     for (auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
@@ -163,10 +170,22 @@ void SemanticAnalyzer::letResolve(const LetExpr& let) {
         valueResolve(var_);
     }
 
+    ExprPtr result;
     for (auto& statement: let.body) {
-        exprResolve(statement);
+        result = exprResolve(statement);
+    }
+    // Update the type of binding
+    for (auto& var: let.bindings) {
+        const auto var_ = cast::toVar(var);
+
+        if (const std::string varName = cast::toString(var_->name)->data;
+            symbolTypeTable.contains(varName)) {
+            var_->value = symbolTypeTable.at(varName);
+        }
     }
     symbolTracker.exit();
+
+    return result;
 }
 
 void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
@@ -211,7 +230,7 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
     valueResolve(var, true);
 }
 
-void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
+ExprPtr SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     const auto var = cast::toVar(defun.name);
     const std::string funcName = cast::toString(var->name)->data;
 
@@ -230,10 +249,13 @@ void SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
         symbolTracker.bind(argName, {argName, arg, argVar->sType});
     }
 
+    ExprPtr result;
     for (auto& statement: defun.forms) {
-        exprResolve(statement);
+        result = exprResolve(statement);
     }
     symbolTracker.exit();
+
+    return result;
 }
 
 ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
@@ -265,13 +287,10 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     }
 
     funcCall.args = std::move(args);
-
-    ExprPtr result;
-    // for (auto& statement: func->forms) {
-    //     result = exprResolve(statement);
-    // }
-
-    return result;
+    func->args = funcCall.args;
+    // Start the type inference. Find the proper type of variables and the return type of the function
+    funcCall.returnType = defunResolve(*func);
+    return funcCall.returnType;
 }
 
 void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
@@ -286,56 +305,74 @@ void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
     }
 }
 
-void SemanticAnalyzer::ifResolve(const IfExpr& if_) {
+ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {
     if (const auto test = cast::toVar(if_.test)) {
         const std::string name = cast::toString(test->name)->data;
 
-        if (const Symbol sym = symbolTracker.lookup(name); !sym.value) {
+        const Symbol sym = symbolTracker.lookup(name);
+        if (!sym.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
+
+        if_.test = sym.value;
     } else {
         exprResolve(if_.test);
     }
 
-    exprResolve(if_.then);
+    ExprPtr result = exprResolve(if_.then);
 
     if (!cast::toUninitialized(if_.else_)) {
-        exprResolve(if_.else_);
+        result = exprResolve(if_.else_);
     }
+
+    return result;
 }
 
-void SemanticAnalyzer::whenResolve(const WhenExpr& when) {
+ExprPtr SemanticAnalyzer::whenResolve(WhenExpr& when) {
     if (const auto test = cast::toVar(when.test)) {
         const std::string name = cast::toString(test->name)->data;
 
-        if (const Symbol sym = symbolTracker.lookup(name); !sym.value) {
+        const Symbol sym = symbolTracker.lookup(name);
+        if (!sym.value) {
             throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
+
+        when.test = sym.value;
     } else {
         exprResolve(when.test);
     }
 
+    ExprPtr result;
     for (auto& form: when.then) {
-        exprResolve(form);
+        result = exprResolve(form);
     }
+
+    return result;
 }
 
-void SemanticAnalyzer::condResolve(const CondExpr& cond) {
-    for (const auto& [test, statements]: cond.variants) {
+ExprPtr SemanticAnalyzer::condResolve(CondExpr& cond) {
+    ExprPtr result;
+
+    for (auto& [test, statements]: cond.variants) {
         if (const auto test_ = cast::toVar(test)) {
             const std::string name = cast::toString(test_->name)->data;
 
-            if (const Symbol sym = symbolTracker.lookup(name); !sym.value) {
+            const Symbol sym = symbolTracker.lookup(name);
+            if (!sym.value) {
                 throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
+
+            test = sym.value;
         } else {
             exprResolve(test);
         }
 
         for (auto& statement: statements) {
-            exprResolve(statement);
+            result = exprResolve(statement);
         }
     }
+
+    return result;
 }
 
 void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
@@ -347,7 +384,7 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     }
 }
 
-void SemanticAnalyzer::checkBool(const ExprPtr& var, TokenType ttype) const {
+void SemanticAnalyzer::checkBool(const ExprPtr& var, const TokenType ttype) const {
     if (ttype == TokenType::AND || ttype == TokenType::OR || ttype == TokenType::NOT)
         return;
 
@@ -360,18 +397,7 @@ void SemanticAnalyzer::checkBool(const ExprPtr& var, TokenType ttype) const {
     }
 }
 
-bool SemanticAnalyzer::checkDouble(const ExprPtr& n) {
-    if (cast::toDouble(n))
-        return true;
-    if (const auto var = cast::toVar(n)) {
-        if (cast::toDouble(var->value))
-            return true;
-    }
-
-    return false;
-}
-
-void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, TokenType ttype) {
+void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) {
     if (ttype == TokenType::LOGAND ||
         ttype == TokenType::LOGIOR ||
         ttype == TokenType::LOGXOR ||
@@ -388,6 +414,7 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) {
         if (const auto int_ = cast::toInt(n)) {
             return int_->n;
         }
+
         return {};
     };
 
@@ -401,7 +428,7 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) {
     return {};
 }
 
-ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
+ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
     if (cast::toInt(n) || cast::toDouble(n) || cast::toUninitialized(n)) {
         if (cast::toDouble(n)) {
             checkBitwiseOp(n, ttype);
@@ -423,6 +450,15 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
     }
 
     var->sType = sym.sType;
+
+    // If we already know the type, don't check
+    if (symbolTypeTable.contains(name)) {
+        ExprPtr name_ = cast::toString(var->name);
+        ExprPtr value_ = symbolTypeTable.at(name);
+        n = std::make_shared<VarExpr>(name_, value_, sym.sType);
+        return cast::toVar(n)->value;
+    }
+
     auto innerVar = cast::toVar(sym.value);
     do {
         checkBool(innerVar->value, ttype);
@@ -431,9 +467,9 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
             ExprPtr name_ = cast::toString(var->name);
             ExprPtr value_ = std::make_shared<IntExpr>(0);
             n = std::make_shared<VarExpr>(name_, value_, sym.sType);
-            return n;
+            return cast::toVar(n)->value;
         }
-        // loop sym value until finding a primitive. Update var.
+        // Loop sym value until finding a primitive. Update var.
         if (cast::toInt(innerVar->value) ||
             cast::toDouble(innerVar->value) ||
             cast::toNIL(innerVar->value) ||
@@ -443,9 +479,16 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
             }
 
             ExprPtr name_ = cast::toString(var->name);
-            ExprPtr value_ = innerVar->value;
+            ExprPtr value_;
+
+            if (cast::toInt(innerVar->value)) {
+                value_ = std::make_shared<IntExpr>(0);
+            } else if (cast::toDouble(innerVar->value)) {
+                value_ = std::make_shared<DoubleExpr>(0.0);
+            }
+
             n = std::make_shared<VarExpr>(name_, value_, sym.sType);
-            return n;
+            return cast::toVar(n)->value;
         }
         innerVar = cast::toVar(innerVar->value);
     } while (innerVar);
@@ -457,7 +500,7 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, TokenType ttype) {
     return nullptr;
 }
 
-ExprPtr SemanticAnalyzer::nodeResolve(ExprPtr& n, TokenType ttype) {
+ExprPtr SemanticAnalyzer::nodeResolve(ExprPtr& n, const TokenType ttype) {
     if (const auto binop = cast::toBinop(n)) {
         return binopResolve(*binop);
     }
@@ -494,9 +537,16 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
         const ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
         symbolTracker.bind(varName, {varName, new_var, var_->sType, isConstant});
     } else {
-        ExprPtr name_ = var_->name;
+        ExprPtr name = var_->name;
         ExprPtr value_ = exprResolve(var_->value);
-        const ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
+
+        if (symbolTypeTable.contains(varName)) {
+            symbolTypeTable[varName] = value_;
+        } else {
+            symbolTypeTable.emplace(varName, value_);
+        }
+
+        const ExprPtr new_var = std::make_shared<VarExpr>(name, value_, var_->sType);
         symbolTracker.bind(varName, {varName, new_var, var_->sType, isConstant});
     }
 }
