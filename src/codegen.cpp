@@ -381,7 +381,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     stack_dealloc(stackAlignedSize)
 
     auto makeInUseRegister = [&](const uint32_t id) {
-        const auto reg = registerAllocator.regFromID(id);
+        auto* reg = registerAllocator.regFromID(id);
         reg->status &= ~NO_USE;
         reg->status |= INUSE;
         return reg;
@@ -608,7 +608,7 @@ void CodeGen::emitSection(const ExprPtr& var) {
 }
 
 void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string& elseLabel) {
-    Register* rp;
+    Register* reg;
 
     if (const auto binop = cast::toBinop(test)) {
         switch (binop->opToken.type) {
@@ -620,64 +620,64 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
             case TokenType::LOGIOR:
             case TokenType::LOGXOR:
             case TokenType::LOGNOR: {
-                rp = emitBinop(*binop);
-                emitInstr2op("cmp", getRegName(rp, REG64), 0);
+                reg = emitBinop(*binop);
+                emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
                 emitJump("je", elseLabel);
-                register_free(rp)
+                register_free(reg)
                 break;
             }
             case TokenType::EQUAL:
             case TokenType::NOT:
-                rp = emitBinop(*binop);
+                reg = emitBinop(*binop);
                 emitJump("jne", elseLabel);
-                register_free(rp)
+                register_free(reg)
                 break;
             case TokenType::NEQUAL:
-                rp = emitBinop(*binop);
+                reg = emitBinop(*binop);
                 emitJump("je", elseLabel);
-                register_free(rp)
+                register_free(reg)
                 break;
             case TokenType::GREATER_THEN:
-                rp = emitBinop(*binop);
+                reg = emitBinop(*binop);
                 emitJump("jle", elseLabel);
-                register_free(rp)
+                register_free(reg)
                 break;
             case TokenType::LESS_THEN:
-                rp = emitBinop(*binop);
+                reg = emitBinop(*binop);
                 emitJump("jge", elseLabel);
-                register_free(rp)
+                register_free(reg)
                 break;
             case TokenType::GREATER_THEN_EQ:
-                rp = emitBinop(*binop);
+                reg = emitBinop(*binop);
                 emitJump("jl", elseLabel);
-                register_free(rp)
+                register_free(reg)
                 break;
             case TokenType::LESS_THEN_EQ:
-                rp = emitBinop(*binop);
+                reg = emitBinop(*binop);
                 emitJump("jg", elseLabel);
-                register_free(rp)
+                register_free(reg)
                 break;
             case TokenType::AND: {
                 const ExprPtr zero = std::make_shared<IntExpr>(0);
 
-                auto* rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
-                register_free(rp1)
+                auto* regLhs = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
+                register_free(regLhs)
                 emitJump("je", elseLabel);
 
-                auto* rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
-                register_free(rp2)
+                auto* regRhs = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
+                register_free(regRhs)
                 emitJump("je", elseLabel);
                 break;
             }
             case TokenType::OR: {
                 const ExprPtr zero = std::make_shared<IntExpr>(0);
 
-                auto* rp1 = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
-                register_free(rp1)
+                auto* regLhs = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
+                register_free(regLhs)
                 emitJump("jne", trueLabel);
 
-                auto* rp2 = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
-                register_free(rp2)
+                auto* regRhs = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
+                register_free(regRhs)
                 emitJump("je", elseLabel);
 
                 emitLabel(trueLabel);
@@ -687,13 +687,13 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
                 break;
         }
     } else if (const auto funcCall = cast::toFuncCall(test)) {
-        rp = emitFuncCall(*funcCall);
-        emitInstr2op((isSSE(rp->rType) ? "ucomisd" : "cmp"), getRegName(rp, REG64), 0);
+        reg = emitFuncCall(*funcCall);
+        emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
         emitJump("je", elseLabel);
-        register_free(rp)
+        register_free(reg)
     } else if (const auto var = cast::toVar(test)) {
-        const std::string varName = cast::toString(var->name)->data;
-        emitInstr2op("cmp", getAddr(varName, var->sType, REG64), 0);
+        reg = emitLoadRegFromMem(*var, REG64);
+        emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
         emitJump("je", elseLabel);
     } else if (cast::toNIL(test)) {
         emitJump("jmp", elseLabel);
