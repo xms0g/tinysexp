@@ -39,11 +39,15 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
         if (const auto param = cast::toVar(arg);
             cast::toDouble(param->value)) {
             sseCount++;
-            }
+        }
     }
 
     if (args.size() > 6) {
-        stackParamCount = args.size() - 6 - sseCount;
+        if (args.size() == sseCount) {
+            stackParamCount = args.size() - 8;
+        } else {
+            stackParamCount = args.size() - 6 - sseCount;
+        }
     }
 
     uint32_t alignedSize = stackOffset + stackParamCount * 8;
@@ -71,4 +75,3 @@ int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName,
 
     return offset;
 }
-
