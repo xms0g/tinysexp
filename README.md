@@ -25,3 +25,4 @@ The output assembly follows the System V AMD64 ABI, ensuring compatibility with 
 ```
 
 ## License
+This project is licensed under the GPL-2.0 License. See the LICENSE file for details.
