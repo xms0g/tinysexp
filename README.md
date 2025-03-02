@@ -16,12 +16,19 @@ A subset of Lisp, including:
 - Local Variables: with `let` and `setq`.
 - Global Variables: with `defvar`.
 - Constant Variables: with `defconstant`.
-
 ### System V AMD64 ABI Compliance
 The output assembly follows the System V AMD64 ABI, ensuring compatibility with Linux and other UNIX-like operating systems on AMD64 systems.
 ## Usage
 ```bash
-./tinysexp main.lisp
+➜  ~ tinysexp -h
+OVERVIEW: Lisp compiler for x86-64 architecture
+
+USAGE: tinysexp <input lisp file> [options]
+
+OPTIONS:
+  -o, --output          The output file name
+  -h, --help            Display available options
+  -v, --version         Display the version of this program
 ```
 ## License
 This project is licensed under the GPL-2.0 License. See the LICENSE file for details.
