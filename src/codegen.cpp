@@ -165,11 +165,11 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
         case TokenType::LOGNOR: {
             const ExprPtr negOne = std::make_shared<IntExpr>(-1);
             // Bitwise NOT seperately
-            Register* rp1 = emitExpr(binop.lhs, negOne, {"xor", nullptr});
-            Register* rp2 = emitExpr(binop.rhs, negOne, {"xor", nullptr});
-            emitInstr2op("and", getRegName(rp1, REG64), getRegName(rp2, REG64));
-            register_free(rp2)
-            return rp1;
+            Register* regLhs = emitExpr(binop.lhs, negOne, {"xor", nullptr});
+            Register* regRhs = emitExpr(binop.rhs, negOne, {"xor", nullptr});
+            emitInstr2op("and", getRegName(regLhs, REG64), getRegName(regRhs, REG64));
+            register_free(regRhs)
+            return regLhs;
         }
         case TokenType::NOT: {
             const ExprPtr zero = std::make_shared<IntExpr>(0);
