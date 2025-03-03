@@ -1,14 +1,14 @@
 #include "stack.h"
 
-void StackAllocator::alloc(uint32_t size) {
+void StackAllocator::alloc(const uint32_t size) {
     stackOffset += size;
 }
 
-void StackAllocator::dealloc(uint32_t size) {
+void StackAllocator::dealloc(const uint32_t size) {
     stackOffset -= size;
 }
 
-int StackAllocator::pushStackFrame(const std::string& funcName, const std::string& varName, SymbolType stype) {
+int StackAllocator::pushStackFrame(const std::string& funcName, const std::string& varName, const SymbolType stype) {
     StackFrame* sf = nullptr;
 
     if (stack.contains(funcName)) {
@@ -58,7 +58,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
     return alignedSize;
 }
 
-int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName, SymbolType stype) {
+int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName, const SymbolType stype) {
     int offset;
 
     if (stype == SymbolType::LOCAL) {

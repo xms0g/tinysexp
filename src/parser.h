@@ -182,7 +182,7 @@ struct Uninitialized final : IExpr {
 
 class Parser {
 public:
-    Parser(const char* mFileName, Lexer& lexer);
+    Parser(const char* fn, Lexer& lexer);
 
     ExprPtr parse();
 
@@ -225,7 +225,7 @@ private:
 
     void consume(TokenType expected, const char* errorStr);
 
-    void expect(TokenType expected, const char* errorStr);
+    void expect(TokenType expected, const char* errorStr) const;
 
     Lexer& mLexer;
     Token mCurrentToken{};

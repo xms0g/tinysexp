@@ -866,7 +866,7 @@ void CodeGen::handlePrimitive(const VarExpr& var, const char* instr, const std::
     if (const std::string key = currentScope + varName;
         paramToRegisters.contains(key)) {
         const uint32_t rid = paramToRegisters.at(key);
-        emitInstr2op(instr, registerAllocator.nameFromID(rid, REG64), value);
+        emitInstr2op(instr, getRegNameByID(rid, REG64), value);
     } else {
         emitInstr2op(instr, getAddr(varName, var.sType, REG64), value);
     }

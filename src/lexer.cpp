@@ -159,6 +159,6 @@ void Lexer::advance() {
     }
 }
 
-void Lexer::advance(int step) {
+void Lexer::advance(const int step) {
     for (int i = 0; i < step; ++i) advance();
 }

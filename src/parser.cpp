@@ -1,7 +1,7 @@
 #include "parser.h"
 #include "exceptions.hpp"
 
-Parser::Parser(const char* fn, Lexer& lexer) : mFileName(fn), mLexer(lexer), mTokenIndex(-1) {
+Parser::Parser(const char* fn, Lexer& lexer) : mLexer(lexer), mTokenIndex(-1), mFileName(fn) {
 }
 
 ExprPtr Parser::parse() {
@@ -419,12 +419,12 @@ ExprPtr Parser::createVar(bool isConstant) {
     return var;
 }
 
-void Parser::consume(TokenType expected, const char* errorStr) {
+void Parser::consume(const TokenType expected, const char* errorStr) {
     expect(expected, errorStr);
     advance();
 }
 
-void Parser::expect(TokenType expected, const char* errorStr) {
+void Parser::expect(const TokenType expected, const char* errorStr) const {
     if (mCurrentToken.type != expected)
         throw InvalidSyntaxError(mFileName, errorStr, 0);
 }
