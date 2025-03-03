@@ -86,8 +86,8 @@ struct LetExpr final : IExpr {
     std::vector<ExprPtr> bindings;
     std::vector<ExprPtr> body;
 
-    LetExpr(std::vector<ExprPtr>& bindings_, std::vector<ExprPtr>& body_) : body(std::move(body_)),
-                                                                            bindings(std::move(bindings_)) {
+    LetExpr(std::vector<ExprPtr>& bindings_, std::vector<ExprPtr>& body_) : bindings(std::move(bindings_)),
+                                                                            body(std::move(body_)) {
     }
 };
 
