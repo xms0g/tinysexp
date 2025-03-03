@@ -45,7 +45,7 @@ void compile(std::string& fn, const std::string& in, std::string& out) {
 int main(int argc, char** argv) {
     static const char* usage =
             "OVERVIEW: Lisp compiler for x86-64 architecture\n\n"
-            "USAGE: tinysexp <input lisp file> [options]\n\n"
+            "USAGE: tinysexp [options] file\n\n"
             "OPTIONS:\n"
             "  -o, --output          The output file name\n"
             "  -h, --help            Display available options\n"

@@ -26,7 +26,7 @@ A subset of Lisp, including:
 ➜  ~ tinysexp -h
 OVERVIEW: Lisp compiler for x86-64 architecture
 
-USAGE: tinysexp <input lisp file> [options]
+USAGE: tinysexp [options] file
 
 OPTIONS:
   -o, --output          The output file name
