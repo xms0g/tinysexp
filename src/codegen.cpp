@@ -39,12 +39,12 @@
     emitInstr2op("movdqu", xmm, "dqword [rsp]"); \
     stack_dealloc(16)
 
-#define popInUseRegisters(registers, pop)                                   \
-    for (const int paramRegister: registers) {                              \
-        if (const auto* reg = registerAllocator.regFromID(paramRegister);   \
-            isINUSE(reg->status)) {                                         \
-            pop(getRegName(reg, REG64));                                    \
-        }                                                                   \
+#define popInUseRegisters(registers, pop) \
+    for (const int paramRegister: registers) { \
+        if (const auto* reg = registerAllocator.regFromID(paramRegister); \
+            isINUSE(reg->status)) { \
+            pop(getRegName(reg, REG64)); \
+        } \
     }
 
 #define mov(d, s) emitInstr2op("mov", d, s)
@@ -54,24 +54,24 @@
 #define strDirective(s) std::format("db \"{}\", 10", s)
 #define memDirective(d, n) std::format("{} {}", d, n)
 
-#define emitSet8L(op, rp) \
-    emitInstr1op(op, getRegName(rp, REG8L)); \
-    movzx(getRegName(rp, REG64), getRegName(rp, REG8L));
+#define emitSet8L(op, reg) \
+    emitInstr1op(op, getRegName(reg, REG8L)); \
+    movzx(getRegName(reg, REG64), getRegName(reg, REG8L));
 
-#define register_alloc() ([&]() {                           \
-    auto* rp = registerAllocator.alloc();                   \
-    if (rp && isPRESERVED(rp->rType)) {                     \
-        push(getRegName(rp, REG64))                         \
-    }                                                       \
-    return rp;                                              \
+#define register_alloc() ([&]() { \
+    auto* reg = registerAllocator.alloc(); \
+    if (reg && isPRESERVED(reg->rType)) { \
+        push(getRegName(reg, REG64)) \
+    } \
+    return reg; \
     }())
 
-#define register_free(rp)                                   \
-    if (rp && !(rp->status >> INUSE_FOR_PARAM_IDX & 1)) {   \
-            registerAllocator.free(rp);                     \
-            if (isPRESERVED(rp->rType)) {                   \
-                pop(getRegName(rp, REG64))                  \
-            }                                               \
+#define register_free(reg) \
+    if (reg && !(reg->status >> INUSE_FOR_PARAM_IDX & 1)) { \
+            registerAllocator.free(reg); \
+            if (isPRESERVED(reg->rType)) { \
+                pop(getRegName(reg, REG64)) \
+            } \
     }
 
 std::string CodeGen::emit(const ExprPtr& ast) {
@@ -172,8 +172,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
             return regLhs;
         }
         case TokenType::NOT: {
-            const ExprPtr zero = std::make_shared<IntExpr>(0);
-            return emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
+            return emitCmpZero(binop.lhs);
         }
         case TokenType::EQUAL:
         case TokenType::NEQUAL:
@@ -460,9 +459,9 @@ Register* CodeGen::emitCond(const CondExpr& cond) {
 
 Register* CodeGen::emitNumb(const ExprPtr& n) {
     if (const auto int_ = cast::toInt(n)) {
-        auto* rp = register_alloc();
-        mov(getRegName(rp, REG64), int_->n);
-        return rp;
+        auto* reg = register_alloc();
+        mov(getRegName(reg, REG64), int_->n);
+        return reg;
     }
 
     if (const auto double_ = cast::toDouble(n)) {
@@ -470,12 +469,11 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
         const char* regStr = getRegName(reg, REG64);
 
         auto* regSSE = registerAllocator.alloc(SSE);
-        const char* regSSEStr = getRegName(regSSE, REG64);
 
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
 
         mov(regStr, emitHex(hex));
-        movq(regSSEStr, regStr);
+        movq(getRegName(regSSE, REG64), regStr);
 
         register_free(reg)
 
@@ -670,25 +668,21 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
                 register_free(reg)
                 break;
             case TokenType::AND: {
-                const ExprPtr zero = std::make_shared<IntExpr>(0);
-
-                auto* regLhs = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
+                auto* regLhs = emitCmpZero(binop->lhs);
                 register_free(regLhs)
                 emitJump("je", elseLabel);
 
-                auto* regRhs = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
+                auto* regRhs = emitCmpZero(binop->rhs);
                 register_free(regRhs)
                 emitJump("je", elseLabel);
                 break;
             }
             case TokenType::OR: {
-                const ExprPtr zero = std::make_shared<IntExpr>(0);
-
-                auto* regLhs = emitExpr(binop->lhs, zero, {"cmp", "ucomisd"});
+                auto* regLhs = emitCmpZero(binop->lhs);
                 register_free(regLhs)
                 emitJump("jne", trueLabel);
 
-                auto* regRhs = emitExpr(binop->rhs, zero, {"cmp", "ucomisd"});
+                auto* regRhs = emitCmpZero(binop->rhs);
                 register_free(regRhs)
                 emitJump("je", elseLabel);
 
@@ -771,49 +765,58 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 }
 
 Register* CodeGen::emitLogOp(const BinOpExpr& binop, const char* op) {
-    const ExprPtr zero = std::make_shared<IntExpr>(0);
+    struct RegisterInfo {
+        Register* reg = nullptr;
+        Register* setReg = nullptr;
+        const char* setRegStr{};
+        const char* setReg8LStr{};
+    };
 
-    auto* regLhs = emitExpr(binop.lhs, zero, {"cmp", "ucomisd"});
-    Register* setRegLhs = isSSE(regLhs->rType) ? register_alloc() : regLhs;
+    auto prepareRegister = [&](const ExprPtr& node, RegisterInfo& regInfo) {
+        regInfo.reg = emitCmpZero(node);
+        regInfo.setReg = isSSE(regInfo.reg->rType) ? register_alloc() : regInfo.reg;
 
-    const char* setRegLhsStr = getRegName(setRegLhs, REG64);
-    const char* setRegLhs8LStr = getRegName(setRegLhs, REG8L);
+        regInfo.setRegStr = getRegName(regInfo.setReg, REG64);
+        regInfo.setReg8LStr = getRegName(regInfo.setReg, REG8L);
 
-    emitInstr2op("xor", setRegLhsStr, setRegLhsStr);
-    emitInstr1op("setne", setRegLhs8LStr);
+        emitInstr2op("xor", regInfo.setRegStr, regInfo.setRegStr);
+        emitInstr1op("setne", regInfo.setReg8LStr);
+    };
 
-    auto* regRhs = emitExpr(binop.rhs, zero, {"cmp", "ucomisd"});
-    Register* setRegRhs = isSSE(regRhs->rType) ? register_alloc() : regRhs;
+    RegisterInfo lhs;
+    prepareRegister(binop.lhs, lhs);
 
-    const char* setRegRhsStr = getRegName(setRegRhs, REG64);
-    const char* setRegRhs8LStr = getRegName(setRegRhs, REG8L);
+    RegisterInfo rhs;
+    prepareRegister(binop.rhs, rhs);
 
-    emitInstr2op("xor", setRegRhsStr, setRegRhsStr);
-    emitInstr1op("setne", setRegRhs8LStr);
+    emitInstr2op(op, lhs.setReg8LStr, rhs.setReg8LStr);
+    movzx(lhs.setRegStr, lhs.setReg8LStr);
 
-    emitInstr2op(op, setRegLhs8LStr, setRegRhs8LStr);
-    movzx(setRegLhsStr, setRegLhs8LStr);
-
-    if (isSSE(regLhs->rType)) {
-        emitInstr2op("cvtsi2sd", getRegName(regLhs, REG64), setRegLhsStr);
-        register_free(setRegLhs)
+    if (isSSE(lhs.reg->rType)) {
+        emitInstr2op("cvtsi2sd", getRegName(lhs.reg, REG64), lhs.setRegStr);
+        register_free(lhs.setReg)
     }
 
-    if (isSSE(regRhs->rType)) {
-        register_free(setRegRhs)
+    if (isSSE(rhs.reg->rType)) {
+        register_free(rhs.setReg)
     }
 
-    register_free(regRhs)
-    return regLhs;
+    register_free(rhs.reg)
+    return lhs.reg;
 }
 
 Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
-    const auto rp = emitBinop(binop);
+    const auto reg = emitBinop(binop);
 
-    if (isSSE(rp->rType)) {
+    if (isSSE(reg->rType)) {
         return register_alloc();
     }
-    return rp;
+    return reg;
+}
+
+Register* CodeGen::emitCmpZero(const ExprPtr& node) {
+    const ExprPtr zero = std::make_shared<IntExpr>(0);
+    return emitExpr(node, zero, {"cmp", "ucomisd"});
 }
 
 void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
@@ -848,15 +851,15 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
                        std::make_pair(label, strDirective(str->data)));
 
         auto* reg = register_alloc();
-        const char* rpStr = getRegName(reg, REG64);
+        const char* regStr = getRegName(reg, REG64);
 
-        emitInstr2op("lea", rpStr, labelAddr);
-        mov(varAddr, rpStr);
+        emitInstr2op("lea", regStr, labelAddr);
+        mov(varAddr, regStr);
         register_free(reg)
     } else {
-        auto* rp = emitSet(var_->value);
-        emitStoreMemFromReg(varName, var_->sType, rp, REG64);
-        register_free(rp)
+        auto* reg = emitSet(var_->value);
+        emitStoreMemFromReg(varName, var_->sType, reg, REG64);
+        register_free(reg)
     }
 }
 
@@ -901,7 +904,6 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
                 reg = registerAllocator.regFromID(rid);
             } else {
                 reg = register_alloc();
-
                 mov(getRegName(reg, REG64), getAddr(varName, var.sType, size));
             }
             break;
@@ -930,14 +932,14 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
 
 void CodeGen::emitStoreMemFromReg(const std::string& varName,
                                   const SymbolType stype,
-                                  const Register* rp,
+                                  const Register* reg,
                                   const uint32_t size) {
-    const char* rpStr = getRegName(rp, size);
+    const char* regStr = getRegName(reg, size);
 
-    if (isSCRATCH(rp->rType) || isPRESERVED(rp->rType)) {
-        mov(getAddr(varName, stype, size), rpStr);
-    } else if (isSSE(rp->rType)) {
-        movsd(getAddr(varName, stype, size), rpStr);
+    if (isSCRATCH(reg->rType) || isPRESERVED(reg->rType)) {
+        mov(getAddr(varName, stype, size), regStr);
+    } else if (isSSE(reg->rType)) {
+        movsd(getAddr(varName, stype, size), regStr);
     }
 }
 

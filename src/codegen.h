@@ -58,6 +58,8 @@ private:
 
     Register* emitSetReg(const BinOpExpr& binop);
 
+    Register* emitCmpZero(const ExprPtr& node);
+
     void handleAssignment(const ExprPtr& var, uint32_t size);
 
     void handlePrimitive(const VarExpr& var, const char* instr, const std::string& value);
@@ -66,7 +68,7 @@ private:
 
     Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
 
-    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, const Register* rp, uint32_t size);
+    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, const Register* reg, uint32_t size);
 
     std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
 
