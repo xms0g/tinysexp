@@ -45,25 +45,25 @@ OPTIONS:
 ```asm
 [bits 64]
 section .text
-	global _start
+    global _start
 _start:
-	push rbp
-	mov rbp, rsp
-	sub rsp, 16
-	mov rdi, 1
-	mov rsi, 2
-	call add
-	add rsp, 16
-	pop rbp
-	ret
+    push rbp
+    mov rbp, rsp
+    sub rsp, 16
+    mov rdi, 1
+    mov rsi, 2
+    call add
+    add rsp, 16
+    pop rbp
+    ret
 
 add:
-	push rbp
-	mov rbp, rsp
-	add rdi, rsi
-	mov rax, rdi
-	pop rbp
-	ret
+    push rbp
+    mov rbp, rsp
+    add rdi, rsi
+    mov rax, rdi
+    pop rbp
+    ret
 ```
 ## License
 This project is licensed under the GPL-2.0 License. See the LICENSE file for details.
