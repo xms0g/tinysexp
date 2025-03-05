@@ -766,8 +766,8 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 
 Register* CodeGen::emitLogOp(const BinOpExpr& binop, const char* op) {
     struct RegisterInfo {
-        Register* reg = nullptr;
-        Register* setReg = nullptr;
+        Register* reg{nullptr};
+        Register* setReg{nullptr};
         const char* setRegStr{};
         const char* setReg8LStr{};
     };
