@@ -8,8 +8,7 @@
         ((= op 1) (+ n1 n2))
         ((= op 2) (- n1 n2))
         ((= op 3) (* n1 n2))
-        ((= op 4) (/ n1 n2))
-    ))
+        ((= op 4) (/ n1 n2))))
 
 (setq add-result (calculator 1 2 1))
 (setq sub-result (calculator 3 2 2))
