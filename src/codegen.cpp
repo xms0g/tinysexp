@@ -8,7 +8,8 @@
 #define emitJump(jmp, label) emitInstr1op(jmp, label)
 #define ret() generatedCode += "\tret\n"
 #define cqo() generatedCode += "\tcqo\n"
-#define newLine() generatedCode += "\n";
+#define newLine() generatedCode += "\n"
+#define syscall() generatedCode += "\tsyscall\n"
 
 #define isSSE(type) ((type >> SSE_IDX) & 1)
 #define isSCRATCH(type) ((type >> SCRATCH_IDX) & 1)
@@ -92,7 +93,17 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     }
 
     pop("rbp")
-    ret();
+
+#if defined(__APPLE__) || defined(__MACH__)
+    mov("rax", emitHex(0x2000001));
+#elif defined(__linux__)
+    mov("rax", 60);
+#else
+    std::cout << "Unknown Operating System" << std::endl;
+#endif
+
+    emitInstr2op("xor", "rdi", "rdi");
+    syscall();
 
     // Function definitions
     for (auto& [func, defun]: functions) {
