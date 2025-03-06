@@ -67,7 +67,7 @@ Symbol ScopeTracker::lookupCurrent(const std::string& name) {
 SemanticAnalyzer::SemanticAnalyzer(const char* fn) : mFileName(fn) {
 }
 
-void SemanticAnalyzer::analyze(ExprPtr& ast) {
+void SemanticAnalyzer::analyze(const ExprPtr& ast) {
     auto next = ast;
 
     symbolTracker.enter();
@@ -243,10 +243,10 @@ ExprPtr SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     symbolTracker.bind(funcName, {funcName, func, SymbolType::GLOBAL});
 
     symbolTracker.enter();
-    for (auto& arg: defun.args) {
+    for (auto& arg: func->args) {
         const auto argVar = cast::toVar(arg);
         const std::string argName = cast::toString(argVar->name)->data;
-        symbolTracker.bind(argName, {argName, arg, argVar->sType});
+        symbolTracker.bind(argName, {.name = argName, .value = arg, .sType = argVar->sType});
     }
 
     ExprPtr result;
@@ -278,7 +278,6 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     std::vector<ExprPtr> args;
     for (int i = 0; i < func->args.size(); ++i) {
         const auto argVar = cast::toVar(func->args[i]);
-        const std::string argName = cast::toString(argVar->name)->data;
 
         ExprPtr name = argVar->name;
         ExprPtr value = funcCall.args[i];
@@ -525,7 +524,12 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
         }
         // Update value
         var_->value = sym.value;
-        symbolTracker.bind(varName, {varName, var, var_->sType, isConstant});
+        symbolTracker.bind(varName, {
+                               .name = varName,
+                               .value = var,
+                               .sType = var_->sType,
+                               .isConstant = isConstant
+                           });
     } else if (cast::toInt(var_->value) ||
                cast::toDouble(var_->value) ||
                cast::toNIL(var_->value) ||
@@ -535,7 +539,12 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
         ExprPtr name_ = var_->name;
         ExprPtr value_ = var_->value;
         const ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
-        symbolTracker.bind(varName, {varName, new_var, var_->sType, isConstant});
+        symbolTracker.bind(varName, {
+                               .name = varName,
+                               .value = new_var,
+                               .sType = var_->sType,
+                               .isConstant = isConstant
+                           });
     } else {
         ExprPtr name = var_->name;
         ExprPtr value_ = exprResolve(var_->value);
@@ -547,6 +556,11 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
         }
 
         const ExprPtr new_var = std::make_shared<VarExpr>(name, value_, var_->sType);
-        symbolTracker.bind(varName, {varName, new_var, var_->sType, isConstant});
+        symbolTracker.bind(varName, {
+                               .name = varName,
+                               .value = new_var,
+                               .sType = var_->sType,
+                               .isConstant = isConstant
+                           });
     }
 }
