@@ -99,7 +99,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 #elif defined(__linux__)
     mov("rax", 60);
 #else
-    std::cout << "Unknown Operating System" << std::endl;
+    throw std::runtime_error("Unsupported Operating System");
 #endif
 
     emitInstr2op("xor", "rdi", "rdi");
@@ -182,9 +182,8 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
             register_free(regRhs)
             return regLhs;
         }
-        case TokenType::NOT: {
+        case TokenType::NOT:
             return emitCmpZero(binop.lhs);
-        }
         case TokenType::EQUAL:
         case TokenType::NEQUAL:
         case TokenType::GREATER_THEN:

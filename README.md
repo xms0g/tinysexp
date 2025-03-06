@@ -55,7 +55,9 @@ _start:
     call add
     add rsp, 16
     pop rbp
-    ret
+    mov rax, 0x2000001
+    xor rdi, rdi
+    syscall
 
 add:
     push rbp

@@ -33,6 +33,9 @@ _start:
 	add rsp, 16
 	mov qword [rel div-result], rax
 	pop rbp
+	mov rax, 0x2000001
+    xor rdi, rdi
+    syscall
 	ret
 
 calculator:

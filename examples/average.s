@@ -9,7 +9,9 @@ _start:
 	call average
 	add rsp, 16
 	pop rbp
-	ret
+	mov rax, 0x2000001
+	xor rdi, rdi
+	syscall
 
 average:
 	push rbp
