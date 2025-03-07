@@ -46,13 +46,11 @@ enum RegisterTypeIndex {
 
 enum RegisterStatus : uint8_t {
     NO_USE = 1 << 0,
-    INUSE_FOR_PARAM = 1 << 1,
-    INUSE = 1 << 2
+    INUSE = 1 << 1
 };
 
 enum RegisterStatusIndex {
     NO_USE_IDX = 0,
-    INUSE_FOR_PARAM_IDX,
     INUSE_IDX,
 };
 

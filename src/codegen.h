@@ -62,8 +62,6 @@ private:
 
     void handleAssignment(const ExprPtr& var, uint32_t size);
 
-    void handlePrimitive(const VarExpr& var, const char* instr, const std::string& value);
-
     void handleVariable(const VarExpr& var, uint32_t size);
 
     Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
@@ -77,7 +75,7 @@ private:
     template<typename T>
     void pushParamToRegister(const std::string& paramName, uint32_t rid, T value);
 
-    void pushParamOntoStack(const VarExpr& param, int& stackIdx);
+    void pushParamOntoStack(VarExpr& param, int& stackIdx);
 
     const char* getRegName(const Register* reg, uint32_t size);
 
@@ -94,7 +92,6 @@ private:
     std::string currentScope;
     // Register
     RegisterAllocator registerAllocator;
-    std::unordered_map<std::string, uint32_t> paramToRegisters;
     // Stack
     StackAllocator stackAllocator;
     // Sections

@@ -68,11 +68,11 @@
     }())
 
 #define register_free(reg) \
-    if (reg && !(reg->status >> INUSE_FOR_PARAM_IDX & 1)) { \
-            registerAllocator.free(reg); \
-            if (isPRESERVED(reg->rType)) { \
-                pop(getRegName(reg, REG64)) \
-            } \
+    if (reg) { \
+        registerAllocator.free(reg); \
+        if (isPRESERVED(reg->rType)) { \
+            pop(getRegName(reg, REG64)) \
+        } \
     }
 
 std::string CodeGen::emit(const ExprPtr& ast) {
@@ -332,6 +332,45 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     push("rbp")
     mov("rbp", "rsp");
 
+    uint32_t stackSize = 0;
+    int scratchIdx = 0, sseIdx = 0;
+    for (auto& arg: defun.args) {
+        const auto param = cast::toVar(arg);
+        const std::string paramName = cast::toString(param->name)->data;
+
+        if (cast::toInt(param->value)) {
+            if (scratchIdx > 5)
+                continue;
+            scratchIdx++;
+        } else if (cast::toDouble(param->value)) {
+            if (sseIdx > 7)
+                continue;
+            sseIdx++;
+        }
+
+        stackSize += memorySizeInBytes[getMemSize(arg)];
+        stackAllocator.pushStackFrame(currentScope, paramName, param->sType);
+    }
+
+    stack_alloc(stackSize)
+
+    scratchIdx = 0, sseIdx = 0;
+    for (const auto& arg: defun.args) {
+        const auto param = cast::toVar(arg);
+        const std::string paramName = cast::toString(param->name)->data;
+
+        if (scratchIdx > 5 && cast::toInt(param->value)) {
+            continue;
+        }
+
+        if (sseIdx > 7 && cast::toDouble(param->value)) {
+            continue;
+        }
+
+        mov(getAddr(paramName, param->sType, REG64), getRegNameByID(
+                cast::toInt(param->value) ? paramRegisters[scratchIdx++] : paramRegistersSSE[sseIdx++], REG64));
+    }
+
     for (auto& form: defun.forms) {
         reg = emitAST(form);
     }
@@ -342,17 +381,8 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         mov("rax", getRegName(reg, REG64));
     }
 
-    auto clearInUseParamBit = [&](const auto& registers) {
-        for (const int paramRegister: registers) {
-            auto* r = registerAllocator.regFromID(paramRegister);
-            r->status &= ~INUSE_FOR_PARAM;
-        }
-    };
-
-    clearInUseParamBit(paramRegisters);
-    clearInUseParamBit(paramRegistersSSE);
-
     pop("rbp")
+    stack_dealloc(stackSize)
     ret();
 }
 
@@ -834,7 +864,7 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
     const std::string varName = cast::toString(var_->name)->data;
 
     if (const auto int_ = cast::toInt(var_->value)) {
-        handlePrimitive(*var_, "mov", std::to_string(int_->n));
+        mov(getAddr(varName, var_->sType, REG64), int_->n);
     } else if (const auto double_ = cast::toDouble(var_->value)) {
         auto* reg = register_alloc();
         const char* regStr = getRegName(reg, REG64);
@@ -847,9 +877,9 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
     } else if (cast::toVar(var_->value)) {
         handleVariable(*var_, size);
     } else if (cast::toNIL(var_->value)) {
-        handlePrimitive(*var_, "mov", std::to_string(0));
+        mov(getAddr(varName, var_->sType, REG64), 0);
     } else if (cast::toT(var_->value)) {
-        handlePrimitive(*var_, "mov", std::to_string(1));
+        mov(getAddr(varName, var_->sType, REG64), 1);
     } else if (cast::toUninitialized(var_->value) && var_->sType == SymbolType::LOCAL) {
         getAddr(varName, var_->sType, REG64);
     } else if (const auto str = cast::toString(var_->value)) {
@@ -873,18 +903,6 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
     }
 }
 
-void CodeGen::handlePrimitive(const VarExpr& var, const char* instr, const std::string& value) {
-    const std::string varName = cast::toString(var.name)->data;
-
-    if (const std::string key = currentScope + varName;
-        paramToRegisters.contains(key)) {
-        const uint32_t rid = paramToRegisters.at(key);
-        emitInstr2op(instr, getRegNameByID(rid, REG64), value);
-    } else {
-        emitInstr2op(instr, getAddr(varName, var.sType, REG64), value);
-    }
-}
-
 void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
     const std::string varName = cast::toString(var.name)->data;
     auto value = cast::toVar(var.value);
@@ -892,10 +910,7 @@ void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
     do {
         if (Register* reg = emitLoadRegFromMem(*value, size)) {
             emitStoreMemFromReg(varName, var.sType, reg, size);
-
-            if (value->sType != SymbolType::PARAM) {
-                register_free(reg)
-            }
+            register_free(reg)
         }
 
         value = cast::toVar(value->value);
@@ -908,14 +923,8 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
 
     switch (var.sType) {
         case SymbolType::PARAM: {
-            if (const std::string key = currentScope + varName;
-                paramToRegisters.contains(key)) {
-                const uint32_t rid = paramToRegisters.at(key);
-                reg = registerAllocator.regFromID(rid);
-            } else {
-                reg = register_alloc();
-                mov(getRegName(reg, REG64), getAddr(varName, var.sType, size));
-            }
+            reg = register_alloc();
+            mov(getRegName(reg, REG64), getAddr(varName, var.sType, size));
             break;
         }
         case SymbolType::LOCAL:
@@ -1001,9 +1010,6 @@ void CodeGen::pushParamToRegister(const std::string& paramName, const uint32_t r
         }
     }
 
-    reg->status &= ~NO_USE;
-    reg->status |= INUSE_FOR_PARAM;
-
     if (isSSE(reg->rType)) {
         auto* regScr = register_alloc();
         const char* regScrStr = getRegName(regScr, REG64);
@@ -1016,14 +1022,12 @@ void CodeGen::pushParamToRegister(const std::string& paramName, const uint32_t r
     } else {
         mov(regStr, value);
     }
-
-    paramToRegisters.emplace(currentScope + paramName, reg->id);
 }
 
-void CodeGen::pushParamOntoStack(const VarExpr& param, int& stackIdx) {
+void CodeGen::pushParamOntoStack(VarExpr& param, int& stackIdx) {
     const std::string paramName = cast::toString(param.name)->data;
 
-    stackAllocator.pushStackFrame(currentScope, paramName, param.sType);
+    stackAllocator.pushStackFrame(currentScope, paramName, SymbolType::PARAM);
 
     const std::string addr = stackIdx ? std::format("qword [rsp + {}]", stackIdx) : "qword [rsp]";
 
