@@ -94,8 +94,8 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
         defvarResolve(*defvar);
     } else if (const auto defconst = cast::toDefconstant(ast)) {
         defconstResolve(*defconst);
-    } else if (const auto defun = cast::toDefun(ast)) {
-        return defunResolve(*defun);
+    } else if (cast::toDefun(ast)) {
+        return defunResolve(ast);
     } else if (const auto funcCall = cast::toFuncCall(ast)) {
         return funcCallResolve(*funcCall);
     } else if (const auto return_ = cast::toReturn(ast)) {
@@ -230,17 +230,16 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
     valueResolve(var, true);
 }
 
-ExprPtr SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
-    const auto var = cast::toVar(defun.name);
+ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
+    const auto func = cast::toDefun(defun);
+    const auto var = cast::toVar(func->name);
     const std::string funcName = cast::toString(var->name)->data;
 
     if (symbolTracker.level() > 1) {
         throw SemanticError(mFileName, ERROR(FUNC_DEF_ERROR, funcName), 0);
     }
 
-    const ExprPtr func = std::make_shared<DefunExpr>(defun);
-
-    symbolTracker.bind(funcName, {funcName, func, SymbolType::GLOBAL});
+    symbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
 
     symbolTracker.enter();
     for (auto& arg: func->args) {
@@ -250,7 +249,7 @@ ExprPtr SemanticAnalyzer::defunResolve(const DefunExpr& defun) {
     }
 
     ExprPtr result;
-    for (auto& statement: defun.forms) {
+    for (auto& statement: func->forms) {
         result = exprResolve(statement);
     }
     symbolTracker.exit();
@@ -285,10 +284,21 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
         args.emplace_back(std::make_shared<VarExpr>(name, value, argVar->sType));
     }
 
-    funcCall.args = std::move(args);
-    func->args = funcCall.args;
+    funcCall.args = args;
+    func->args.clear();
+
+    // Make the arg type local because we'll keep them onto stack inside function
+    for (int i = 0; i < args.size(); i++) {
+        auto argVar = cast::toVar(args[i]);
+        // The params beyond 6 are already onto stack
+        if (i < 6) {
+            argVar->sType = SymbolType::LOCAL;
+        }
+
+        func->args.push_back(argVar);
+    }
     // Start the type inference. Find the proper type of variables and the return type of the function
-    funcCall.returnType = defunResolve(*func);
+    funcCall.returnType = defunResolve(func);
     return funcCall.returnType;
 }
 

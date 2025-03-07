@@ -35,7 +35,7 @@ class SemanticAnalyzer {
 public:
     explicit SemanticAnalyzer(const char* fn);
 
-    void analyze(ExprPtr& ast);
+    void analyze(const ExprPtr& ast);
 
 private:
     /* Name Resolutions */
@@ -56,7 +56,7 @@ private:
 
     void defconstResolve(const DefconstExpr& defconst);
 
-    ExprPtr defunResolve(const DefunExpr& defun);
+    ExprPtr defunResolve(const ExprPtr& defun);
 
     ExprPtr funcCallResolve(FuncCallExpr& funcCall);
 
