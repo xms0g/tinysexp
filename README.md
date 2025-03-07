@@ -62,10 +62,16 @@ _start:
 add:
     push rbp
     mov rbp, rsp
-    add rdi, rsi
-    mov rax, rdi
+    sub rsp, 16
+    mov qword [rbp - 8], rdi
+    mov qword [rbp - 16], rsi
+    mov rax, qword [rbp - 8]
+    mov r10, qword [rbp - 16]
+    add rax, r10
     pop rbp
+    add rsp, 16
     ret
+
 ```
 ## License
 This project is licensed under the GPL-2.0 License. See the LICENSE file for details.
