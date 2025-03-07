@@ -34,43 +34,56 @@ _start:
 	mov qword [rel div-result], rax
 	pop rbp
 	mov rax, 0x2000001
-    xor rdi, rdi
-    syscall
-	ret
+	xor rdi, rdi
+	syscall
 
 calculator:
 	push rbp
 	mov rbp, rsp
-	mov rax, 1
-	cmp rdx, rax
+	sub rsp, 24
+	mov qword [rbp - 8], rdi
+	mov qword [rbp - 16], rsi
+	mov qword [rbp - 24], rdx
+	mov rax, qword [rbp - 24]
+	mov r10, 1
+	cmp rax, r10
 	jne .L1
-	add rdi, rsi
+	mov rax, qword [rbp - 8]
+	mov r10, qword [rbp - 16]
+	add rax, r10
 	jmp .L0
 .L1:
-	mov rax, 2
-	cmp rdx, rax
+	mov rax, qword [rbp - 24]
+	mov r10, 2
+	cmp rax, r10
 	jne .L2
-	sub rdi, rsi
+	mov rax, qword [rbp - 8]
+	mov r10, qword [rbp - 16]
+	sub rax, r10
 	jmp .L0
 .L2:
-	mov rax, 3
-	cmp rdx, rax
+	mov rax, qword [rbp - 24]
+	mov r10, 3
+	cmp rax, r10
 	jne .L3
-	imul rdi, rsi
+	mov rax, qword [rbp - 8]
+	mov r10, qword [rbp - 16]
+	imul rax, r10
 	jmp .L0
 .L3:
-	mov rax, 4
-	cmp rdx, rax
+	mov rax, qword [rbp - 24]
+	mov r10, 4
+	cmp rax, r10
 	jne .L4
-	mov rax, rdi
+	mov rax, qword [rbp - 8]
+	mov r10, qword [rbp - 16]
 	cqo
-	idiv rsi
-	mov rdi, rax
+	idiv r10
 	jmp .L0
 .L4:
 .L0:
-	mov rax, rdi
 	pop rbp
+	add rsp, 24
 	ret
 
 section .data
