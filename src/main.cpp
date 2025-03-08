@@ -8,7 +8,7 @@
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 8
-#define VERSION_PATCH 25
+#define VERSION_PATCH 26
 
 #define STRINGIFY0(s) # s
 #define STRINGIFY(s) STRINGIFY0(s)
@@ -32,7 +32,6 @@ void compile(std::string& fn, const std::string& in, std::string& out) {
         analyzer.analyze(ast);
 
         asmFile << cgen.emit(ast);
-        asmFile.close();
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();
     } catch (InvalidSyntaxError& e) {
@@ -40,6 +39,8 @@ void compile(std::string& fn, const std::string& in, std::string& out) {
     } catch (SemanticError& e) {
         std::cerr << ERROR_COLOR << e.what();
     }
+
+    asmFile.close();
 }
 
 int main(int argc, char** argv) {
