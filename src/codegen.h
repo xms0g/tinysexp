@@ -48,7 +48,7 @@ private:
 
     Register* emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op);
 
-    void emitSection(const ExprPtr& value);
+    void emitSection(const ExprPtr& var, bool isConstant = false);
 
     void emitTest(const ExprPtr& test, std::string& trueLabel, std::string& elseLabel);
 

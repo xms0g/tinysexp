@@ -319,7 +319,7 @@ void CodeGen::emitDefvar(const DefvarExpr& defvar) {
 }
 
 void CodeGen::emitDefconst(const DefconstExpr& defconst) {
-    emitSection(defconst.pair);
+    emitSection(defconst.pair, true);
 }
 
 void CodeGen::emitDefun(const DefunExpr& defun) {
@@ -610,7 +610,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     return regLhs;
 }
 
-void CodeGen::emitSection(const ExprPtr& var) {
+void CodeGen::emitSection(const ExprPtr& var, const bool isConstant) {
     const auto var_ = cast::toVar(var);
 
     if (cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
@@ -624,31 +624,31 @@ void CodeGen::emitSection(const ExprPtr& var) {
                        std::make_pair(cast::toString(var_->name)->data,
                                       memDirective(dataSizeUninitialized[REG64], 1)));
     } else if (cast::toNIL(var_->value)) {
-        updateSections("\nsection .data\n",
+        updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data,
                                       memDirective(dataSizeInitialized[REG8L], 0)));
     } else if (cast::toT(var_->value)) {
-        updateSections("\nsection .data\n",
+        updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data,
                                       memDirective(dataSizeInitialized[REG8L], 1)));
     } else if (const auto int_ = cast::toInt(var_->value)) {
-        updateSections("\nsection .data\n",
+        updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data,
                                       memDirective(dataSizeInitialized[REG64], int_->n)));
     } else if (const auto double_ = cast::toDouble(var_->value)) {
         uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-        updateSections("\nsection .data\n",
+        updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data,
                                       memDirective(dataSizeInitialized[REG64], emitHex(hex))));
     } else if (cast::toVar(var_->value)) {
-        const auto memSize = getMemSize(var_);
+        const uint32_t memSize = getMemSize(var_);
 
-        updateSections("\nsection .data\n",
+        updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
                        std::make_pair(cast::toString(var_->name)->data,
                                       memDirective(dataSizeInitialized[memSize], 0)));
         handleAssignment(var, memSize);
     } else if (const auto str = cast::toString(var_->value)) {
-        updateSections("\nsection .data\n",
+        updateSections("\nsection .rodata\n",
                        std::make_pair(cast::toString(var_->name)->data,
                                       strDirective(str->data)));
     }

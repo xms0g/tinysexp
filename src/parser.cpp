@@ -355,13 +355,13 @@ ExprPtr Parser::parseCond() {
 
 ExprPtr Parser::parseAtom() {
     if (mCurrentToken.type == TokenType::STRING) {
-        auto token = mCurrentToken;
+        Token token = mCurrentToken;
         advance();
         return std::make_shared<StringExpr>(token.lexeme);
     }
 
     if (mCurrentToken.type == TokenType::VAR) {
-        auto token = mCurrentToken;
+        Token token = mCurrentToken;
         advance();
         ExprPtr name = std::make_shared<StringExpr>(token.lexeme);
         ExprPtr value = std::make_shared<Uninitialized>();
@@ -399,18 +399,20 @@ ExprPtr Parser::parseNumber() {
     throw InvalidSyntaxError(mFileName, EXPECTED_NUMBER_ERROR, 0);
 }
 
-ExprPtr Parser::createVar(bool isConstant) {
+ExprPtr Parser::createVar(const bool isConstant) {
     ExprPtr value;
     advance();
 
     ExprPtr var = parseAtom();
 
     if (mCurrentToken.type == TokenType::LPAREN) {
+        if (isConstant)
+            throw InvalidSyntaxError(mFileName, ERROR(SEXPR_ERROR, "DEFCONSTANT"), 0);
         value = parseExpr();
     } else {
         value = parseAtom();
 
-        if (isConstant && cast::toNIL(value)) {
+        if (isConstant && cast::toUninitialized(value)) {
             throw InvalidSyntaxError(mFileName, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DEFCONSTANT"), 0);
         }
     }
