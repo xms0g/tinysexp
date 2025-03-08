@@ -33,7 +33,7 @@ int StackAllocator::pushStackFrame(const std::string& funcName, const std::strin
 
 uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& args) const {
     int sseCount = 0;
-    size_t stackParamCount = 0;
+    int stackParamCount = 0;
 
     for (const auto& arg: args) {
         if (const auto param = cast::toVar(arg);
@@ -50,7 +50,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
         }
     }
 
-    uint32_t alignedSize = stackOffset + stackParamCount * 8;
+    uint32_t alignedSize = stackOffset + (stackParamCount > 0 ? stackParamCount * 8 : 0);
 
     if (alignedSize % 16 != 0)
         alignedSize += 8;
