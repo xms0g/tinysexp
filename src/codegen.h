@@ -10,7 +10,7 @@
 
 class CodeGen {
 public:
-    CodeGen() : currentLabelCount(0), currentScope("main") {
+    CodeGen() : currentScope("main") {
     }
 
     std::string emit(const ExprPtr& ast);
@@ -87,7 +87,7 @@ private:
 
     std::string generatedCode;
     // Label
-    int currentLabelCount;
+    int currentLabelCount{0};
     // Scope
     std::string currentScope;
     // Register

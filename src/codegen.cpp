@@ -358,17 +358,14 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     for (const auto& arg: defun.args) {
         const auto param = cast::toVar(arg);
         const std::string paramName = cast::toString(param->name)->data;
+        const bool isInt = cast::toInt(param->value) != nullptr;
 
-        if (scratchIdx > 5 && cast::toInt(param->value)) {
-            continue;
-        }
-
-        if (sseIdx > 7 && cast::toDouble(param->value)) {
+        if ((isInt && scratchIdx > 5) || (cast::toDouble(param->value) && sseIdx > 7)) {
             continue;
         }
 
         mov(getAddr(paramName, param->sType, REG64), getRegNameByID(
-                cast::toInt(param->value) ? paramRegisters[scratchIdx++] : paramRegistersSSE[sseIdx++], REG64));
+                isInt ? paramRegisters[scratchIdx++] : paramRegistersSSE[sseIdx++], REG64));
     }
 
     for (auto& form: defun.forms) {

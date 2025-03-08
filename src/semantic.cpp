@@ -288,11 +288,18 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     func->args.clear();
 
     // Make the arg type local because we'll keep them onto stack inside function
-    for (int i = 0; i < args.size(); i++) {
-        auto argVar = cast::toVar(args[i]);
-        // The params beyond 6 are already onto stack
-        if (i < 6) {
+    int scratchIdx = 0, sseIdx = 0;
+    for (auto& arg: args) {
+        auto argVar = cast::toVar(arg);
+        const bool isInt = cast::toInt(argVar->value) != nullptr;
+        const bool isDouble = cast::toDouble(argVar->value) != nullptr;
+        // The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
+        if (isInt && scratchIdx < 6) {
             argVar->sType = SymbolType::LOCAL;
+            scratchIdx++;
+        } else if (isDouble && sseIdx < 8) {
+            argVar->sType = SymbolType::LOCAL;
+            sseIdx++;
         }
 
         func->args.push_back(argVar);
