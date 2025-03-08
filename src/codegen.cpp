@@ -850,6 +850,7 @@ Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
     const auto reg = emitBinop(binop);
 
     if (isSSE(reg->rType)) {
+        register_free(reg)
         return register_alloc();
     }
     return reg;
