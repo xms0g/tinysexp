@@ -528,7 +528,7 @@ ExprPtr SemanticAnalyzer::nodeResolve(ExprPtr& n, const TokenType ttype) {
     return numberResolve(n, ttype);
 }
 
-void SemanticAnalyzer::valueResolve(const ExprPtr& var, bool isConstant) {
+void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
 
