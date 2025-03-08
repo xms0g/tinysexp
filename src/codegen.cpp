@@ -17,12 +17,16 @@
 #define isINUSE(type) ((type >> INUSE_IDX) & 1)
 
 #define stack_alloc(size) \
-    emitInstr2op("sub", "rsp", size); \
-    stackAllocator.alloc(size);
+    if (size > 0) { \
+        emitInstr2op("sub", "rsp", size); \
+        stackAllocator.alloc(size); \
+    }
 
 #define stack_dealloc(size) \
-    emitInstr2op("add", "rsp", size); \
-    stackAllocator.dealloc(size);
+    if (size > 0) { \
+        emitInstr2op("add", "rsp", size); \
+        stackAllocator.dealloc(size); \
+    }
 
 #define push(v) \
     emitInstr1op("push", v); \
