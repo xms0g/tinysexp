@@ -54,7 +54,7 @@ public:
 
 class InvalidSyntaxError final : public IError {
 public:
-    explicit InvalidSyntaxError(const char* fn, const char* detail, int ln) : IError(
+    explicit InvalidSyntaxError(const char* fn, const char* detail, const int ln) : IError(
         "Invalid Syntax: ", fn, detail, ln) {
     }
 };

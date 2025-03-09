@@ -81,8 +81,7 @@ void SemanticAnalyzer::analyze(const ExprPtr& ast) {
 ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     if (auto binop = cast::toBinop(ast)) {
         return binopResolve(*binop);
-    }
-    if (const auto dotimes = cast::toDotimes(ast)) {
+    } else if (const auto dotimes = cast::toDotimes(ast)) {
         return dotimesResolve(*dotimes);
     } else if (const auto loop = cast::toLoop(ast)) {
         return loopResolve(*loop);

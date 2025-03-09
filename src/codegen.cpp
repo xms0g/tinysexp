@@ -399,7 +399,6 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     int scratchIdx = 0, sseIdx = 0, stackIdx = 0;
     for (const auto& arg: funcCall.args) {
         const auto param = cast::toVar(arg);
-        const std::string paramName = cast::toString(param->name)->data;
 
         // If scratch param size > 5 or sse param size > 7, push the params onto stack
         if ((scratchIdx > 5 && cast::toInt(param->value)) ||
@@ -409,9 +408,9 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
         }
         // Push parameter to the appropriate register
         if (const auto int_ = cast::toInt(param->value)) {
-            pushParamToRegister(paramName, paramRegisters[scratchIdx++], int_->n);
+            pushParamToRegister(paramRegisters[scratchIdx++], int_->n);
         } else if (const auto double_ = cast::toDouble(param->value)) {
-            pushParamToRegister(paramName, paramRegistersSSE[sseIdx++], double_->n);
+            pushParamToRegister(paramRegistersSSE[sseIdx++], double_->n);
         }
     }
 
@@ -957,10 +956,10 @@ void CodeGen::emitStoreMemFromReg(const std::string& varName,
                                   const uint32_t size) {
     const char* regStr = getRegName(reg, size);
 
-    if (isSCRATCH(reg->rType) || isPRESERVED(reg->rType)) {
-        mov(getAddr(varName, stype, size), regStr);
-    } else if (isSSE(reg->rType)) {
+    if (isSSE(reg->rType)) {
         movsd(getAddr(varName, stype, size), regStr);
+    } else {
+        mov(getAddr(varName, stype, size), regStr);
     }
 }
 
@@ -999,9 +998,8 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
     return 0;
 }
 
-template<typename T>
-void CodeGen::pushParamToRegister(const std::string& paramName, const uint32_t rid, T value) {
-    auto* reg = registerAllocator.regFromID(rid);
+void CodeGen::pushParamToRegister(const uint32_t rid, auto value) {
+    const auto* reg = registerAllocator.regFromID(rid);
     const char* regStr = getRegName(reg, REG64);
 
     if (isINUSE(reg->status)) {
@@ -1026,7 +1024,7 @@ void CodeGen::pushParamToRegister(const std::string& paramName, const uint32_t r
     }
 }
 
-void CodeGen::pushParamOntoStack(VarExpr& param, int& stackIdx) {
+void CodeGen::pushParamOntoStack(const VarExpr& param, int& stackIdx) {
     const std::string paramName = cast::toString(param.name)->data;
 
     stackAllocator.pushStackFrame(currentScope, paramName, SymbolType::PARAM);
@@ -1054,7 +1052,7 @@ const char* CodeGen::getRegName(const Register* reg, const uint32_t size) {
     return registerAllocator.nameFromReg(reg, size);
 }
 
-const char* CodeGen::getRegNameByID(uint32_t id, uint32_t size) {
+const char* CodeGen::getRegNameByID(const uint32_t id, const uint32_t size) {
     return registerAllocator.nameFromID(id, size);
 }
 
