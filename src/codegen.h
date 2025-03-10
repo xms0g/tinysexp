@@ -99,21 +99,13 @@ private:
     std::unordered_set<std::string> calledFunctions;
     std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > functions;
 
-    static constexpr const char* memorySize[SIZE_COUNT] = {
-        "qword", "dword", "word", "byte", "byte"
-    };
+    static constexpr const char* memorySize[SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
 
-    static constexpr const char* dataSizeInitialized[SIZE_COUNT] = {
-        "dq", "dd", "dw", "db", "db"
-    };
+    static constexpr const char* dataSizeInitialized[SIZE_COUNT] = {"dq", "dd", "dw", "db", "db"};
 
-    static constexpr const char* dataSizeUninitialized[SIZE_COUNT] = {
-        "resq", "resd", "resw", "resb", "resb"
-    };
+    static constexpr const char* dataSizeUninitialized[SIZE_COUNT] = {"resq", "resd", "resw", "resb", "resb"};
 
-    static constexpr int memorySizeInBytes[SIZE_COUNT] = {
-        8, 4, 2, 1, 1
-    };
+    static constexpr int memorySizeInBytes[SIZE_COUNT] = {8, 4, 2, 1, 1};
 
     static constexpr int paramRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
 

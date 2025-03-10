@@ -480,7 +480,7 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
         // If the value is param
         if (cast::toUninitialized(innerVar->value)) {
             ExprPtr name_ = cast::toString(var->name);
-            ExprPtr value_ = std::make_shared<IntExpr>(0);
+            ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
             n = std::make_shared<VarExpr>(name_, value_, sym.sType);
             return cast::toVar(n)->value;
         }

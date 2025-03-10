@@ -32,7 +32,6 @@ ExprPtr Parser::parseExpr() {
     ExprPtr expr;
 
     consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-
     switch (mCurrentToken.type) {
         case TokenType::PLUS:
         case TokenType::MINUS:
