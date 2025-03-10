@@ -540,7 +540,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
     Register* regLhs = emitNode(lhs);
     Register* regRhs = emitNode(rhs);
 
-    if (isSSE(regLhs->rType) && (isSCRATCH(regRhs->rType) || isPRESERVED(regRhs->rType))) {
+    if (isSSE(regLhs->rType) && !isSSE(regRhs->rType)) {
         auto* newReg = registerAllocator.alloc(SSE);
         const char* newRegStr = getRegName(newReg, REG64);
 
@@ -553,7 +553,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
         return regLhs;
     }
 
-    if ((isSCRATCH(regLhs->rType) || isPRESERVED(regLhs->rType)) && isSSE(regRhs->rType)) {
+    if (!isSSE(regLhs->rType) && isSSE(regRhs->rType)) {
         auto* newReg = registerAllocator.alloc(SSE);
         const char* newRegStr = getRegName(newReg, REG64);
         const char* regRhsStr = getRegName(regRhs, REG64);

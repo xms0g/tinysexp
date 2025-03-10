@@ -22,14 +22,14 @@ using ExprPtr = std::shared_ptr<IExpr>;
 struct IntExpr final : IExpr {
     int n;
 
-    explicit IntExpr(int n_) : n(n_) {
+    explicit IntExpr(const int n_) : n(n_) {
     }
 };
 
 struct DoubleExpr final : IExpr {
     double n;
 
-    explicit DoubleExpr(double n_) : n(n_) {
+    explicit DoubleExpr(const double n_) : n(n_) {
     }
 };
 
@@ -171,7 +171,7 @@ struct VarExpr final : IExpr {
     ExprPtr value;
     SymbolType sType;
 
-    VarExpr(ExprPtr& name_, ExprPtr& value_, SymbolType type = SymbolType::GLOBAL) : name(std::move(name_)),
+    VarExpr(ExprPtr& name_, ExprPtr& value_, const SymbolType type = SymbolType::GLOBAL) : name(std::move(name_)),
         value(std::move(value_)),
         sType(type) {
     }

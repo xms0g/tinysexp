@@ -36,7 +36,7 @@ struct Token {
 
     Token() = default;
 
-    explicit Token(TokenType type, std::string value = "") : type(type), lexeme(std::move(value)) {}
+    explicit Token(const TokenType type, std::string value = "") : type(type), lexeme(std::move(value)) {}
 };
 
 struct Position {
@@ -44,7 +44,7 @@ struct Position {
     int lineNumber;
     int columnNumber;
 
-    Position(int idx, int ln, int coln) : index(idx), lineNumber(ln), columnNumber(coln) {}
+    Position(const int idx, const int ln, const int coln) : index(idx), lineNumber(ln), columnNumber(coln) {}
 
     void advance(const char* token) {
         ++index;
@@ -65,7 +65,7 @@ public:
 
     [[nodiscard]] size_t getTokenSize() const { return mTokens.size(); }
 
-    Token getToken(int index) { return mTokens[index]; }
+    Token getToken(const int index) { return mTokens[index]; }
 
 private:
     void advance();
