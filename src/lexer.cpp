@@ -2,7 +2,7 @@
 #include <cstring>
 #include "exceptions.hpp"
 
-Lexer::Lexer(const char* fn, std::string text) : mFileName(fn), mText(std::move(text)), mPos(-1, 0, -1) {
+Lexer::Lexer(const char* fn, std::string text) : mText(std::move(text)), mPos(-1, 0, -1), mFileName(fn) {
     advance();
 }
 
@@ -74,7 +74,7 @@ void Lexer::process() {
         } else if (std::isalpha(mCurrentChar[0])) {
             std::string token;
 
-            while (mCurrentChar && (!std::isspace(mCurrentChar[0]) && mCurrentChar[0] != ')')) {
+            while (mCurrentChar && std::isalnum(mCurrentChar[0])) {
                 token += mCurrentChar[0];
                 advance();
             }
