@@ -111,12 +111,6 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
     // Function definitions
     for (auto& [func, defun]: functions) {
-        const auto var = cast::toVar(defun.name);
-        if (std::string funcName = cast::toString(var->name)->data;
-            !calledFunctions.contains(funcName)) {
-            continue;
-        }
-
         (this->*func)(defun);
     }
     // Sections
@@ -378,7 +372,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 
     if (reg && isSSE(reg->rType) && reg->id != xmm0) {
         movsd("xmm0", getRegName(reg, REG64));
-    } else if (reg && reg->id != RAX) {
+    } else if (reg && !isSSE(reg->rType) && reg->id != RAX) {
         mov("rax", getRegName(reg, REG64));
     }
 
@@ -390,7 +384,6 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     const auto func = cast::toVar(funcCall.name);
     currentScope = cast::toString(func->name)->data;
-    calledFunctions.emplace(currentScope);
 
     // Calculate the proper stack size before function call
     uint32_t stackAlignedSize = stackAllocator.calculateRequiredStackSize(funcCall.args);
