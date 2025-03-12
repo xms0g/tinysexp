@@ -50,7 +50,7 @@ private:
 
     ExprPtr letResolve(const LetExpr& let);
 
-    void setqResolve(const SetqExpr& setq);
+    ExprPtr setqResolve(const SetqExpr& setq);
 
     void defvarResolve(const DefvarExpr& defvar);
 
@@ -82,9 +82,17 @@ private:
 
     void valueResolve(const ExprPtr& var, bool isConstant = false);
 
+    bool isPrimitive(const ExprPtr& var);
+
     ScopeTracker symbolTracker;
 
-    std::unordered_map<std::string, ExprPtr> symbolTypeTable;
+    struct TypeInferenceContext {
+        bool isStarted{false};
+        std::string entryPoint;
+        std::unordered_map<std::string, ExprPtr> symbolTypeTable;
+    };
+    TypeInferenceContext tfCtx;
+
     /* File Name */
     const char* mFileName;
 };

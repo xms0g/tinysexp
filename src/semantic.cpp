@@ -32,7 +32,7 @@ Symbol ScopeTracker::lookup(const std::string& name) {
     std::stack<ScopeType> scopes;
     const size_t level = mSymbolTable.size();
 
-    for (int i = 0; i < level; ++i) {
+    for (size_t i = 0; i < level; ++i) {
         ScopeType scope = mSymbolTable.top();
         mSymbolTable.pop();
         scopes.push(scope);
@@ -45,7 +45,7 @@ Symbol ScopeTracker::lookup(const std::string& name) {
 
     // reconstruct the scopes
     const size_t currentLevel = scopes.size();
-    for (int i = 0; i < currentLevel; ++i) {
+    for (size_t i = 0; i < currentLevel; ++i) {
         ScopeType scope = scopes.top();
         scopes.pop();
         mSymbolTable.push(scope);
@@ -88,7 +88,7 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     } else if (const auto let = cast::toLet(ast)) {
         return letResolve(*let);
     } else if (const auto setq = cast::toSetq(ast)) {
-        setqResolve(*setq);
+        return setqResolve(*setq);
     } else if (const auto defvar = cast::toDefvar(ast)) {
         defvarResolve(*defvar);
     } else if (const auto defconst = cast::toDefconstant(ast)) {
@@ -178,8 +178,8 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
         const auto var_ = cast::toVar(var);
 
         if (const std::string varName = cast::toString(var_->name)->data;
-            symbolTypeTable.contains(varName)) {
-            var_->value = symbolTypeTable.at(varName);
+            tfCtx.symbolTypeTable.contains(varName)) {
+            var_->value = tfCtx.symbolTypeTable.at(varName);
         }
     }
     symbolTracker.exit();
@@ -187,7 +187,7 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
     return result;
 }
 
-void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
+ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     checkConstantVar(setq.pair);
 
     const auto var = cast::toVar(setq.pair);
@@ -205,6 +205,12 @@ void SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     // If it's int or double, update sym->value and bind again.
     // If it's expr, resolve it.
     valueResolve(var);
+
+    if (tfCtx.symbolTypeTable.contains(varName)) {
+        return tfCtx.symbolTypeTable.at(varName);
+    }
+
+    return var->value;
 }
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
@@ -234,10 +240,6 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     const auto var = cast::toVar(func->name);
     const std::string funcName = cast::toString(var->name)->data;
 
-    if (symbolTracker.level() > 1) {
-        throw SemanticError(mFileName, ERROR(FUNC_DEF_ERROR, funcName), 0);
-    }
-
     symbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
 
     symbolTracker.enter();
@@ -260,7 +262,12 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     const auto var = cast::toVar(funcCall.name);
     const std::string funcName = cast::toString(var->name)->data;
 
-    const Symbol sym = symbolTracker.lookup(funcName);
+    if (symbolTracker.level() == 1) {
+        tfCtx.isStarted = true;
+        tfCtx.entryPoint = funcName;
+    }
+
+    Symbol sym = symbolTracker.lookup(funcName);
 
     if (!sym.value || !cast::toDefun(sym.value)) {
         throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
@@ -273,38 +280,86 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     }
 
     // Match the param names to values
-    std::vector<ExprPtr> args;
-    for (int i = 0; i < func->args.size(); ++i) {
-        const auto argVar = cast::toVar(func->args[i]);
+    if (!funcCall.args.empty()) {
+        const auto farg = cast::toVar(func->args[0]);
+        const auto fcarg = cast::toVar(funcCall.args[0]);
 
-        ExprPtr name = argVar->name;
-        ExprPtr value = funcCall.args[i];
+        if ((fcarg && cast::toString(farg->name)->data != cast::toString(fcarg->name)->data) ||
+            isPrimitive(funcCall.args[0])) {
+            std::vector<ExprPtr> args;
+            for (int i = 0; i < func->args.size(); ++i) {
+                const auto fArg = cast::toVar(func->args[i]);
 
-        args.emplace_back(std::make_shared<VarExpr>(name, value, argVar->sType));
+                ExprPtr name = fArg->name;
+                ExprPtr value = funcCall.args[i];
+
+                args.emplace_back(std::make_shared<VarExpr>(name, value, fArg->sType));
+            }
+
+            funcCall.args = args;
+        }
     }
-
-    funcCall.args = args;
-    func->args.clear();
-
+    // Check out if the params are already resolved
+    for (const auto& arg: funcCall.args) {
+        auto argVar = cast::toVar(arg);
+        do {
+            const std::string argName = cast::toString(argVar->name)->data;
+            sym = symbolTracker.lookup(argName);
+            if (sym.value) {
+                // Loop sym value until finding a primitive. Update var.
+                if (auto value = cast::toVar(sym.value); isPrimitive(value->value)) {
+                    argVar->value = value->value;
+                    break;
+                }
+            }
+            argVar = cast::toVar(argVar->value);
+        } while (argVar);
+    }
     // Make the arg type local because we'll keep them onto stack inside function
     int scratchIdx = 0, sseIdx = 0;
-    for (auto& arg: args) {
-        auto argVar = cast::toVar(arg);
-        const bool isInt = cast::toInt(argVar->value) != nullptr;
-        const bool isDouble = cast::toDouble(argVar->value) != nullptr;
+    auto makeLocal = [&](const std::shared_ptr<VarExpr>& arg,
+                         const std::shared_ptr<VarExpr>& innerArg = nullptr) {
+        const bool isInt = innerArg
+                               ? cast::toInt(innerArg->value) != nullptr
+                               : cast::toInt(arg->value) != nullptr;
+        const bool isDouble = innerArg
+                                  ? cast::toDouble(innerArg->value) != nullptr
+                                  : cast::toDouble(arg->value) != nullptr;
         // The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
         if (isInt && scratchIdx < 6) {
-            argVar->sType = SymbolType::LOCAL;
+            arg->sType = SymbolType::LOCAL;
             scratchIdx++;
         } else if (isDouble && sseIdx < 8) {
-            argVar->sType = SymbolType::LOCAL;
+            arg->sType = SymbolType::LOCAL;
             sseIdx++;
         }
+    };
 
-        func->args.push_back(argVar);
+    if (tfCtx.isStarted) {
+        func->args.clear();
+
+        for (auto& arg: funcCall.args) {
+            if (auto argVar = cast::toVar(arg); isPrimitive(argVar->value)) {
+                makeLocal(argVar);
+            } else {
+                auto innerVar = cast::toVar(argVar->value);
+                do {
+                    // Loop value until finding a primitive. Update var.
+                    if (isPrimitive(innerVar->value)) {
+                        makeLocal(argVar, innerVar);
+                    }
+                    innerVar = cast::toVar(innerVar->value);
+                } while (innerVar);
+            }
+            func->args.push_back(arg);
+        }
     }
-    // Start the type inference. Find the proper type of variables and the return type of the function
+
+    // Find the proper type of variables and the return type of the function
     funcCall.returnType = defunResolve(func);
+    if (funcName == tfCtx.entryPoint)
+        tfCtx.isStarted = false;
+
     return funcCall.returnType;
 }
 
@@ -444,7 +499,7 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) {
 }
 
 ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
-    if (cast::toInt(n) || cast::toDouble(n) || cast::toUninitialized(n)) {
+    if (isPrimitive(n) || cast::toUninitialized(n)) {
         if (cast::toDouble(n)) {
             checkBitwiseOp(n, ttype);
         }
@@ -467,9 +522,9 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
     var->sType = sym.sType;
 
     // If we already know the type, don't check
-    if (symbolTypeTable.contains(name)) {
+    if (tfCtx.isStarted && tfCtx.symbolTypeTable.contains(name)) {
         ExprPtr name_ = cast::toString(var->name);
-        ExprPtr value_ = symbolTypeTable.at(name);
+        ExprPtr value_ = tfCtx.symbolTypeTable.at(name);
         n = std::make_shared<VarExpr>(name_, value_, sym.sType);
         return cast::toVar(n)->value;
     }
@@ -485,10 +540,7 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
             return cast::toVar(n)->value;
         }
         // Loop sym value until finding a primitive. Update var.
-        if (cast::toInt(innerVar->value) ||
-            cast::toDouble(innerVar->value) ||
-            cast::toNIL(innerVar->value) ||
-            cast::toT(innerVar->value)) {
+        if (isPrimitive(innerVar->value)) {
             if (cast::toDouble(innerVar->value)) {
                 checkBitwiseOp(innerVar->value, ttype);
             }
@@ -501,9 +553,8 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
             } else if (cast::toDouble(innerVar->value)) {
                 value_ = std::make_shared<DoubleExpr>(0.0);
             }
-
-            n = std::make_shared<VarExpr>(name_, value_, sym.sType);
-            return cast::toVar(n)->value;
+            var->value = value_;
+            return value_;
         }
         innerVar = cast::toVar(innerVar->value);
     } while (innerVar);
@@ -546,18 +597,10 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
                                .sType = var_->sType,
                                .isConstant = isConstant
                            });
-    } else if (cast::toInt(var_->value) ||
-               cast::toDouble(var_->value) ||
-               cast::toNIL(var_->value) ||
-               cast::toT(var_->value) ||
-               cast::toString(var_->value) ||
-               cast::toUninitialized(var_->value)) {
-        ExprPtr name_ = var_->name;
-        ExprPtr value_ = var_->value;
-        const ExprPtr new_var = std::make_shared<VarExpr>(name_, value_, var_->sType);
+    } else if (isPrimitive(var_->value) || cast::toUninitialized(var_->value)) {
         symbolTracker.bind(varName, {
                                .name = varName,
-                               .value = new_var,
+                               .value = var,
                                .sType = var_->sType,
                                .isConstant = isConstant
                            });
@@ -565,18 +608,27 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
         ExprPtr name = var_->name;
         ExprPtr value_ = exprResolve(var_->value);
 
-        if (symbolTypeTable.contains(varName)) {
-            symbolTypeTable[varName] = value_;
-        } else {
-            symbolTypeTable.emplace(varName, value_);
-        }
-
-        const ExprPtr new_var = std::make_shared<VarExpr>(name, value_, var_->sType);
         symbolTracker.bind(varName, {
                                .name = varName,
-                               .value = new_var,
+                               .value = var,
                                .sType = var_->sType,
                                .isConstant = isConstant
                            });
+
+        if (!tfCtx.isStarted) return;
+
+        if (tfCtx.symbolTypeTable.contains(varName)) {
+            tfCtx.symbolTypeTable[varName] = value_;
+        } else {
+            tfCtx.symbolTypeTable.emplace(varName, value_);
+        }
     }
+}
+
+bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
+    return cast::toInt(var) ||
+           cast::toDouble(var) ||
+           cast::toNIL(var) ||
+           cast::toT(var) ||
+           cast::toString(var);
 }
