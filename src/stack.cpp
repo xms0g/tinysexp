@@ -53,7 +53,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
     if (alignedSize % 16 != 0)
         alignedSize += 8;
 
-    return alignedSize;
+    return alignedSize - stackOffset;
 }
 
 int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName, const SymbolType stype) {
@@ -68,8 +68,6 @@ int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName,
     }
 
     sf->offsets.emplace(varName, offset);
-
-    stackOffset += 8;
 
     return offset;
 }
