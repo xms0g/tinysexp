@@ -11,6 +11,14 @@ enum class SymbolType {
     GLOBAL
 };
 
+enum class VarType {
+    INT,
+    DOUBLE,
+    STRING,
+    NIL,
+    T
+};
+
 struct IExpr {
     std::shared_ptr<IExpr> child;
 
@@ -170,6 +178,7 @@ struct VarExpr final : IExpr {
     ExprPtr name;
     ExprPtr value;
     SymbolType sType;
+    VarType vType;
 
     VarExpr(ExprPtr& name_, ExprPtr& value_, const SymbolType type = SymbolType::GLOBAL) : name(std::move(name_)),
         value(std::move(value_)),
