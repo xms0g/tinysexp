@@ -84,6 +84,8 @@ private:
 
     bool isPrimitive(const ExprPtr& var);
 
+    void setType(VarExpr& var, const ExprPtr& value);
+
     ScopeTracker symbolTracker;
 
     struct TypeInferenceContext {

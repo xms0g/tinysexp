@@ -301,36 +301,46 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     }
     // Check out if the params are already resolved
     for (const auto& arg: funcCall.args) {
+        bool found{false};
         auto argVar = cast::toVar(arg);
+
+        auto innerVar = argVar;
         do {
-            const std::string argName = cast::toString(argVar->name)->data;
+            const std::string argName = cast::toString(innerVar->name)->data;
             sym = symbolTracker.lookup(argName);
             if (sym.value) {
+                innerVar->sType = sym.sType;
                 // Loop sym value until finding a primitive. Update var.
-                if (auto value = cast::toVar(sym.value); isPrimitive(value->value)) {
-                    argVar->value = value->value;
+                if (auto sym_value = cast::toVar(sym.value); isPrimitive(sym_value->value)) {
+                    innerVar->value = sym_value->value;
+                    setType(*argVar, sym_value->value);
                     break;
+                } else if (auto innerValue = cast::toVar(sym_value->value)) {
+                    do {
+                        if (isPrimitive(innerValue->value)) {
+                            innerVar->value = innerValue;
+                            setType(*argVar, innerValue->value);
+                            found = true;
+                            break;
+                        }
+                        innerValue = cast::toVar(innerValue->value);
+                    } while (innerValue);
                 }
             }
-            argVar = cast::toVar(argVar->value);
-        } while (argVar);
+            if (found)
+                break;
+            innerVar = cast::toVar(innerVar->value);
+        } while (innerVar);
     }
     // Make the arg type local because we'll keep them onto stack inside function
     int scratchIdx = 0, sseIdx = 0;
-    auto makeLocal = [&](const std::shared_ptr<VarExpr>& arg,
-                         const std::shared_ptr<VarExpr>& innerArg = nullptr) {
-        const bool isInt = innerArg
-                               ? cast::toInt(innerArg->value) != nullptr
-                               : cast::toInt(arg->value) != nullptr;
-        const bool isDouble = innerArg
-                                  ? cast::toDouble(innerArg->value) != nullptr
-                                  : cast::toDouble(arg->value) != nullptr;
+    auto makeLocal = [&](VarExpr& arg) {
         // The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
-        if (isInt && scratchIdx < 6) {
-            arg->sType = SymbolType::LOCAL;
+        if (arg.vType == VarType::INT && scratchIdx < 6) {
+            arg.sType = SymbolType::LOCAL;
             scratchIdx++;
-        } else if (isDouble && sseIdx < 8) {
-            arg->sType = SymbolType::LOCAL;
+        } else if (arg.vType == VarType::DOUBLE && sseIdx < 8) {
+            arg.sType = SymbolType::LOCAL;
             sseIdx++;
         }
     };
@@ -339,24 +349,14 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
         func->args.clear();
 
         for (auto& arg: funcCall.args) {
-            if (auto argVar = cast::toVar(arg); isPrimitive(argVar->value)) {
-                makeLocal(argVar);
-            } else {
-                auto innerVar = cast::toVar(argVar->value);
-                do {
-                    // Loop value until finding a primitive. Update var.
-                    if (isPrimitive(innerVar->value)) {
-                        makeLocal(argVar, innerVar);
-                    }
-                    innerVar = cast::toVar(innerVar->value);
-                } while (innerVar);
-            }
+            auto argVar = cast::toVar(arg);
+            makeLocal(*argVar);
             func->args.push_back(arg);
         }
     }
-
     // Find the proper type of variables and the return type of the function
     funcCall.returnType = defunResolve(func);
+
     if (funcName == tfCtx.entryPoint)
         tfCtx.isStarted = false;
 
@@ -631,4 +631,18 @@ bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
            cast::toNIL(var) ||
            cast::toT(var) ||
            cast::toString(var);
+}
+
+void SemanticAnalyzer::setType(VarExpr& var, const ExprPtr& value) {
+    if (cast::toInt(value)) {
+        var.vType = VarType::INT;
+    } else if (cast::toDouble(value)) {
+        var.vType = VarType::DOUBLE;
+    } else if (cast::toString(value)) {
+        var.vType = VarType::STRING;
+    } else if (cast::toT(value)) {
+        var.vType = VarType::T;
+    } else if (cast::toNIL(value)) {
+        var.vType = VarType::NIL;
+    }
 }
