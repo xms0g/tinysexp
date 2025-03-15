@@ -37,7 +37,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 
     for (const auto& arg: args) {
         const auto param = cast::toVar(arg);
-        sseCount += cast::toDouble(param->value) != nullptr;
+        sseCount += param->vType == VarType::DOUBLE;
     }
 
     if (args.size() > 6) {

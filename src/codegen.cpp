@@ -212,8 +212,8 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     auto token = Token{TokenType::LESS_THEN};
     ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
     // Address of iter var
-    std::string iterVarAddr = getAddr(iterVarName, SymbolType::LOCAL, REG64);
     stack_alloc(memorySizeInBytes[REG64])
+    std::string iterVarAddr = getAddr(iterVarName, SymbolType::LOCAL, REG64);
     // Set 0 to iter var
     mov(iterVarAddr, 0);
     // Loop label
@@ -336,11 +336,11 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         const auto param = cast::toVar(arg);
         const std::string paramName = cast::toString(param->name)->data;
 
-        if (cast::toInt(param->value)) {
+        if (param->vType == VarType::INT) {
             if (scratchIdx > 5)
                 continue;
             scratchIdx++;
-        } else if (cast::toDouble(param->value)) {
+        } else if (param->vType == VarType::DOUBLE) {
             if (sseIdx > 7)
                 continue;
             sseIdx++;
@@ -356,14 +356,15 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     for (const auto& arg: defun.args) {
         const auto param = cast::toVar(arg);
         const std::string paramName = cast::toString(param->name)->data;
-        const bool isInt = cast::toInt(param->value) != nullptr;
 
-        if ((isInt && scratchIdx > 5) || (cast::toDouble(param->value) && sseIdx > 7)) {
+        if ((param->vType == VarType::INT && scratchIdx > 5) || (param->vType == VarType::DOUBLE && sseIdx > 7)) {
             continue;
         }
 
-        mov(getAddr(paramName, param->sType, REG64), getRegNameByID(
-                isInt ? paramRegisters[scratchIdx++] : paramRegistersSSE[sseIdx++], REG64));
+        mov(getAddr(paramName, param->sType, REG64),
+            getRegNameByID(param->vType == VarType::INT
+                ? paramRegisters[scratchIdx++]
+                : paramRegistersSSE[sseIdx++], REG64));
     }
 
     for (auto& form: defun.forms) {
@@ -376,14 +377,14 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         mov("rax", getRegName(reg, REG64));
     }
 
-    pop("rbp")
     stack_dealloc(stackSize)
+    pop("rbp")
     ret();
 }
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     const auto func = cast::toVar(funcCall.name);
-    currentScope = cast::toString(func->name)->data;
+    const std::string funcName = cast::toString(func->name)->data;
 
     // Calculate the proper stack size before function call
     uint32_t stackAlignedSize = stackAllocator.calculateRequiredStackSize(funcCall.args);
@@ -392,22 +393,34 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     int scratchIdx = 0, sseIdx = 0, stackIdx = 0;
     for (const auto& arg: funcCall.args) {
         const auto param = cast::toVar(arg);
+        std::string addr;
+        bool isVar{false};
 
+        if (const auto innerVar = cast::toVar(param->value)) {
+            const std::string paramName = cast::toString(innerVar->name)->data;
+            addr = getAddr(paramName, innerVar->sType, REG64);
+            isVar = true;
+        }
         // If scratch param size > 5 or sse param size > 7, push the params onto stack
-        if ((scratchIdx > 5 && cast::toInt(param->value)) ||
-            (sseIdx > 7 && cast::toDouble(param->value))) {
-            pushParamOntoStack(*param, stackIdx);
+        if ((scratchIdx > 5 && param->vType == VarType::INT) || (sseIdx > 7 && param->vType == VarType::DOUBLE)) {
+            pushParamOntoStack(funcName, *param, stackIdx);
             continue;
         }
         // Push parameter to the appropriate register
-        if (const auto int_ = cast::toInt(param->value)) {
-            pushParamToRegister(paramRegisters[scratchIdx++], int_->n);
-        } else if (const auto double_ = cast::toDouble(param->value)) {
-            pushParamToRegister(paramRegistersSSE[sseIdx++], double_->n);
+        if (isVar) {
+            pushParamToRegister(param->vType == VarType::INT
+                                    ? paramRegisters[scratchIdx++]
+                                    : paramRegistersSSE[sseIdx++], addr);
+        } else {
+            if (const auto int_ = cast::toInt(param->value)) {
+                pushParamToRegister(paramRegisters[scratchIdx++], int_->n);
+            } else if (const auto double_ = cast::toDouble(param->value)) {
+                pushParamToRegister(paramRegistersSSE[sseIdx++], double_->n);
+            }
         }
     }
 
-    emitInstr1op("call", currentScope);
+    emitInstr1op("call", funcName);
 
     popInUseRegisters(paramRegisters, pop);
     popInUseRegisters(paramRegistersSSE, popxmm);
@@ -1017,10 +1030,10 @@ void CodeGen::pushParamToRegister(const uint32_t rid, auto value) {
     }
 }
 
-void CodeGen::pushParamOntoStack(const VarExpr& param, int& stackIdx) {
+void CodeGen::pushParamOntoStack(const std::string& funcName, const VarExpr& param, int& stackIdx) {
     const std::string paramName = cast::toString(param.name)->data;
 
-    stackAllocator.pushStackFrame(currentScope, paramName, SymbolType::PARAM);
+    stackAllocator.pushStackFrame(funcName, paramName, SymbolType::PARAM);
 
     const std::string addr = stackIdx ? std::format("qword [rsp + {}]", stackIdx) : "qword [rsp]";
 

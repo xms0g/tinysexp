@@ -73,7 +73,7 @@ private:
 
     void pushParamToRegister(uint32_t rid, auto value);
 
-    void pushParamOntoStack(const VarExpr& param, int& stackIdx);
+    void pushParamOntoStack(const std::string& funcName, const VarExpr& param, int& stackIdx);
 
     const char* getRegName(const Register* reg, uint32_t size);
 
