@@ -4,33 +4,33 @@ section .text
 _start:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 16
+	sub rsp, 8
 	mov rdi, 1
 	mov rsi, 2
 	mov rdx, 1
 	call calculator
-	add rsp, 16
+	add rsp, 8
 	mov qword [rel add-result], rax
-	sub rsp, 16
+	sub rsp, 8
 	mov rdi, 3
 	mov rsi, 2
 	mov rdx, 2
 	call calculator
-	add rsp, 16
+	add rsp, 8
 	mov qword [rel sub-result], rax
-	sub rsp, 16
+	sub rsp, 8
 	mov rdi, 3
 	mov rsi, 2
 	mov rdx, 3
 	call calculator
-	add rsp, 16
+	add rsp, 8
 	mov qword [rel mul-result], rax
-	sub rsp, 16
+	sub rsp, 8
 	mov rdi, 4
 	mov rsi, 2
 	mov rdx, 4
 	call calculator
-	add rsp, 16
+	add rsp, 8
 	mov qword [rel div-result], rax
 	pop rbp
 	mov rax, 0x2000001
@@ -82,8 +82,8 @@ calculator:
 	jmp .L0
 .L4:
 .L0:
-	pop rbp
 	add rsp, 24
+	pop rbp
 	ret
 
 section .data

@@ -4,10 +4,10 @@ section .text
 _start:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 16
+	sub rsp, 8
 	mov rdi, 10
 	call average
-	add rsp, 16
+	add rsp, 8
 	pop rbp
 	mov rax, 0x2000001
 	xor rdi, rdi
@@ -42,6 +42,6 @@ average:
 	cqo
 	idiv r10
 	add rsp, 8
-	pop rbp
 	add rsp, 8
+	pop rbp
 	ret

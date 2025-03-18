@@ -45,15 +45,15 @@ OPTIONS:
 ```asm
 [bits 64]
 section .text
-    global _start
+	global _start
 _start:
     push rbp
     mov rbp, rsp
-    sub rsp, 16
+    sub rsp, 8
     mov rdi, 1
     mov rsi, 2
     call add
-    add rsp, 16
+    add rsp, 8
     pop rbp
     mov rax, 0x2000001
     xor rdi, rdi
@@ -68,8 +68,8 @@ add:
     mov rax, qword [rbp - 8]
     mov r10, qword [rbp - 16]
     add rax, r10
-    pop rbp
     add rsp, 16
+    pop rbp
     ret
 
 ```
