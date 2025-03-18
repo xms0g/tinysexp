@@ -321,7 +321,7 @@ void CodeGen::emitDefconst(const DefconstExpr& defconst) {
 }
 
 void CodeGen::emitDefun(const DefunExpr& defun) {
-    const Register* reg = nullptr;
+    Register* reg = nullptr;
     const auto func = cast::toVar(defun.name);
     currentScope = cast::toString(func->name)->data;
 
@@ -372,11 +372,14 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     }
 
     if (reg && isSSE(reg->rType) && reg->id != xmm0) {
+        makeInUseRegister(xmm0);
         movsd("xmm0", getRegName(reg, REG64));
     } else if (reg && !isSSE(reg->rType) && reg->id != RAX) {
+        makeInUseRegister(RAX);
         mov("rax", getRegName(reg, REG64));
     }
 
+    register_free(reg)
     stack_dealloc(stackSize)
     pop("rbp")
     ret();
@@ -426,13 +429,6 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     popInUseRegisters(paramRegistersSSE, popxmm);
 
     stack_dealloc(stackAlignedSize)
-
-    auto makeInUseRegister = [&](const uint32_t id) {
-        auto* reg = registerAllocator.regFromID(id);
-        reg->status &= ~NO_USE;
-        reg->status |= INUSE;
-        return reg;
-    };
 
     if (cast::toDouble(funcCall.returnType)) {
         return makeInUseRegister(xmm0);
@@ -1002,6 +998,13 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
     } while (var_);
 
     return 0;
+}
+
+Register* CodeGen::makeInUseRegister(const uint32_t id) {
+    auto* reg = registerAllocator.regFromID(id);
+    reg->status &= ~NO_USE;
+    reg->status |= INUSE;
+    return reg;
 }
 
 void CodeGen::pushParamToRegister(const uint32_t rid, auto value) {
