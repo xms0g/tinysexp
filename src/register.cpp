@@ -10,7 +10,7 @@ Register* RegisterAllocator::alloc(const uint8_t rt) {
 }
 
 void RegisterAllocator::free(Register* reg) {
-    reg->status = NO_USE;
+    reg->status &= ~INUSE;
 }
 
 const char* RegisterAllocator::nameFromReg(const Register* reg, const uint32_t size) {
@@ -38,9 +38,8 @@ Register* RegisterAllocator::regFromID(const uint32_t id) {
 Register* RegisterAllocator::scan(const uint32_t* priorityOrder, const int size) {
     for (int i = 0; i < size; ++i) {
         for (auto& register_: registers) {
-            if (priorityOrder[i] == register_.rType && register_.status >> NO_USE_IDX & 1) {
-                register_.status &= ~NO_USE;
-                register_.status |= INUSE;
+            if (priorityOrder[i] == register_.rType && !isINUSE(register_.status)) {
+                setINUSE(register_.status);
                 return &register_;
             }
         }

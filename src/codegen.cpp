@@ -11,11 +11,6 @@
 #define newLine() generatedCode += "\n"
 #define syscall() generatedCode += "\tsyscall\n"
 
-#define isSSE(type) ((type >> SSE_IDX) & 1)
-#define isSCRATCH(type) ((type >> SCRATCH_IDX) & 1)
-#define isPRESERVED(type) ((type >> PRESERVED_IDX) & 1)
-#define isINUSE(type) ((type >> INUSE_IDX) & 1)
-
 #define stack_alloc(size) \
     if (size > 0) { \
         emitInstr2op("sub", "rsp", size); \
@@ -373,7 +368,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 
     if (reg && isSSE(reg->rType) && reg->id != xmm0) {
         auto* xmm = registerAllocator.regFromID(xmm0);
-        xmm->status = (xmm->status & ~NO_USE) | INUSE;
+        setINUSE(xmm->status);
         movsd("xmm0", getRegName(reg, REG64));
     } else if (reg && !isSSE(reg->rType) && reg->id != RAX) {
         mov("rax", getRegName(reg, REG64));
