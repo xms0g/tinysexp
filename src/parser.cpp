@@ -250,12 +250,15 @@ ExprPtr Parser::parseFuncCall() {
 
     ExprPtr name = parseAtom();
 
-    while (mCurrentToken.type == TokenType::INT ||
-           mCurrentToken.type == TokenType::DOUBLE ||
-           mCurrentToken.type == TokenType::VAR ||
-           mCurrentToken.type == TokenType::T ||
-           mCurrentToken.type == TokenType::NIL) {
-        args.emplace_back(parseAtom());
+    for (;;) {
+        if (mCurrentToken.type == TokenType::LPAREN) {
+            args.emplace_back(parseExpr());
+        } else {
+            args.emplace_back(parseAtom());
+        }
+
+        if (mCurrentToken.type == TokenType::RPAREN)
+            break;
     }
 
     return std::make_shared<FuncCallExpr>(name, args);
