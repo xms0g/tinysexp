@@ -372,10 +372,10 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     }
 
     if (reg && isSSE(reg->rType) && reg->id != xmm0) {
-        makeInUseRegister(xmm0);
+        auto* xmm = registerAllocator.regFromID(xmm0);
+        xmm->status = (xmm->status & ~NO_USE) | INUSE;
         movsd("xmm0", getRegName(reg, REG64));
     } else if (reg && !isSSE(reg->rType) && reg->id != RAX) {
-        makeInUseRegister(RAX);
         mov("rax", getRegName(reg, REG64));
     }
 
@@ -425,15 +425,20 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 
     emitInstr1op("call", funcName);
 
-    popInUseRegisters(paramRegisters, pop);
-    popInUseRegisters(paramRegistersSSE, popxmm);
+    Register* reg;
+    if (cast::toDouble(funcCall.returnType)) {
+        reg = registerAllocator.alloc(SSE);
+        movsd(getRegName(reg, REG64), "xmm0");
+        popInUseRegisters(paramRegistersSSE, popxmm)
+    } else {
+        reg = register_alloc();
+        mov(getRegName(reg, REG64), "rax");
+        popInUseRegisters(paramRegisters, pop)
+    }
 
     stack_dealloc(stackAlignedSize)
 
-    if (cast::toDouble(funcCall.returnType)) {
-        return makeInUseRegister(xmm0);
-    }
-    return makeInUseRegister(RAX);
+    return reg;
 }
 
 Register* CodeGen::emitIf(const IfExpr& if_) {
@@ -577,36 +582,10 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 
     // rax -> dividend
     // idiv divisor[register/memory]
-    // We have to check out lhs isn't rax and divisor is in rax cases.
     if (std::strcmp(op.first, "idiv") == 0) {
-        bool raxInUse{false};
-        const bool isRegLhsNotRax = regLhs->id != RAX;
-
-        if (isRegLhsNotRax) {
-            if (regRhs->id == RAX) {
-                auto* newReg = register_alloc();
-                mov(getRegName(newReg, REG64), "rax");
-                regRhs = newReg;
-            } else {
-                raxInUse = isINUSE(registerAllocator.regFromID(RAX)->status);
-
-                if (raxInUse) {
-                    push("rax")
-                }
-            }
-            mov("rax", getRegName(regLhs, REG64));
-        }
-
+        mov("rax", getRegName(regLhs, REG64));
         cqo();
         emitInstr1op("idiv", getRegName(regRhs, REG64));
-
-        if (isRegLhsNotRax) {
-            mov(getRegName(regLhs, REG64), "rax");
-        }
-
-        if (raxInUse) {
-            pop("rax")
-        }
     } else {
         emitInstr2op(op.first, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
     }
@@ -998,13 +977,6 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
     } while (var_);
 
     return 0;
-}
-
-Register* CodeGen::makeInUseRegister(const uint32_t id) {
-    auto* reg = registerAllocator.regFromID(id);
-    reg->status &= ~NO_USE;
-    reg->status |= INUSE;
-    return reg;
 }
 
 void CodeGen::pushParamToRegister(const uint32_t rid, auto value) {

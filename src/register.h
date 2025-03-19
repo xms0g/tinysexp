@@ -72,7 +72,7 @@ private:
     Register* scan(const uint32_t* priorityOrder, int size);
 
     Register registers[REGISTER_COUNT] = {
-        {RAX, SCRATCH, NO_USE},
+        {RAX, SCRATCH, INUSE},
         {RDI, SCRATCH | PARAM, NO_USE},
         {RSI, SCRATCH | PARAM, NO_USE},
         {RDX, SCRATCH | PARAM, NO_USE},
