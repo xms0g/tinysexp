@@ -586,6 +586,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
         mov("rax", getRegName(regLhs, REG64));
         cqo();
         emitInstr1op("idiv", getRegName(regRhs, REG64));
+        mov(getRegName(regLhs, REG64), "rax");
     } else {
         emitInstr2op(op.first, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
     }

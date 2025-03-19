@@ -45,7 +45,7 @@ OPTIONS:
 ```asm
 [bits 64]
 section .text
-	global _start
+    global _start
 _start:
     push rbp
     mov rbp, rsp
@@ -65,9 +65,10 @@ add:
     sub rsp, 16
     mov qword [rbp - 8], rdi
     mov qword [rbp - 16], rsi
-    mov rax, qword [rbp - 8]
-    mov r10, qword [rbp - 16]
-    add rax, r10
+    mov r10, qword [rbp - 8]
+    mov r11, qword [rbp - 16]
+    add r10, r11
+    mov rax, r10
     add rsp, 16
     pop rbp
     ret
