@@ -291,20 +291,16 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
         const auto farg = cast::toVar(func->args[0]);
         const auto fcargVar = cast::toVar(fcarg);
 
-        if (fcargVar && cast::toString(farg->name)->data != cast::toString(fcargVar->name)->data ||
+        if ((fcargVar && cast::toString(farg->name)->data != cast::toString(fcargVar->name)->data) ||
             isPrimitive(fcarg) || cast::toBinop(fcarg) || cast::toFuncCall(fcarg)) {
-            std::vector<ExprPtr> args;
-
-            for (int i = 0; i < func->args.size(); ++i) {
+            for (size_t i = 0; i < func->args.size(); ++i) {
                 const auto fArg = cast::toVar(func->args[i]);
 
                 ExprPtr name = fArg->name;
                 ExprPtr value = funcCall.args[i];
 
-                args.emplace_back(std::make_shared<VarExpr>(name, value, fArg->sType));
+                funcCall.args[i] = std::make_shared<VarExpr>(name, value, fArg->sType);
             }
-
-            funcCall.args = args;
         }
     }
     // Check out if the params are already resolved
