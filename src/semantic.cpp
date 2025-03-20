@@ -105,6 +105,12 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
         return whenResolve(*when);
     } else if (const auto cond = cast::toCond(ast)) {
         return condResolve(*cond);
+    } else if (cast::toInt(ast) || cast::toDouble(ast) || cast::toVar(ast)) {
+        if (const auto var = cast::toVar(ast)) {
+            return var->value;
+        }
+
+        return ast;
     }
 
     return nullptr;
@@ -281,12 +287,14 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
 
     // Match the param names to values
     if (!funcCall.args.empty()) {
+        const auto fcarg = funcCall.args[0];
         const auto farg = cast::toVar(func->args[0]);
-        const auto fcarg = cast::toVar(funcCall.args[0]);
+        const auto fcargVar = cast::toVar(fcarg);
 
-        if ((fcarg && cast::toString(farg->name)->data != cast::toString(fcarg->name)->data) ||
-            isPrimitive(funcCall.args[0])) {
+        if (fcargVar && cast::toString(farg->name)->data != cast::toString(fcargVar->name)->data ||
+            isPrimitive(fcarg) || cast::toBinop(fcarg) || cast::toFuncCall(fcarg)) {
             std::vector<ExprPtr> args;
+
             for (int i = 0; i < func->args.size(); ++i) {
                 const auto fArg = cast::toVar(func->args[i]);
 
@@ -301,36 +309,48 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     }
     // Check out if the params are already resolved
     for (const auto& arg: funcCall.args) {
-        bool found{false};
-        auto argVar = cast::toVar(arg);
-
-        auto innerVar = argVar;
-        do {
-            const std::string argName = cast::toString(innerVar->name)->data;
-            sym = symbolTracker.lookup(argName);
-            if (sym.value) {
-                innerVar->sType = sym.sType;
-                // Loop sym value until finding a primitive. Update var.
-                if (auto sym_value = cast::toVar(sym.value); isPrimitive(sym_value->value)) {
-                    innerVar->value = sym_value->value;
-                    setType(*argVar, sym_value->value);
-                    break;
-                } else if (auto innerValue = cast::toVar(sym_value->value)) {
-                    do {
-                        if (isPrimitive(innerValue->value)) {
-                            innerVar->value = innerValue;
-                            setType(*argVar, innerValue->value);
-                            found = true;
-                            break;
-                        }
-                        innerValue = cast::toVar(innerValue->value);
-                    } while (innerValue);
-                }
+        if (auto argVar = cast::toVar(arg)) {
+            if (auto binop = cast::toBinop(argVar->value)) {
+                auto value = binopResolve(*binop);
+                setType(*argVar, value);
+                continue;
             }
-            if (found)
-                break;
-            innerVar = cast::toVar(innerVar->value);
-        } while (innerVar);
+
+            if (auto fc = cast::toFuncCall(argVar->value)) {
+                auto value = funcCallResolve(*fc);
+                setType(*argVar, value);
+                continue;
+            }
+
+            bool found{false};
+            auto innerVar = argVar;
+            do {
+                const std::string argName = cast::toString(innerVar->name)->data;
+                sym = symbolTracker.lookup(argName);
+                if (sym.value) {
+                    innerVar->sType = sym.sType;
+                    // Loop sym value until finding a primitive. Update var.
+                    if (auto sym_value = cast::toVar(sym.value); isPrimitive(sym_value->value)) {
+                        innerVar->value = sym_value->value;
+                        setType(*argVar, sym_value->value);
+                        break;
+                    } else if (auto innerValue = cast::toVar(sym_value->value)) {
+                        do {
+                            if (isPrimitive(innerValue->value)) {
+                                innerVar->value = innerValue;
+                                setType(*argVar, innerValue->value);
+                                found = true;
+                                break;
+                            }
+                            innerValue = cast::toVar(innerValue->value);
+                        } while (innerValue);
+                    }
+                }
+                if (found)
+                    break;
+                innerVar = cast::toVar(innerVar->value);
+            } while (innerVar);
+        }
     }
     // Make the arg type local because we'll keep them onto stack inside function
     int scratchIdx = 0, sseIdx = 0;
