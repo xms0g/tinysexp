@@ -39,7 +39,7 @@ Register* RegisterAllocator::scan(const uint32_t* priorityOrder, const int size)
     for (int i = 0; i < size; ++i) {
         for (auto& register_: registers) {
             if (priorityOrder[i] == register_.rType && !isINUSE(register_.status)) {
-                setINUSE(register_.status);
+                register_.status |= INUSE;
                 return &register_;
             }
         }
