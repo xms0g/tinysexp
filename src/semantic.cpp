@@ -362,12 +362,10 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     };
 
     if (tfCtx.isStarted) {
-        func->args.clear();
-
-        for (auto& arg: funcCall.args) {
-            auto argVar = cast::toVar(arg);
-            makeLocal(*argVar);
-            func->args.push_back(arg);
+        for (size_t i = 0; i < funcCall.args.size(); ++i) {
+            auto arg = cast::toVar(funcCall.args[i]);
+            makeLocal(*arg);
+            func->args[i] = funcCall.args[i];
         }
     }
     // Find the proper type of variables and the return type of the function
