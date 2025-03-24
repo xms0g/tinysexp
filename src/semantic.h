@@ -88,13 +88,17 @@ private:
 
     ScopeTracker symbolTracker;
 
+    struct DepthContext {
+        std::string currentScope;
+    };
+    DepthContext depthCtx;
+
     struct TypeInferenceContext {
         bool isStarted{false};
         std::string entryPoint;
         std::unordered_map<std::string, ExprPtr> symbolTypeTable;
     };
     TypeInferenceContext tfCtx;
-
     /* File Name */
     const char* mFileName;
 };

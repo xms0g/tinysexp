@@ -246,6 +246,10 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     const auto var = cast::toVar(func->name);
     const std::string funcName = cast::toString(var->name)->data;
 
+    if (tfCtx.isStarted) {
+        depthCtx.currentScope = funcName;
+    }
+
     symbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
 
     symbolTracker.enter();
@@ -367,12 +371,14 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
             makeLocal(*arg);
             func->args[i] = funcCall.args[i];
         }
-    }
-    // Find the proper type of variables and the return type of the function
-    funcCall.returnType = defunResolve(func);
+        // Find the proper type of variables and the return type of the function
+        if (depthCtx.currentScope != funcName) {
+            funcCall.returnType = defunResolve(func);
 
-    if (funcName == tfCtx.entryPoint)
-        tfCtx.isStarted = false;
+            if (funcName == tfCtx.entryPoint)
+                tfCtx.isStarted = false;
+        }
+    }
 
     return funcCall.returnType;
 }
