@@ -41,6 +41,8 @@ private:
 
     Register* emitCond(const CondExpr& cond);
 
+    Register* emitPrimitive(const ExprPtr& prim);
+
     Register* emitNumb(const ExprPtr& n);
 
     Register* emitNode(const ExprPtr& node);

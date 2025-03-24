@@ -145,6 +145,8 @@ Register* CodeGen::emitAST(const ExprPtr& ast) {
         return emitWhen(*when);
     } else if (const auto cond = cast::toCond(ast)) {
         return emitCond(*cond);
+    } else if (cast::toInt(ast) || cast::toDouble(ast) || cast::toVar(ast)) {
+        return emitPrimitive(ast);
     }
 
     return nullptr;
@@ -390,24 +392,34 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     int scratchIdx = 0, sseIdx = 0, stackIdx = 0;
     for (const auto& arg: funcCall.args) {
         const auto param = cast::toVar(arg);
-        std::string addr;
-        bool isVar{false};
 
-        if (const auto innerVar = cast::toVar(param->value)) {
-            const std::string paramName = cast::toString(innerVar->name)->data;
-            addr = getAddr(paramName, innerVar->sType, REG64);
-            isVar = true;
-        }
         // If scratch param size > 5 or sse param size > 7, push the params onto stack
         if ((scratchIdx > 5 && param->vType == VarType::INT) || (sseIdx > 7 && param->vType == VarType::DOUBLE)) {
             pushParamOntoStack(funcName, *param, stackIdx);
             continue;
         }
         // Push parameter to the appropriate register
-        if (isVar) {
+        if (const auto innerVar = cast::toVar(param->value)) {
+            const std::string paramName = cast::toString(innerVar->name)->data;
             pushParamToRegister(param->vType == VarType::INT
                                     ? paramRegisters[scratchIdx++]
-                                    : paramRegistersSSE[sseIdx++], addr);
+                                    : paramRegistersSSE[sseIdx++],
+                                getAddr(paramName, innerVar->sType, REG64));
+        } else if (const auto binop = cast::toBinop(param->value)) {
+            Register* reg = emitBinop(*binop);
+            pushParamToRegister(isSSE(reg->rType)
+                                    ? paramRegistersSSE[sseIdx++]
+                                    : paramRegisters[scratchIdx++],
+                                getRegName(reg, REG64));
+            register_free(reg)
+        } else if (const auto fc = cast::toFuncCall(param->value)) {
+            Register* reg = emitFuncCall(*fc);
+
+            pushParamToRegister(isSSE(reg->rType)
+                                    ? paramRegistersSSE[sseIdx++]
+                                    : paramRegisters[scratchIdx++],
+                                getRegName(reg, REG64));
+            register_free(reg)
         } else {
             if (const auto int_ = cast::toInt(param->value)) {
                 pushParamToRegister(paramRegisters[scratchIdx++], int_->n);
@@ -496,6 +508,28 @@ Register* CodeGen::emitCond(const CondExpr& cond) {
     emitLabel(done);
 
     return reg;
+}
+
+Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
+    Register* reg = nullptr;
+
+    auto getPrimitive = [&](const ExprPtr& n) {
+        if (const auto int_ = cast::toInt(n)) {
+            reg = register_alloc();
+            mov(getRegName(reg, REG64), int_->n);
+        } else if (const auto double_ = cast::toDouble(prim)) {
+            reg = registerAllocator.alloc(SSE);
+            mov(getRegName(reg, REG64), double_->n);
+        }
+
+        return reg;
+    };
+
+    if (const auto var = cast::toVar(prim)) {
+        return getPrimitive(var->value);
+    }
+
+    return getPrimitive(prim);
 }
 
 Register* CodeGen::emitNumb(const ExprPtr& n) {
