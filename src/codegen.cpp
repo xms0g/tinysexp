@@ -513,23 +513,23 @@ Register* CodeGen::emitCond(const CondExpr& cond) {
 Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
     Register* reg = nullptr;
 
-    auto getPrimitive = [&](const ExprPtr& n) {
-        if (const auto int_ = cast::toInt(n)) {
-            reg = register_alloc();
-            mov(getRegName(reg, REG64), int_->n);
-        } else if (const auto double_ = cast::toDouble(prim)) {
-            reg = registerAllocator.alloc(SSE);
-            mov(getRegName(reg, REG64), double_->n);
-        }
-
-        return reg;
-    };
-
     if (const auto var = cast::toVar(prim)) {
-        return getPrimitive(var->value);
+        const std::string varName = cast::toString(var->name)->data;
+
+        reg = register_alloc();
+        mov(getRegName(reg, REG64), getAddr(varName, var->sType, REG64));
+        return reg;
     }
 
-    return getPrimitive(prim);
+    if (const auto int_ = cast::toInt(prim)) {
+        reg = register_alloc();
+        mov(getRegName(reg, REG64), int_->n);
+    } else if (const auto double_ = cast::toDouble(prim)) {
+        reg = registerAllocator.alloc(SSE);
+        mov(getRegName(reg, REG64), double_->n);
+    }
+
+    return reg;
 }
 
 Register* CodeGen::emitNumb(const ExprPtr& n) {
