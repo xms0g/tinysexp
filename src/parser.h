@@ -12,6 +12,7 @@ enum class SymbolType {
 };
 
 enum class VarType {
+    UNKNOWN,
     INT,
     DOUBLE,
     STRING,
