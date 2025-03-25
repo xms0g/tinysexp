@@ -58,7 +58,7 @@ private:
 
     ExprPtr defunResolve(const ExprPtr& defun);
 
-    ExprPtr funcCallResolve(FuncCallExpr& funcCall);
+    ExprPtr funcCallResolve(FuncCallExpr& funcCall, bool isParam = false);
 
     void returnResolve(const ReturnExpr& return_);
 
@@ -76,7 +76,7 @@ private:
 
     std::variant<int, double> getValue(const ExprPtr& num);
 
-    ExprPtr numberResolve(ExprPtr& n, TokenType ttype);
+    ExprPtr varResolve(ExprPtr& n, TokenType ttype);
 
     ExprPtr nodeResolve(ExprPtr& n, TokenType ttype);
 

@@ -268,11 +268,11 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     return result;
 }
 
-ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
+ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) {
     const auto var = cast::toVar(funcCall.name);
     const std::string funcName = cast::toString(var->name)->data;
 
-    if (symbolTracker.level() == 1) {
+    if (!isParam && symbolTracker.level() == 1) {
         tfCtx.isStarted = true;
         tfCtx.entryPoint = funcName;
     }
@@ -309,48 +309,53 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall) {
     }
     // Check out if the params are already resolved
     for (const auto& arg: funcCall.args) {
-        if (auto argVar = cast::toVar(arg)) {
-            if (auto binop = cast::toBinop(argVar->value)) {
-                auto value = binopResolve(*binop);
-                setType(*argVar, value);
-                continue;
-            }
+        auto argVar = cast::toVar(arg);
 
-            if (auto fc = cast::toFuncCall(argVar->value)) {
-                auto value = funcCallResolve(*fc);
-                setType(*argVar, value);
-                continue;
-            }
-
-            bool found{false};
-            auto innerVar = argVar;
-            do {
-                const std::string argName = cast::toString(innerVar->name)->data;
-                sym = symbolTracker.lookup(argName);
-                if (sym.value) {
-                    innerVar->sType = sym.sType;
-                    // Loop sym value until finding a primitive. Update var.
-                    if (auto sym_value = cast::toVar(sym.value); isPrimitive(sym_value->value)) {
-                        innerVar->value = sym_value->value;
-                        setType(*argVar, sym_value->value);
-                        break;
-                    } else if (auto innerValue = cast::toVar(sym_value->value)) {
-                        do {
-                            if (isPrimitive(innerValue->value)) {
-                                innerVar->value = innerValue;
-                                setType(*argVar, innerValue->value);
-                                found = true;
-                                break;
-                            }
-                            innerValue = cast::toVar(innerValue->value);
-                        } while (innerValue);
-                    }
-                }
-                if (found)
-                    break;
-                innerVar = cast::toVar(innerVar->value);
-            } while (innerVar);
+        if (isPrimitive(argVar->value)) {
+            setType(*argVar, argVar->value);
+            continue;
         }
+
+        if (auto binop = cast::toBinop(argVar->value)) {
+            auto value = binopResolve(*binop);
+            setType(*argVar, value);
+            continue;
+        }
+
+        if (auto fc = cast::toFuncCall(argVar->value)) {
+            auto value = funcCallResolve(*fc, true);
+            setType(*argVar, value);
+            continue;
+        }
+
+        bool found{false};
+        auto innerVar = argVar;
+        do {
+            const std::string argName = cast::toString(innerVar->name)->data;
+            sym = symbolTracker.lookup(argName);
+            if (sym.value) {
+                innerVar->sType = sym.sType;
+                // Loop sym value until finding a primitive. Update var.
+                if (auto sym_value = cast::toVar(sym.value); isPrimitive(sym_value->value)) {
+                    innerVar->value = sym_value->value;
+                    setType(*argVar, sym_value->value);
+                    break;
+                } else if (auto innerValue = cast::toVar(sym_value->value)) {
+                    do {
+                        if (isPrimitive(innerValue->value)) {
+                            innerVar->value = innerValue;
+                            setType(*argVar, innerValue->value);
+                            found = true;
+                            break;
+                        }
+                        innerValue = cast::toVar(innerValue->value);
+                    } while (innerValue);
+                }
+            }
+            if (found)
+                break;
+            innerVar = cast::toVar(innerVar->value);
+        } while (innerVar);
     }
     // Make the arg type local because we'll keep them onto stack inside function
     int scratchIdx = 0, sseIdx = 0;
@@ -518,7 +523,7 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) {
     return {};
 }
 
-ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
+ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
     if (isPrimitive(n) || cast::toUninitialized(n)) {
         if (cast::toDouble(n)) {
             checkBitwiseOp(n, ttype);
@@ -550,32 +555,47 @@ ExprPtr SemanticAnalyzer::numberResolve(ExprPtr& n, const TokenType ttype) {
     }
 
     auto innerVar = cast::toVar(sym.value);
+    // Loop sym value until finding a primitive. Update var.
     do {
         checkBool(innerVar->value, ttype);
-        // If the value is param
-        if (cast::toUninitialized(innerVar->value)) {
-            ExprPtr name_ = cast::toString(var->name);
-            ExprPtr value_ = std::make_shared<DoubleExpr>(0.0);
-            n = std::make_shared<VarExpr>(name_, value_, sym.sType);
-            return cast::toVar(n)->value;
-        }
-        // Loop sym value until finding a primitive. Update var.
+
         if (isPrimitive(innerVar->value)) {
-            if (cast::toDouble(innerVar->value)) {
+            if (innerVar->vType == VarType::DOUBLE) {
                 checkBitwiseOp(innerVar->value, ttype);
             }
 
             ExprPtr name_ = cast::toString(var->name);
             ExprPtr value_;
 
-            if (cast::toInt(innerVar->value)) {
+            if (innerVar->vType == VarType::INT) {
                 value_ = std::make_shared<IntExpr>(0);
-            } else if (cast::toDouble(innerVar->value)) {
+            } else if (innerVar->vType == VarType::DOUBLE) {
                 value_ = std::make_shared<DoubleExpr>(0.0);
             }
             var->value = value_;
+            var->vType = innerVar->vType;
             return value_;
         }
+
+        if (auto binop = cast::toBinop(innerVar->value)) {
+            const auto value = binopResolve(*binop);
+            setType(*var, value);
+            var->value = value;
+            return var->value;
+        }
+
+        if (const auto fc = cast::toFuncCall(innerVar->value)) {
+            const auto value = funcCallResolve(*fc);
+            setType(*var, value);
+            var->value = value;
+            return var->value;
+        }
+        // If the value is param
+        if (cast::toUninitialized(innerVar->value)) {
+            var->value = std::make_shared<DoubleExpr>(0.0);;
+            return var->value;
+        }
+
         innerVar = cast::toVar(innerVar->value);
     } while (innerVar);
 
@@ -595,14 +615,22 @@ ExprPtr SemanticAnalyzer::nodeResolve(ExprPtr& n, const TokenType ttype) {
         return funcCallResolve(*funcCall);
     }
 
-    return numberResolve(n, ttype);
+    return varResolve(n, ttype);
 }
 
 void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
 
-    if (const auto value = cast::toVar(var_->value)) {
+    if (isPrimitive(var_->value) || cast::toUninitialized(var_->value)) {
+        setType(*var_, var_->value);
+        symbolTracker.bind(varName, {
+                               .name = varName,
+                               .value = var,
+                               .sType = var_->sType,
+                               .isConstant = isConstant
+                           });
+    } else if (const auto value = cast::toVar(var_->value)) {
         const std::string valueName = cast::toString(value->name)->data;
         const Symbol sym = symbolTracker.lookup(valueName);
 
@@ -611,13 +639,8 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
         }
         // Update value
         var_->value = sym.value;
-        symbolTracker.bind(varName, {
-                               .name = varName,
-                               .value = var,
-                               .sType = var_->sType,
-                               .isConstant = isConstant
-                           });
-    } else if (isPrimitive(var_->value) || cast::toUninitialized(var_->value)) {
+        var_->vType = cast::toVar(sym.value)->vType;
+
         symbolTracker.bind(varName, {
                                .name = varName,
                                .value = var,
