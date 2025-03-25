@@ -67,19 +67,19 @@ int main(int argc, char** argv) {
         return EXIT_SUCCESS;
     }
 
-    std::string fn, lispFile, outputFile;
+    std::string fn, in, out;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
-            outputFile = argv[++i];
+            out = argv[++i];
         } else {
             fn = argv[i];
         }
     }
 
-    if (outputFile.empty()) {
+    if (out.empty()) {
         size_t pos = fn.rfind('.');
         std::string base = pos != std::string::npos ? fn.substr(0, pos) : fn;
-        outputFile = base + ".s";
+        out = base + ".s";
     }
 
     std::ifstream file;
@@ -91,9 +91,9 @@ int main(int argc, char** argv) {
         const std::size_t length = file.tellg();
         file.seekg(0, std::ios::beg);
 
-        lispFile.resize(length);
+        in.resize(length);
 
-        file.read(lispFile.data(), length);
+        file.read(in.data(), length);
 
         file.close();
     } catch (std::ifstream::failure& e) {
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    compile(fn, lispFile, outputFile);
+    compile(fn, in, out);
 
     return 0;
 }
