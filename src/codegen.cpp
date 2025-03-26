@@ -511,48 +511,55 @@ Register* CodeGen::emitCond(const CondExpr& cond) {
 }
 
 Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
-    Register* reg = nullptr;
+    if (const auto int_ = cast::toInt(prim)) {
+        return emitInt(*int_);
+    }
+
+    if (const auto double_ = cast::toDouble(prim)) {
+        return emitDouble(*double_);
+    }
 
     if (const auto var = cast::toVar(prim)) {
         const std::string varName = cast::toString(var->name)->data;
 
-        reg = register_alloc();
+        Register* reg = register_alloc();
         mov(getRegName(reg, REG64), getAddr(varName, var->sType, REG64));
+
         return reg;
     }
 
-    if (const auto int_ = cast::toInt(prim)) {
-        reg = register_alloc();
-        mov(getRegName(reg, REG64), int_->n);
-    } else if (const auto double_ = cast::toDouble(prim)) {
-        reg = registerAllocator.alloc(SSE);
-        mov(getRegName(reg, REG64), double_->n);
-    }
+    return nullptr;
+}
 
+Register* CodeGen::emitDouble(DoubleExpr& double_) {
+    Register* reg = register_alloc();
+    const char* regStr = getRegName(reg, REG64);
+
+    auto* regSSE = registerAllocator.alloc(SSE);
+
+    uint64_t hex = *reinterpret_cast<uint64_t*>(&double_.n);
+
+    mov(regStr, emitHex(hex));
+    movq(getRegName(regSSE, REG64), regStr);
+
+    register_free(reg)
+
+    return regSSE;
+}
+
+Register* CodeGen::emitInt(IntExpr& int_) {
+    auto* reg = register_alloc();
+    mov(getRegName(reg, REG64), int_.n);
     return reg;
 }
 
 Register* CodeGen::emitNumb(const ExprPtr& n) {
     if (const auto int_ = cast::toInt(n)) {
-        auto* reg = register_alloc();
-        mov(getRegName(reg, REG64), int_->n);
-        return reg;
+        return emitInt(*int_);
     }
 
     if (const auto double_ = cast::toDouble(n)) {
-        auto* reg = register_alloc();
-        const char* regStr = getRegName(reg, REG64);
-
-        auto* regSSE = registerAllocator.alloc(SSE);
-
-        uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-
-        mov(regStr, emitHex(hex));
-        movq(getRegName(regSSE, REG64), regStr);
-
-        register_free(reg)
-
-        return regSSE;
+        return emitDouble(*double_);
     }
 
     const auto var = cast::toVar(n);

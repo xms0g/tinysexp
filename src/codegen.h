@@ -43,6 +43,10 @@ private:
 
     Register* emitPrimitive(const ExprPtr& prim);
 
+    Register* emitInt(IntExpr& int_);
+
+    Register* emitDouble(DoubleExpr& double_);
+
     Register* emitNumb(const ExprPtr& n);
 
     Register* emitNode(const ExprPtr& node);
