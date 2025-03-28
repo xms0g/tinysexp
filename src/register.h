@@ -78,7 +78,7 @@ private:
         {.id = R13, .rType = PRESERVED, .status = 0},
         {.id = R14, .rType = PRESERVED, .status = 0},
         {.id = R15, .rType = PRESERVED, .status = 0},
-        {.id = xmm0, .rType = SSE | PARAM, .status = 0},
+        {.id = xmm0, .rType = SSE | PARAM, .status = INUSE},
         {.id = xmm1, .rType = SSE | PARAM, .status = 0},
         {.id = xmm2, .rType = SSE | PARAM, .status = 0},
         {.id = xmm3, .rType = SSE | PARAM, .status = 0},

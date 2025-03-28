@@ -39,14 +39,6 @@
     emitInstr2op("movdqu", xmm, "dqword [rsp]"); \
     stack_dealloc(16)
 
-#define popInUseRegisters(registers, pop) \
-    for (const int paramRegister: registers) { \
-        if (const auto* reg = registerAllocator.regFromID(paramRegister); \
-            isINUSE(reg->status)) { \
-            pop(getRegName(reg, REG64)); \
-        } \
-    }
-
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movq(d, s) emitInstr2op("movq", d, s)
 #define movsd(d, s) emitInstr2op("movsd", d, s)
@@ -369,7 +361,6 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     }
 
     if (reg && isSSE(reg->rType) && reg->id != xmm0) {
-        registerAllocator.regFromID(xmm0)->status |= INUSE;
         movsd("xmm0", getRegName(reg, REG64));
     } else if (reg && !isSSE(reg->rType) && reg->id != RAX) {
         mov("rax", getRegName(reg, REG64));
@@ -435,11 +426,9 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
     if (cast::toDouble(funcCall.returnType)) {
         reg = registerAllocator.alloc(SSE);
         movsd(getRegName(reg, REG64), "xmm0");
-        popInUseRegisters(paramRegistersSSE, popxmm)
     } else {
         reg = register_alloc();
         mov(getRegName(reg, REG64), "rax");
-        popInUseRegisters(paramRegisters, pop)
     }
 
     stack_dealloc(stackAlignedSize)
@@ -1018,14 +1007,6 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 void CodeGen::pushParamToRegister(const uint32_t rid, auto value) {
     const auto* reg = registerAllocator.regFromID(rid);
     const char* regStr = getRegName(reg, REG64);
-
-    if (isINUSE(reg->status)) {
-        if (isSSE(reg->rType)) {
-            pushxmm(regStr)
-        } else {
-            push(regStr)
-        }
-    }
 
     if (isSSE(reg->rType)) {
         auto* regScr = register_alloc();
