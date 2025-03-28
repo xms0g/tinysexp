@@ -57,6 +57,8 @@ private:
 
     void emitTest(const ExprPtr& test, std::string& trueLabel, std::string& elseLabel);
 
+    void emitJmpTrueLabel(const Register* reg, TokenType type, const std::string& label);
+
     Register* emitSet(const ExprPtr& set);
 
     Register* emitLogOp(const BinOpExpr& binop, const char* op);
@@ -88,6 +90,8 @@ private:
     std::string createLabel();
 
     void updateSections(const char* name, const std::pair<std::string, std::string>& data);
+
+    bool isPrimitive(const ExprPtr& var);
 
     std::string generatedCode;
     // Label

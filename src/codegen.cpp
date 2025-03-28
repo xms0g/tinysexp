@@ -714,23 +714,40 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
                 register_free(reg)
                 break;
             case TokenType::AND: {
-                auto* regLhs = emitCmpZero(binop->lhs);
-                register_free(regLhs)
-                emitJump("je", elseLabel);
+                auto andComp = [&](const ExprPtr& node) {
+                    if (isPrimitive(node)) {
+                        Register* regLhs = emitCmpZero(node);
+                        emitJump("je", elseLabel);
+                        register_free(regLhs)
+                    } else {
+                        emitTest(node, trueLabel, elseLabel);
+                    }
+                };
 
-                auto* regRhs = emitCmpZero(binop->rhs);
-                register_free(regRhs)
-                emitJump("je", elseLabel);
+                andComp(binop->lhs);
+                andComp(binop->rhs);
                 break;
             }
             case TokenType::OR: {
-                auto* regLhs = emitCmpZero(binop->lhs);
-                register_free(regLhs)
-                emitJump("jne", trueLabel);
+                if (isPrimitive(binop->lhs)) {
+                    Register* regLhs = emitCmpZero(binop->lhs);
+                    emitJump("jne", trueLabel);
+                    register_free(regLhs)
+                } else if (const auto bop = cast::toBinop(binop->lhs)) {
+                    reg = emitBinop(*bop);
+                    emitJmpTrueLabel(reg, bop->opToken.type, trueLabel);
+                    register_free(reg)
+                } else {
+                    emitTest(binop->lhs, trueLabel, elseLabel);
+                }
 
-                auto* regRhs = emitCmpZero(binop->rhs);
-                register_free(regRhs)
-                emitJump("je", elseLabel);
+                if (isPrimitive(binop->rhs)) {
+                    Register* regRhs = emitCmpZero(binop->rhs);
+                    emitJump("je", elseLabel);
+                    register_free(regRhs)
+                } else {
+                    emitTest(binop->rhs, trueLabel, elseLabel);
+                }
 
                 emitLabel(trueLabel);
                 break;
@@ -753,6 +770,43 @@ void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string&
     } else if (cast::toT(test)) {
         emitJump("jmp", trueLabel);
         emitLabel(trueLabel);
+    }
+}
+
+void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, const std::string& label) {
+    switch (type) {
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::DIV:
+        case TokenType::MUL:
+        case TokenType::LOGAND:
+        case TokenType::LOGIOR:
+        case TokenType::LOGXOR:
+        case TokenType::LOGNOR: {
+            emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
+            emitJump("jne", label);
+            break;
+        }
+        case TokenType::EQUAL:
+            emitJump("je", label);
+            break;
+        case TokenType::NEQUAL:
+            emitJump("jne", label);
+            break;
+        case TokenType::GREATER_THEN:
+            emitJump("jg", label);
+            break;
+        case TokenType::LESS_THEN:
+            emitJump("jl", label);
+            break;
+        case TokenType::GREATER_THEN_EQ:
+            emitJump("jge", label);
+            break;
+        case TokenType::LESS_THEN_EQ:
+            emitJump("jle", label);
+            break;
+        case TokenType::NOT:
+            break;
     }
 }
 
@@ -1064,4 +1118,13 @@ void CodeGen::updateSections(const char* name, const std::pair<std::string, std:
     }
 
     sections.at(name).emplace_back(data.first, data.second);
+}
+
+bool CodeGen::isPrimitive(const ExprPtr& var) {
+    return cast::toInt(var) ||
+           cast::toDouble(var) ||
+           cast::toNIL(var) ||
+           cast::toT(var) ||
+           cast::toString(var) ||
+           cast::toVar(var);
 }
