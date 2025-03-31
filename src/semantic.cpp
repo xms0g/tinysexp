@@ -1,13 +1,19 @@
 #include "semantic.h"
 #include "exceptions.hpp"
 
-void ScopeTracker::enter() {
+void ScopeTracker::enter(const std::string& scopeName) {
     std::unordered_map<std::string, Symbol> scope;
     mSymbolTable.push(scope);
+    mScopeNames.push(scopeName);
 }
 
 void ScopeTracker::exit() {
     mSymbolTable.pop();
+    mScopeNames.pop();
+}
+
+std::string& ScopeTracker::scopeName() {
+    return mScopeNames.top();
 }
 
 size_t ScopeTracker::level() const {
@@ -70,7 +76,7 @@ SemanticAnalyzer::SemanticAnalyzer(const char* fn) : mFileName(fn) {
 void SemanticAnalyzer::analyze(const ExprPtr& ast) {
     auto next = ast;
 
-    symbolTracker.enter();
+    symbolTracker.enter("global");
     while (next != nullptr) {
         exprResolve(next);
         next = next->child;
@@ -132,7 +138,7 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 }
 
 ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
-    symbolTracker.enter();
+    symbolTracker.enter("dotimes");
     checkConstantVar(dotimes.iterationCount);
 
     const auto var = cast::toVar(dotimes.iterationCount);
@@ -160,7 +166,7 @@ ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
 }
 
 ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
-    symbolTracker.enter();
+    symbolTracker.enter("let");
     for (auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
         const std::string varName = cast::toString(var_->name)->data;
@@ -246,13 +252,9 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     const auto var = cast::toVar(func->name);
     const std::string funcName = cast::toString(var->name)->data;
 
-    if (tfCtx.isStarted) {
-        depthCtx.currentScope = funcName;
-    }
-
     symbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
 
-    symbolTracker.enter();
+    symbolTracker.enter(funcName);
     for (auto& arg: func->args) {
         const auto argVar = cast::toVar(arg);
         const std::string argName = cast::toString(argVar->name)->data;
@@ -377,7 +379,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
             func->args[i] = funcCall.args[i];
         }
         // Find the proper type of variables and the return type of the function
-        if (depthCtx.currentScope != funcName) {
+        if (std::string& currentScope = symbolTracker.scopeName(); currentScope != funcName) {
             funcCall.returnType = defunResolve(func);
 
             if (funcName == tfCtx.entryPoint)

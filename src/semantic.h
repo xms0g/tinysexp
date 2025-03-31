@@ -14,9 +14,11 @@ struct Symbol {
 
 class ScopeTracker {
 public:
-    void enter();
+    void enter(const std::string& scopeName);
 
     void exit();
+
+    [[nodiscard]] std::string& scopeName();
 
     [[nodiscard]] size_t level() const;
 
@@ -29,6 +31,7 @@ public:
 private:
     using ScopeType = std::unordered_map<std::string, Symbol>;
     std::stack<ScopeType> mSymbolTable;
+    std::stack<std::string> mScopeNames;
 };
 
 class SemanticAnalyzer {
@@ -87,11 +90,6 @@ private:
     void setType(VarExpr& var, const ExprPtr& value);
 
     ScopeTracker symbolTracker;
-
-    struct DepthContext {
-        std::string currentScope;
-    };
-    DepthContext depthCtx;
 
     struct TypeInferenceContext {
         bool isStarted{false};
