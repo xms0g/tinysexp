@@ -349,7 +349,11 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 
     Register* reg = nullptr;
     for (auto& form: defun.forms) {
-        reg = emitAST(form);
+        if (form == defun.forms.back() && cast::toBinop(form)) {
+            reg = emitSet(form);
+        } else {
+            reg = emitAST(form);
+        }
     }
 
     if (reg && isSSE(reg->rType) && reg->id != xmm0) {
@@ -904,6 +908,7 @@ Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
         register_free(reg)
         return register_alloc();
     }
+
     return reg;
 }
 
