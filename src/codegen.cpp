@@ -207,11 +207,11 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     }
     // Increment iteration count
     reg = register_alloc();
-    const char* tempRegStr = getRegName(reg, REG64);
+    const char* regStr = getRegName(reg, REG64);
 
-    mov(tempRegStr, iterVarAddr);
-    emitInstr2op("add", tempRegStr, 1);
-    mov(iterVarAddr, tempRegStr);
+    mov(regStr, iterVarAddr);
+    emitInstr2op("add", regStr, 1);
+    mov(iterVarAddr, regStr);
 
     register_free(reg)
 
@@ -409,10 +409,10 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
                                 getRegName(reg, REG64));
             register_free(reg)
         } else {
-            if (const auto int_ = cast::toInt(param->value)) {
-                pushParamToRegister(paramRegisters[scratchIdx++], int_->n);
-            } else if (const auto double_ = cast::toDouble(param->value)) {
-                pushParamToRegister(paramRegistersSSE[sseIdx++], double_->n);
+            if (param->vType == VarType::INT) {
+                pushParamToRegister(paramRegisters[scratchIdx++], cast::toInt(param->value)->n);
+            } else if (param->vType == VarType::DOUBLE) {
+                pushParamToRegister(paramRegistersSSE[sseIdx++], cast::toDouble(param->value)->n);
             }
         }
     }
