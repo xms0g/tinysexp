@@ -143,7 +143,7 @@ ExprPtr Parser::parseDotimes() {
 
 
     while (mCurrentToken.type == TokenType::LPAREN) {
-        statements.emplace_back(parseExpr());
+        statements.push_back(parseExpr());
     }
 
     return std::make_shared<DotimesExpr>(var, statements);
@@ -155,7 +155,7 @@ ExprPtr Parser::parseLoop() {
     advance();
 
     while (mCurrentToken.type == TokenType::LPAREN) {
-        sexprs.emplace_back(parseExpr());
+        sexprs.push_back(parseExpr());
     }
 
     return std::make_shared<LoopExpr>(sexprs);
@@ -174,7 +174,7 @@ ExprPtr Parser::parseLet() {
         while (mCurrentToken.type == TokenType::VAR) {
             var = parseAtom();
             cast::toVar(var)->sType = SymbolType::LOCAL;
-            bindings.emplace_back(var);
+            bindings.push_back(var);
         }
 
         // Check out (let ((x 11)) )
@@ -190,7 +190,7 @@ ExprPtr Parser::parseLet() {
 
             cast::toVar(var)->value = std::move(value);
             cast::toVar(var)->sType = SymbolType::LOCAL;
-            bindings.emplace_back(var);
+            bindings.push_back(var);
             consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
         }
 
@@ -200,7 +200,7 @@ ExprPtr Parser::parseLet() {
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
 
     while (mCurrentToken.type == TokenType::LPAREN) {
-        body.emplace_back(parseExpr());
+        body.push_back(parseExpr());
     }
 
     return std::make_shared<LetExpr>(bindings, body);
@@ -234,12 +234,12 @@ ExprPtr Parser::parseDefun() {
     while (mCurrentToken.type == TokenType::VAR) {
         ExprPtr arg = parseAtom();
         cast::toVar(arg)->sType = SymbolType::PARAM;
-        args.emplace_back(arg);
+        args.push_back(arg);
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     // Parse body
     while (mCurrentToken.type == TokenType::LPAREN) {
-        forms.emplace_back(parseExpr());
+        forms.push_back(parseExpr());
     }
 
     return std::make_shared<DefunExpr>(name, args, forms);
@@ -252,9 +252,9 @@ ExprPtr Parser::parseFuncCall() {
 
     for (;;) {
         if (mCurrentToken.type == TokenType::LPAREN) {
-            args.emplace_back(parseExpr());
+            args.push_back(parseExpr());
         } else {
-            args.emplace_back(parseAtom());
+            args.push_back(parseAtom());
         }
 
         if (mCurrentToken.type == TokenType::RPAREN)
