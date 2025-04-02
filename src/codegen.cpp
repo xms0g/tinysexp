@@ -31,14 +31,6 @@
     emitInstr1op("pop", rn); \
     stackAllocator.dealloc(8);
 
-#define pushxmm(xmm) \
-    stack_alloc(16) \
-    emitInstr2op("movdqu", "dqword [rsp]", xmm);
-
-#define popxmm(xmm) \
-    emitInstr2op("movdqu", xmm, "dqword [rsp]"); \
-    stack_dealloc(16)
-
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movq(d, s) emitInstr2op("movq", d, s)
 #define movsd(d, s) emitInstr2op("movsd", d, s)
@@ -1118,13 +1110,4 @@ void CodeGen::updateSections(const char* name, const std::pair<std::string, std:
     }
 
     sections.at(name).emplace_back(data.first, data.second);
-}
-
-bool CodeGen::isPrimitive(const ExprPtr& var) {
-    return cast::toInt(var) ||
-           cast::toDouble(var) ||
-           cast::toNIL(var) ||
-           cast::toT(var) ||
-           cast::toString(var) ||
-           cast::toVar(var);
 }

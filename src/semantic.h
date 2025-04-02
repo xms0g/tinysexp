@@ -85,7 +85,7 @@ private:
 
     void valueResolve(const ExprPtr& var, bool isConstant = false);
 
-    bool isPrimitive(const ExprPtr& var);
+    static bool isPrimitive(const ExprPtr& var);
 
     void setType(VarExpr& var, const ExprPtr& value);
 
@@ -100,5 +100,13 @@ private:
     /* File Name */
     const char* mFileName;
 };
+
+inline bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
+    return cast::toInt(var) ||
+           cast::toDouble(var) ||
+           cast::toNIL(var) ||
+           cast::toT(var) ||
+           cast::toString(var);
+}
 
 #endif //SEMANTIC_H

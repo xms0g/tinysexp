@@ -670,14 +670,6 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
     }
 }
 
-bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
-    return cast::toInt(var) ||
-           cast::toDouble(var) ||
-           cast::toNIL(var) ||
-           cast::toT(var) ||
-           cast::toString(var);
-}
-
 void SemanticAnalyzer::setType(VarExpr& var, const ExprPtr& value) {
     if (cast::toInt(value)) {
         var.vType = VarType::INT;
