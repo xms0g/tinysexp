@@ -388,7 +388,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
             pushParamToRegister(param->vType == VarType::INT
                                     ? paramRegisters[scratchIdx++]
                                     : paramRegistersSSE[sseIdx++],
-                                getAddr(paramName, innerVar->sType, REG64));
+                                getAddr(paramName, innerVar->sType, REG64).c_str());
         } else if (const auto binop = cast::toBinop(param->value)) {
             reg = emitBinop(*binop);
             pushParamToRegister(isSSE(reg->rType)

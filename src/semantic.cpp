@@ -340,12 +340,14 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
                 // Loop sym value until finding a primitive. Update var.
                 if (auto sym_value = cast::toVar(sym.value); isPrimitive(sym_value->value)) {
                     innerVar->value = sym_value->value;
+                    setType(*innerVar, sym_value->value);
                     setType(*argVar, sym_value->value);
                     break;
                 } else if (auto innerValue = cast::toVar(sym_value->value)) {
                     do {
                         if (isPrimitive(innerValue->value)) {
-                            innerVar->value = innerValue;
+                            innerVar->value = sym_value;
+                            setType(*innerVar, innerValue->value);
                             setType(*argVar, innerValue->value);
                             found = true;
                             break;
