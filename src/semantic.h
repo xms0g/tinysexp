@@ -16,7 +16,7 @@ class ScopeTracker {
 public:
     void enter(const std::string& scopeName);
 
-    void exit();
+    void exit(bool isFunc = false);
 
     [[nodiscard]] std::string& scopeName();
 

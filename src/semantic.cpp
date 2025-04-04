@@ -4,12 +4,18 @@
 void ScopeTracker::enter(const std::string& scopeName) {
     std::unordered_map<std::string, Symbol> scope;
     mSymbolTable.push(scope);
-    mScopeNames.push(scopeName);
+
+    if (!scopeName.empty()) {
+        mScopeNames.push(scopeName);
+    }
 }
 
-void ScopeTracker::exit() {
+void ScopeTracker::exit(bool isFunc) {
     mSymbolTable.pop();
-    mScopeNames.pop();
+
+    if (isFunc) {
+        mScopeNames.pop();
+    }
 }
 
 std::string& ScopeTracker::scopeName() {
@@ -138,7 +144,7 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 }
 
 ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
-    symbolTracker.enter("dotimes");
+    symbolTracker.enter("");
     checkConstantVar(dotimes.iterationCount);
 
     const auto var = cast::toVar(dotimes.iterationCount);
@@ -166,7 +172,7 @@ ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
 }
 
 ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
-    symbolTracker.enter("let");
+    symbolTracker.enter("");
     for (const auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
         const std::string varName = cast::toString(var_->name)->data;
@@ -265,7 +271,7 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     for (const auto& statement: func->forms) {
         result = exprResolve(statement);
     }
-    symbolTracker.exit();
+    symbolTracker.exit(true);
 
     return result;
 }
