@@ -79,7 +79,7 @@ private:
 
     uint32_t getMemSize(const ExprPtr& var);
 
-    void pushParamToRegister(uint32_t rid, auto value);
+    void pushParamToRegister(uint32_t rid, const std::any& value);
 
     void pushParamOntoStack(const std::string& funcName, const VarExpr& param, int& stackIdx);
 

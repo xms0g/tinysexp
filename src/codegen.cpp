@@ -1055,21 +1055,31 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
     return 0;
 }
 
-void CodeGen::pushParamToRegister(const uint32_t rid, auto value) {
+void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
     const auto* reg = registerAllocator.regFromID(rid);
     const char* regStr = getRegName(reg, REG64);
 
     if (isSSE(reg->rType)) {
-        auto* regScr = register_alloc();
-        const char* regScrStr = getRegName(regScr, REG64);
+        try {
+            double n = std::any_cast<double>(value);
+            uint64_t hex = *reinterpret_cast<uint64_t*>(&n);
 
-        uint64_t hex = *reinterpret_cast<uint64_t*>(&value);
+            auto* regScr = register_alloc();
+            const char* regScrStr = getRegName(regScr, REG64);
 
-        mov(regScrStr, emitHex(hex));
-        movq(regStr, regScrStr);
-        register_free(regScr)
+            mov(regScrStr, emitHex(hex));
+            movq(regStr, regScrStr);
+            register_free(regScr)
+        } catch (const std::bad_any_cast& e) {
+            movsd(regStr, std::any_cast<const char*>(value));
+        }
     } else {
-        mov(regStr, value);
+        try {
+            mov(regStr, std::any_cast<int>(value));
+        } catch (const std::bad_any_cast& e) {
+            mov(regStr, std::any_cast<const char*>(value));
+        }
+
     }
 }
 
