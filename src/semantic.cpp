@@ -147,7 +147,7 @@ ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     valueResolve(var);
 
     ExprPtr result;
-    for (auto& statement: dotimes.statements) {
+    for (const auto& statement: dotimes.statements) {
         result = exprResolve(statement);
     }
     symbolTracker.exit();
@@ -158,7 +158,7 @@ ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
 ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
     ExprPtr result;
 
-    for (auto& sexpr: loop.sexprs) {
+    for (const auto& sexpr: loop.sexprs) {
         result = exprResolve(sexpr);
     }
 
@@ -167,7 +167,7 @@ ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
 
 ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
     symbolTracker.enter("let");
-    for (auto& var: let.bindings) {
+    for (const auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
         const std::string varName = cast::toString(var_->name)->data;
 
@@ -182,11 +182,11 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
     }
 
     ExprPtr result;
-    for (auto& statement: let.body) {
+    for (const auto& statement: let.body) {
         result = exprResolve(statement);
     }
     // Update the type of binding
-    for (auto& var: let.bindings) {
+    for (const auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
 
         if (const std::string varName = cast::toString(var_->name)->data;
@@ -255,14 +255,14 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     symbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
 
     symbolTracker.enter(funcName);
-    for (auto& arg: func->args) {
+    for (const auto& arg: func->args) {
         const auto argVar = cast::toVar(arg);
         const std::string argName = cast::toString(argVar->name)->data;
         symbolTracker.bind(argName, {.name = argName, .value = arg, .sType = argVar->sType});
     }
 
     ExprPtr result;
-    for (auto& statement: func->forms) {
+    for (const auto& statement: func->forms) {
         result = exprResolve(statement);
     }
     symbolTracker.exit();
@@ -442,7 +442,7 @@ ExprPtr SemanticAnalyzer::whenResolve(WhenExpr& when) {
     }
 
     ExprPtr result;
-    for (auto& form: when.then) {
+    for (const auto& form: when.then) {
         result = exprResolve(form);
     }
 
@@ -466,7 +466,7 @@ ExprPtr SemanticAnalyzer::condResolve(CondExpr& cond) {
             exprResolve(test);
         }
 
-        for (auto& statement: statements) {
+        for (const auto& statement: statements) {
             result = exprResolve(statement);
         }
     }
