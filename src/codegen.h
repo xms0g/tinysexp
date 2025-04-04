@@ -1,6 +1,7 @@
 #ifndef CODEGEN_H
 #define CODEGEN_H
 
+#include <any>
 #include <string>
 #include <unordered_map>
 #include "parser.h"
@@ -43,9 +44,9 @@ private:
 
     Register* emitPrimitive(const ExprPtr& prim);
 
-    Register* emitInt(IntExpr& int_);
+    Register* emitInt(const IntExpr& int_);
 
-    Register* emitDouble(DoubleExpr& double_);
+    Register* emitDouble(const DoubleExpr& double_);
 
     Register* emitNumb(const ExprPtr& n);
 
@@ -55,7 +56,7 @@ private:
 
     void emitSection(const ExprPtr& var, bool isConstant = false);
 
-    void emitTest(const ExprPtr& test, std::string& trueLabel, std::string& elseLabel);
+    void emitTest(const ExprPtr& test, const std::string& trueLabel, const std::string& elseLabel);
 
     void emitJmpTrueLabel(const Register* reg, TokenType type, const std::string& label);
 

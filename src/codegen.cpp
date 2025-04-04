@@ -8,7 +8,6 @@
 #define emitJump(jmp, label) emitInstr1op(jmp, label)
 #define ret() generatedCode += "\tret\n"
 #define cqo() generatedCode += "\tcqo\n"
-#define newLine() generatedCode += "\n"
 #define syscall() generatedCode += "\tsyscall\n"
 
 #define stack_alloc(size) \
@@ -89,14 +88,14 @@ std::string CodeGen::emit(const ExprPtr& ast) {
     syscall();
 
     // Function definitions
-    for (auto& [func, defun]: functions) {
+    for (const auto& [func, defun]: functions) {
         (this->*func)(defun);
     }
     // Sections
-    for (auto& [section, data]: sections) {
+    for (const auto& [section, data]: sections) {
         generatedCode += section;
 
-        for (auto& [name, size]: data) {
+        for (const auto& [name, size]: data) {
             generatedCode += std::format("{}: {}\n", name, size);
         }
     }
@@ -181,9 +180,8 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     const auto iterVar = cast::toVar(dotimes.iterationCount);
     const std::string iterVarName = cast::toString(iterVar->name)->data;
     // Labels
-    std::string trueLabel;
-    std::string loopLabel = createLabel();
-    std::string doneLabel = createLabel();
+    const std::string loopLabel = createLabel();
+    const std::string doneLabel = createLabel();
     // Loop condition
     ExprPtr name = iterVar->name;
     ExprPtr value = std::make_shared<IntExpr>(0);
@@ -198,10 +196,10 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     mov(iterVarAddr, 0);
     // Loop label
     emitLabel(loopLabel);
-    emitTest(test, trueLabel, doneLabel);
+    emitTest(test, std::string(), doneLabel);
     // Emit statements
     Register* reg = nullptr;
-    for (auto& statement: dotimes.statements) {
+    for (const auto& statement: dotimes.statements) {
         reg = emitAST(statement);
         register_free(reg)
     }
@@ -226,7 +224,6 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 Register* CodeGen::emitLoop(const LoopExpr& loop) {
     Register* reg = nullptr;
     // Labels
-    std::string trueLabel;
     std::string loopLabel = createLabel();
     std::string doneLabel = createLabel();
 
@@ -248,7 +245,7 @@ Register* CodeGen::emitLoop(const LoopExpr& loop) {
                 continue;
             }
 
-            emitTest(when->test, trueLabel, loopLabel);
+            emitTest(when->test, std::string(), loopLabel);
             emitJump("jmp", doneLabel);
             hasReturn = true;
             break;
@@ -266,19 +263,19 @@ Register* CodeGen::emitLet(const LetExpr& let) {
     Register* reg = nullptr;
     uint32_t requiredStackMem = 0;
 
-    for (auto& var: let.bindings) {
+    for (const auto& var: let.bindings) {
         const int size = memorySizeInBytes[getMemSize(var)];
         requiredStackMem += size;
     }
 
     stack_alloc(requiredStackMem)
 
-    for (auto& var: let.bindings) {
-        const auto memSize = getMemSize(var);
+    for (const auto& var: let.bindings) {
+        const uint32_t memSize = getMemSize(var);
         handleAssignment(var, memSize);
     }
 
-    for (auto& sexpr: let.body) {
+    for (const auto& sexpr: let.body) {
         reg = emitAST(sexpr);
         register_free(reg)
     }
@@ -289,7 +286,7 @@ Register* CodeGen::emitLet(const LetExpr& let) {
 }
 
 void CodeGen::emitSetq(const SetqExpr& setq) {
-    const auto memSize = getMemSize(setq.pair);
+    const uint32_t memSize = getMemSize(setq.pair);
     handleAssignment(setq.pair, memSize);
 }
 
@@ -305,8 +302,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     const auto func = cast::toVar(defun.name);
     currentScope = cast::toString(func->name)->data;
 
-    newLine();
-    emitLabel(currentScope);
+    emitLabel("\n" + currentScope);
     push("rbp")
     mov("rbp", "rsp");
 
@@ -348,7 +344,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
     }
 
     Register* reg = nullptr;
-    for (auto& form: defun.forms) {
+    for (const auto& form: defun.forms) {
         if (form == defun.forms.back() && cast::toBinop(form)) {
             reg = emitSet(form);
         } else {
@@ -433,8 +429,8 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 }
 
 Register* CodeGen::emitIf(const IfExpr& if_) {
-    std::string elseLabel = createLabel();
-    std::string trueLabel = createLabel();
+    const std::string trueLabel = createLabel();
+    const std::string elseLabel = createLabel();
     // Emit test
     emitTest(if_.test, trueLabel, elseLabel);
     // Emit then
@@ -458,13 +454,12 @@ Register* CodeGen::emitIf(const IfExpr& if_) {
 }
 
 Register* CodeGen::emitWhen(const WhenExpr& when) {
-    std::string trueLabel;
-    std::string doneLabel = createLabel();
+    const std::string doneLabel = createLabel();
     // Emit test
-    emitTest(when.test, trueLabel, doneLabel);
+    emitTest(when.test, std::string(), doneLabel);
     // Emit then
     Register* reg = nullptr;
-    for (auto& form: when.then) {
+    for (const auto& form: when.then) {
         reg = emitAST(form);
         register_free(reg)
     }
@@ -474,15 +469,14 @@ Register* CodeGen::emitWhen(const WhenExpr& when) {
 }
 
 Register* CodeGen::emitCond(const CondExpr& cond) {
-    std::string trueLabel;
-    std::string done = createLabel();
+    const std::string done = createLabel();
 
     Register* reg = nullptr;
     for (const auto& [test, forms]: cond.variants) {
-        std::string elseLabel = createLabel();
-        emitTest(test, trueLabel, elseLabel);
+        const std::string elseLabel = createLabel();
+        emitTest(test, std::string(), elseLabel);
 
-        for (auto& form: forms) {
+        for (const auto& form: forms) {
             reg = emitAST(form);
             register_free(reg)
         }
@@ -516,13 +510,19 @@ Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
     return nullptr;
 }
 
-Register* CodeGen::emitDouble(DoubleExpr& double_) {
+Register* CodeGen::emitInt(const IntExpr& int_) {
+    auto* reg = register_alloc();
+    mov(getRegName(reg, REG64), int_.n);
+    return reg;
+}
+
+Register* CodeGen::emitDouble(const DoubleExpr& double_) {
     Register* reg = register_alloc();
     const char* regStr = getRegName(reg, REG64);
 
     auto* regSSE = registerAllocator.alloc(SSE);
 
-    uint64_t hex = *reinterpret_cast<uint64_t*>(&double_.n);
+    uint64_t hex = *reinterpret_cast<const uint64_t*>(&double_.n);
 
     mov(regStr, emitHex(hex));
     movq(getRegName(regSSE, REG64), regStr);
@@ -530,12 +530,6 @@ Register* CodeGen::emitDouble(DoubleExpr& double_) {
     register_free(reg)
 
     return regSSE;
-}
-
-Register* CodeGen::emitInt(IntExpr& int_) {
-    auto* reg = register_alloc();
-    mov(getRegName(reg, REG64), int_.n);
-    return reg;
 }
 
 Register* CodeGen::emitNumb(const ExprPtr& n) {
@@ -659,7 +653,7 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant) {
     }
 }
 
-void CodeGen::emitTest(const ExprPtr& test, std::string& trueLabel, std::string& elseLabel) {
+void CodeGen::emitTest(const ExprPtr& test, const std::string& trueLabel, const std::string& elseLabel) {
     Register* reg;
 
     if (const auto binop = cast::toBinop(test)) {
@@ -784,6 +778,7 @@ void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, const 
             break;
         }
         case TokenType::EQUAL:
+        case TokenType::NOT:
             emitJump("je", label);
             break;
         case TokenType::NEQUAL:
@@ -800,8 +795,6 @@ void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, const 
             break;
         case TokenType::LESS_THEN_EQ:
             emitJump("jle", label);
-            break;
-        case TokenType::NOT:
             break;
     }
 }
