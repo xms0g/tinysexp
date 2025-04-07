@@ -954,18 +954,14 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
     }
 }
 
-void CodeGen::handleVariable(const VarExpr& var, uint32_t size) {
+void CodeGen::handleVariable(const VarExpr& var, const uint32_t size) {
     const std::string varName = cast::toString(var.name)->data;
-    auto value = cast::toVar(var.value);
+    const auto value = cast::toVar(var.value);
 
-    do {
-        if (Register* reg = emitLoadRegFromMem(*value, size)) {
-            emitStoreMemFromReg(varName, var.sType, reg, size);
-            register_free(reg)
-        }
-
-        value = cast::toVar(value->value);
-    } while (value);
+    if (Register* reg = emitLoadRegFromMem(*value, size)) {
+        emitStoreMemFromReg(varName, var.sType, reg, size);
+        register_free(reg)
+    }
 }
 
 Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
@@ -980,10 +976,10 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
         }
         case SymbolType::LOCAL:
         case SymbolType::GLOBAL: {
-            if (cast::toInt(var.value)) {
+            if (var.vType == VarType::INT) {
                 reg = register_alloc();
                 mov(getRegName(reg, REG64), getAddr(varName, var.sType, size));
-            } else if (cast::toDouble(var.value)) {
+            } else if (var.vType == VarType::DOUBLE) {
                 reg = registerAllocator.alloc(SSE);
                 movsd(getRegName(reg, REG64), getAddr(varName, var.sType, size));
             } else if (cast::toString(var.value)) {
@@ -995,6 +991,8 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
             }
             break;
         }
+        default:
+            break;
     }
 
     return reg;
@@ -1072,7 +1070,6 @@ void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
         } catch (const std::bad_any_cast& e) {
             mov(regStr, std::any_cast<const char*>(value));
         }
-
     }
 }
 

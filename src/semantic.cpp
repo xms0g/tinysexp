@@ -10,7 +10,7 @@ void ScopeTracker::enter(const std::string& scopeName) {
     }
 }
 
-void ScopeTracker::exit(bool isFunc) {
+void ScopeTracker::exit(const bool isFunc) {
     mSymbolTable.pop();
 
     if (isFunc) {
@@ -300,10 +300,9 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
     // Match the param names to values
     if (!funcCall.args.empty()) {
         const auto fcarg = funcCall.args[0];
-        const auto farg = cast::toVar(func->args[0]);
         const auto fcargVar = cast::toVar(fcarg);
 
-        if ((fcargVar && cast::toString(farg->name)->data != cast::toString(fcargVar->name)->data) ||
+        if ((fcargVar && cast::toUninitialized(fcargVar->value)) ||
             isPrimitive(fcarg) || cast::toBinop(fcarg) || cast::toFuncCall(fcarg)) {
             for (size_t i = 0; i < func->args.size(); ++i) {
                 const auto fArg = cast::toVar(func->args[i]);
@@ -336,36 +335,42 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
             continue;
         }
 
-        bool found{false};
-        auto innerVar = argVar;
-        do {
-            const std::string argName = cast::toString(innerVar->name)->data;
-            sym = symbolTracker.lookup(argName);
-            if (sym.value) {
-                innerVar->sType = sym.sType;
-                // Loop sym value until finding a primitive. Update var.
-                if (auto sym_value = cast::toVar(sym.value); isPrimitive(sym_value->value)) {
+        if (auto innerVar = cast::toVar(argVar->value)) {
+            bool found{false};
+
+            do {
+                const std::string innerVarName = cast::toString(innerVar->name)->data;
+
+                sym = symbolTracker.lookup(innerVarName);
+
+                if (sym.value) {
+                    auto sym_value = cast::toVar(sym.value);
                     innerVar->value = sym_value->value;
-                    setType(*innerVar, sym_value->value);
-                    setType(*argVar, sym_value->value);
-                    break;
-                } else if (auto innerValue = cast::toVar(sym_value->value)) {
-                    do {
-                        if (isPrimitive(innerValue->value)) {
-                            innerVar->value = sym_value;
-                            setType(*innerVar, innerValue->value);
-                            setType(*argVar, innerValue->value);
-                            found = true;
-                            break;
-                        }
-                        innerValue = cast::toVar(innerValue->value);
-                    } while (innerValue);
+                    innerVar->sType = sym_value->sType;
+                    // Loop sym value until finding a primitive. Update var.
+                    if (isPrimitive(sym_value->value)) {
+                        setType(*innerVar, sym_value->value);
+                        setType(*argVar, sym_value->value);
+                        break;
+                    }
+
+                    if (auto innerValue = cast::toVar(sym_value->value)) {
+                        do {
+                            if (isPrimitive(innerValue->value)) {
+                                setType(*innerVar, innerValue->value);
+                                setType(*argVar, innerValue->value);
+                                found = true;
+                                break;
+                            }
+                            innerValue = cast::toVar(innerValue->value);
+                        } while (innerValue);
+                    }
                 }
-            }
-            if (found)
-                break;
-            innerVar = cast::toVar(innerVar->value);
-        } while (innerVar);
+                if (found)
+                    break;
+                innerVar = cast::toVar(innerVar->value);
+            } while (innerVar);
+        }
     }
     // Make the arg type local because we'll keep them onto stack inside function
     int scratchIdx = 0, sseIdx = 0;
@@ -574,9 +579,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
                 checkBitwiseOp(innerVar->value, ttype);
             }
 
-            ExprPtr name_ = cast::toString(var->name);
             ExprPtr value_;
-
             if (innerVar->vType == VarType::INT) {
                 value_ = std::make_shared<IntExpr>(0);
             } else if (innerVar->vType == VarType::DOUBLE) {
