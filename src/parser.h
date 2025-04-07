@@ -6,6 +6,7 @@
 #include "lexer.h"
 
 enum class SymbolType {
+    UNKNOWN,
     LOCAL,
     PARAM,
     GLOBAL
@@ -181,7 +182,7 @@ struct VarExpr final : IExpr {
     SymbolType sType;
     VarType vType;
 
-    VarExpr(ExprPtr& name_, ExprPtr& value_, const SymbolType type = SymbolType::GLOBAL) : name(std::move(name_)),
+    VarExpr(ExprPtr& name_, ExprPtr& value_, const SymbolType type = SymbolType::UNKNOWN) : name(std::move(name_)),
         value(std::move(value_)),
         sType(type) {
     }
@@ -231,7 +232,7 @@ private:
 
     ExprPtr parseNumber();
 
-    ExprPtr createVar(bool isConstant = false);
+    ExprPtr createVar(SymbolType type, bool isConstant = false);
 
     void consume(TokenType expected, const char* errorStr);
 

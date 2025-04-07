@@ -207,17 +207,17 @@ ExprPtr Parser::parseLet() {
 }
 
 ExprPtr Parser::parseSetq() {
-    ExprPtr var = createVar();
+    ExprPtr var = createVar(SymbolType::UNKNOWN);
     return std::make_shared<SetqExpr>(var);
 }
 
 ExprPtr Parser::parseDefvar() {
-    ExprPtr var = createVar();
+    ExprPtr var = createVar(SymbolType::GLOBAL);
     return std::make_shared<DefvarExpr>(var);
 }
 
 ExprPtr Parser::parseDefconst() {
-    ExprPtr var = createVar(true);
+    ExprPtr var = createVar(SymbolType::GLOBAL, true);
     return std::make_shared<DefconstExpr>(var);
 }
 
@@ -401,7 +401,7 @@ ExprPtr Parser::parseNumber() {
     throw InvalidSyntaxError(mFileName, EXPECTED_NUMBER_ERROR, 0);
 }
 
-ExprPtr Parser::createVar(const bool isConstant) {
+ExprPtr Parser::createVar(const SymbolType type, const bool isConstant) {
     ExprPtr value;
     advance();
 
@@ -419,7 +419,9 @@ ExprPtr Parser::createVar(const bool isConstant) {
         }
     }
 
+    cast::toVar(var)->sType = type;
     cast::toVar(var)->value = std::move(value);
+
     return var;
 }
 
