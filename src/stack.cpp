@@ -42,9 +42,9 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 
     if (args.size() > 6) {
         if (args.size() == sseCount) {
-            stackParamCount = args.size() - 8;
+            stackParamCount = static_cast<int>(args.size()) - 8;
         } else {
-            stackParamCount = args.size() - 6 - sseCount;
+            stackParamCount = static_cast<int>(args.size()) - 6 - sseCount;
         }
     }
 

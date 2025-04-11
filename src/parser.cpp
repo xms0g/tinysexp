@@ -238,8 +238,15 @@ ExprPtr Parser::parseDefun() {
     }
     consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
     // Parse body
-    while (mCurrentToken.type == TokenType::LPAREN) {
-        forms.push_back(parseExpr());
+    for (;;) {
+        if (mCurrentToken.type == TokenType::LPAREN) {
+            forms.push_back(parseExpr());
+        } else {
+            forms.push_back(parseAtom());
+        }
+
+        if (mCurrentToken.type == TokenType::RPAREN)
+            break;
     }
 
     return std::make_shared<DefunExpr>(name, args, forms);
@@ -254,7 +261,12 @@ ExprPtr Parser::parseFuncCall() {
         if (mCurrentToken.type == TokenType::LPAREN) {
             args.push_back(parseExpr());
         } else {
-            args.push_back(parseAtom());
+            ExprPtr arg = parseAtom();
+
+            if (cast::toUninitialized(arg))
+                break;
+
+            args.push_back(arg);
         }
 
         if (mCurrentToken.type == TokenType::RPAREN)

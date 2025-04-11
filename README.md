@@ -45,33 +45,34 @@ OPTIONS:
 ```asm
 [bits 64]
 section .text
-    global _start
+	global _start
 _start:
-    push rbp
-    mov rbp, rsp
-    sub rsp, 8
-    mov rdi, 1
-    mov rsi, 2
-    call add
-    add rsp, 8
-    pop rbp
-    mov rax, 0x2000001
-    xor rdi, rdi
-    syscall
+	push rbp
+	mov rbp, rsp
+	sub rsp, 8
+	mov rdi, 1
+	mov rsi, 2
+	call add
+	mov r10, rax
+	add rsp, 8
+	pop rbp
+	mov rax, 0x2000001
+	xor rdi, rdi
+	syscall
 
 add:
-    push rbp
-    mov rbp, rsp
-    sub rsp, 16
-    mov qword [rbp - 8], rdi
-    mov qword [rbp - 16], rsi
-    mov r10, qword [rbp - 8]
-    mov r11, qword [rbp - 16]
-    add r10, r11
-    mov rax, r10
-    add rsp, 16
-    pop rbp
-    ret
+	push rbp
+	mov rbp, rsp
+	sub rsp, 16
+	mov qword [rbp - 8], rdi
+	mov qword [rbp - 16], rsi
+	mov r10, qword [rbp - 8]
+	mov r11, qword [rbp - 16]
+	add r10, r11
+	mov rax, r10
+	add rsp, 16
+	pop rbp
+	ret
 
 ```
 ## License

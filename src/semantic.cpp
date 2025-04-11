@@ -118,8 +118,8 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
     } else if (const auto cond = cast::toCond(ast)) {
         return condResolve(*cond);
     } else if (cast::toInt(ast) || cast::toDouble(ast) || cast::toVar(ast)) {
-        if (const auto var = cast::toVar(ast)) {
-            return var->value;
+        if (cast::toVar(ast)) {
+            return varResolve(const_cast<ExprPtr&>(ast), TokenType::VAR);
         }
 
         return ast;

@@ -180,7 +180,7 @@ struct VarExpr final : IExpr {
     ExprPtr name;
     ExprPtr value;
     SymbolType sType;
-    VarType vType;
+    VarType vType{};
 
     VarExpr(ExprPtr& name_, ExprPtr& value_, const SymbolType type = SymbolType::UNKNOWN) : name(std::move(name_)),
         value(std::move(value_)),
