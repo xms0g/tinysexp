@@ -24,6 +24,8 @@ public:
 
     void bind(const std::string& name, const Symbol& symbol);
 
+    void update(const std::string& name, const Symbol& symbol);
+
     Symbol lookup(const std::string& name);
 
     Symbol lookupCurrent(const std::string& name);
@@ -79,11 +81,13 @@ private:
 
     std::variant<int, double> getValue(const ExprPtr& num);
 
+    ExprPtr returnValue(const VarExpr& var);
+
     ExprPtr varResolve(ExprPtr& n, TokenType ttype);
 
     ExprPtr nodeResolve(ExprPtr& n, TokenType ttype);
 
-    void valueResolve(const ExprPtr& var, bool isConstant = false);
+    ExprPtr valueResolve(const ExprPtr& var, bool isConstant = false);
 
     static bool isPrimitive(const ExprPtr& var);
 
@@ -94,7 +98,6 @@ private:
     struct TypeInferenceContext {
         bool isStarted{false};
         std::string entryPoint;
-        std::unordered_map<std::string, ExprPtr> symbolTypeTable;
     };
     TypeInferenceContext tfCtx;
     /* File Name */

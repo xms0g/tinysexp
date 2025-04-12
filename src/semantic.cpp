@@ -27,16 +27,41 @@ size_t ScopeTracker::level() const {
 }
 
 void ScopeTracker::bind(const std::string& name, const Symbol& symbol) {
-    auto scope = mSymbolTable.top();
-    mSymbolTable.pop();
-
-    if (scope.contains(name)) {
-        scope[name] = symbol;
+    if (lookup(name).value) {
+        update(name, symbol);
     } else {
-        scope.emplace(name, symbol);
+        auto currentScope = mSymbolTable.top();
+        mSymbolTable.pop();
+
+        currentScope.emplace(name, symbol);
+        mSymbolTable.push(currentScope);
+    }
+}
+
+void ScopeTracker::update(const std::string& name, const Symbol& symbol) {
+    std::stack<ScopeType> scopes;
+    const size_t level = mSymbolTable.size();
+
+    for (size_t i = 0; i < level; ++i) {
+        ScopeType scope = mSymbolTable.top();
+        mSymbolTable.pop();
+
+        if (scope.contains(name)) {
+            scope[name] = symbol;
+            scopes.push(scope);
+            break;
+        }
+
+        scopes.push(scope);
     }
 
-    mSymbolTable.push(scope);
+    // reconstruct the scopes
+    const size_t currentLevel = scopes.size();
+    for (size_t i = 0; i < currentLevel; ++i) {
+        ScopeType scope = scopes.top();
+        scopes.pop();
+        mSymbolTable.push(scope);
+    }
 }
 
 Symbol ScopeTracker::lookup(const std::string& name) {
@@ -49,8 +74,8 @@ Symbol ScopeTracker::lookup(const std::string& name) {
         mSymbolTable.pop();
         scopes.push(scope);
 
-        if (auto elem = scope.find(name); elem != scope.end()) {
-            sym = elem->second;
+        if (scope.contains(name)) {
+            sym = scope[name];
             break;
         }
     }
@@ -67,10 +92,8 @@ Symbol ScopeTracker::lookup(const std::string& name) {
 }
 
 Symbol ScopeTracker::lookupCurrent(const std::string& name) {
-    ScopeType currentScope = mSymbolTable.top();
-
-    if (const auto elem = currentScope.find(name); elem != currentScope.end()) {
-        return elem->second;
+    if (ScopeType currentScope = mSymbolTable.top(); currentScope.contains(name)) {
+        return currentScope[name];
     }
 
     return {};
@@ -191,15 +214,7 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
     for (const auto& statement: let.body) {
         result = exprResolve(statement);
     }
-    // Update the type of binding
-    for (const auto& var: let.bindings) {
-        const auto var_ = cast::toVar(var);
 
-        if (const std::string varName = cast::toString(var_->name)->data;
-            tfCtx.symbolTypeTable.contains(varName)) {
-            var_->value = tfCtx.symbolTypeTable.at(varName);
-        }
-    }
     symbolTracker.exit();
 
     return result;
@@ -222,13 +237,7 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     // Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
     // If it's int or double, update sym->value and bind again.
     // If it's expr, resolve it.
-    valueResolve(var);
-
-    if (tfCtx.symbolTypeTable.contains(varName)) {
-        return tfCtx.symbolTypeTable.at(varName);
-    }
-
-    return var->value;
+    return valueResolve(var);
 }
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
@@ -538,6 +547,28 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) {
     return {};
 }
 
+ExprPtr SemanticAnalyzer::returnValue(const VarExpr& var) {
+    if (var.vType == VarType::INT) {
+        return std::make_shared<IntExpr>(0);
+    }
+
+    if (var.vType == VarType::DOUBLE) {
+        return std::make_shared<DoubleExpr>(0.0);
+    }
+
+    if (var.vType == VarType::STRING) {
+        return std::make_shared<StringExpr>();
+    }
+
+    if (var.vType == VarType::NIL) {
+        return std::make_shared<NILExpr>();
+    }
+
+    if (var.vType == VarType::T) {
+        return std::make_shared<TExpr>();
+    }
+}
+
 ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
     if (isPrimitive(n) || cast::toUninitialized(n)) {
         if (cast::toDouble(n)) {
@@ -561,15 +592,14 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
 
     var->sType = sym.sType;
 
-    // If we already know the type, don't check
-    if (tfCtx.isStarted && tfCtx.symbolTypeTable.contains(name)) {
-        ExprPtr name_ = cast::toString(var->name);
-        ExprPtr value_ = tfCtx.symbolTypeTable.at(name);
-        n = std::make_shared<VarExpr>(name_, value_, sym.sType);
-        return cast::toVar(n)->value;
-    }
-
     auto innerVar = cast::toVar(sym.value);
+
+    // If we already know the type, return it.
+    if (innerVar->vType != VarType::UNKNOWN) {
+        var->vType = innerVar->vType;
+        var->value = innerVar->value;
+        return returnValue(*innerVar);
+    }
     // Loop sym value until finding a primitive. Update var.
     do {
         checkBool(innerVar->value, ttype);
@@ -593,15 +623,15 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
         if (auto binop = cast::toBinop(innerVar->value)) {
             const auto value = binopResolve(*binop);
             setType(*var, value);
-            var->value = value;
-            return var->value;
+            var->value = innerVar->value;
+            return returnValue(*var);
         }
 
         if (const auto fc = cast::toFuncCall(innerVar->value)) {
             const auto value = funcCallResolve(*fc);
             setType(*var, value);
-            var->value = value;
-            return var->value;
+            var->value = innerVar->value;
+            return returnValue(*var);
         }
         // If the value is param
         if (cast::toUninitialized(innerVar->value)) {
@@ -631,19 +661,23 @@ ExprPtr SemanticAnalyzer::nodeResolve(ExprPtr& n, const TokenType ttype) {
     return varResolve(n, ttype);
 }
 
-void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
+ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
 
     if (isPrimitive(var_->value) || cast::toUninitialized(var_->value)) {
         setType(*var_, var_->value);
+
         symbolTracker.bind(varName, {
                                .name = varName,
                                .value = var,
                                .sType = var_->sType,
                                .isConstant = isConstant
                            });
-    } else if (const auto value = cast::toVar(var_->value)) {
+        return var_->value;
+    }
+
+    if (const auto value = cast::toVar(var_->value)) {
         const std::string valueName = cast::toString(value->name)->data;
         const Symbol sym = symbolTracker.lookup(valueName);
 
@@ -660,25 +694,21 @@ void SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant) {
                                .sType = var_->sType,
                                .isConstant = isConstant
                            });
-    } else {
-        ExprPtr name = var_->name;
-        ExprPtr value_ = exprResolve(var_->value);
-
-        symbolTracker.bind(varName, {
-                               .name = varName,
-                               .value = var,
-                               .sType = var_->sType,
-                               .isConstant = isConstant
-                           });
-
-        if (!tfCtx.isStarted) return;
-
-        if (tfCtx.symbolTypeTable.contains(varName)) {
-            tfCtx.symbolTypeTable[varName] = value_;
-        } else {
-            tfCtx.symbolTypeTable.emplace(varName, value_);
-        }
+        return var_->value;
     }
+
+    ExprPtr name = var_->name;
+    ExprPtr value_ = exprResolve(var_->value);
+    var_->vType = cast::toInt(value_) ? VarType::INT : VarType::DOUBLE;
+
+    symbolTracker.bind(varName, {
+                           .name = varName,
+                           .value = var,
+                           .sType = var_->sType,
+                           .isConstant = isConstant
+                       });
+
+    return value_;
 }
 
 void SemanticAnalyzer::setType(VarExpr& var, const ExprPtr& value) {
