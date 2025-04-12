@@ -22,10 +22,10 @@ factorial:
 	mov r10, qword [rbp - 8]
 	mov r11, 0
 	cmp r10, r11
-	jne .L0
+	jne .L1
 	mov r10, 1
 	jmp .L2
-.L0:
+.L1:
 	mov r10, qword [rbp - 8]
 	mov r11, qword [rbp - 8]
 	mov rdi, 1

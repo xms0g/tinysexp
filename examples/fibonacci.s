@@ -22,10 +22,10 @@ fibonacci:
 	mov r10, qword [rbp - 8]
 	mov r11, 1
 	cmp r10, r11
-	jg .L0
-	mov r10, qword [rel n]
+	jg .L1
+	mov r10, qword [rbp - 8]
 	jmp .L2
-.L0:
+.L1:
 	mov r10, qword [rbp - 8]
 	mov r11, 1
 	sub r10, r11
