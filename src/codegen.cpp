@@ -186,6 +186,8 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
     ExprPtr name = iterVar->name;
     ExprPtr value = std::make_shared<IntExpr>(0);
     ExprPtr lhs = std::make_shared<VarExpr>(name, value, SymbolType::LOCAL);
+    cast::toVar(lhs)->vType = iterVar->vType;
+
     ExprPtr rhs = iterVar->value;
     auto token = Token{TokenType::LESS_THEN};
     ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
