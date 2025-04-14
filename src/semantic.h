@@ -32,8 +32,8 @@ public:
 
 private:
     using ScopeType = std::unordered_map<std::string, Symbol>;
-    std::stack<ScopeType> mSymbolTable;
-    std::stack<std::string> mScopeNames;
+    std::stack<ScopeType> symbolTable;
+    std::stack<std::string> scopeNames;
 };
 
 class SemanticAnalyzer {

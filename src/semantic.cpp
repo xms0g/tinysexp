@@ -3,96 +3,91 @@
 
 void ScopeTracker::enter(const std::string& scopeName) {
     std::unordered_map<std::string, Symbol> scope;
-    mSymbolTable.push(scope);
+    symbolTable.push(scope);
 
     if (!scopeName.empty()) {
-        mScopeNames.push(scopeName);
+        scopeNames.push(scopeName);
     }
 }
 
 void ScopeTracker::exit(const bool isFunc) {
-    mSymbolTable.pop();
+    symbolTable.pop();
 
     if (isFunc) {
-        mScopeNames.pop();
+        scopeNames.pop();
     }
 }
 
 std::string& ScopeTracker::scopeName() {
-    return mScopeNames.top();
+    return scopeNames.top();
 }
 
 size_t ScopeTracker::level() const {
-    return mSymbolTable.size();
+    return symbolTable.size();
 }
 
 void ScopeTracker::bind(const std::string& name, const Symbol& symbol) {
     if (lookup(name).value) {
         update(name, symbol);
     } else {
-        auto currentScope = mSymbolTable.top();
-        mSymbolTable.pop();
+        auto currentScope = symbolTable.top();
+        symbolTable.pop();
 
         currentScope.emplace(name, symbol);
-        mSymbolTable.push(currentScope);
+        symbolTable.push(currentScope);
     }
 }
 
 void ScopeTracker::update(const std::string& name, const Symbol& symbol) {
     std::stack<ScopeType> scopes;
-    const size_t level = mSymbolTable.size();
-
-    for (size_t i = 0; i < level; ++i) {
-        ScopeType scope = mSymbolTable.top();
-        mSymbolTable.pop();
-
+  
+    while (!symbolTable.empty()) {
+        ScopeType scope = symbolTable.top();
+        symbolTable.pop();
+        
         if (scope.contains(name)) {
             scope[name] = symbol;
             scopes.push(scope);
             break;
         }
-
+        // If the symbol is not found, push the scope back to the stack
+        // and continue searching in the next scope
         scopes.push(scope);
     }
 
     // reconstruct the scopes
-    const size_t currentLevel = scopes.size();
-    for (size_t i = 0; i < currentLevel; ++i) {
-        ScopeType scope = scopes.top();
+    while (!scopes.empty()) {
+        symbolTable.push(scopes.top());
         scopes.pop();
-        mSymbolTable.push(scope);
     }
 }
 
 Symbol ScopeTracker::lookup(const std::string& name) {
     Symbol sym{};
     std::stack<ScopeType> scopes;
-    const size_t level = mSymbolTable.size();
 
-    for (size_t i = 0; i < level; ++i) {
-        ScopeType scope = mSymbolTable.top();
-        mSymbolTable.pop();
+    while (!symbolTable.empty()) {
+        ScopeType scope = symbolTable.top();
+        symbolTable.pop();
         scopes.push(scope);
 
         if (scope.contains(name)) {
             sym = scope[name];
             break;
         }
+        
     }
-
     // reconstruct the scopes
-    const size_t currentLevel = scopes.size();
-    for (size_t i = 0; i < currentLevel; ++i) {
-        ScopeType scope = scopes.top();
+    while (!scopes.empty()) {
+        symbolTable.push(scopes.top());
         scopes.pop();
-        mSymbolTable.push(scope);
     }
 
     return sym;
 }
 
 Symbol ScopeTracker::lookupCurrent(const std::string& name) {
-    if (ScopeType currentScope = mSymbolTable.top(); currentScope.contains(name)) {
+    if (ScopeType currentScope = symbolTable.top(); currentScope.contains(name)) {
         return currentScope[name];
     }
 
