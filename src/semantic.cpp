@@ -94,7 +94,7 @@ Symbol ScopeTracker::lookupCurrent(const std::string& name) {
     return {};
 }
 
-SemanticAnalyzer::SemanticAnalyzer(const char* fn) : mFileName(fn) {
+SemanticAnalyzer::SemanticAnalyzer(const char* fn) : fileName(fn) {
 }
 
 void SemanticAnalyzer::analyze(const ExprPtr& ast) {
@@ -197,7 +197,7 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
 
         // Check out the var in the current scope, if it's already defined, raise error
         if (const Symbol sym = symbolTracker.lookupCurrent(varName); sym.value) {
-            throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
+            throw SemanticError(fileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
         }
 
         // Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
@@ -225,7 +225,7 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     const Symbol sym = symbolTracker.lookup(varName);
 
     if (!sym.value) {
-        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
+        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
     }
     // Resolve the var scope.
     var->sType = sym.sType;
@@ -240,7 +240,7 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
     const std::string varName = cast::toString(var->name)->data;
 
     if (symbolTracker.level() > 1) {
-        throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
+        throw SemanticError(fileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
     }
 
     valueResolve(var);
@@ -251,7 +251,7 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
     const std::string varName = cast::toString(var->name)->data;
 
     if (symbolTracker.level() > 1) {
-        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
+        throw SemanticError(fileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
     }
 
     valueResolve(var, true);
@@ -292,13 +292,13 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
     Symbol sym = symbolTracker.lookup(funcName);
 
     if (!sym.value || !cast::toDefun(sym.value)) {
-        throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
+        throw SemanticError(fileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
     }
 
     const auto func = cast::toDefun(sym.value);
 
     if (funcCall.args.size() != func->args.size()) {
-        throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
+        throw SemanticError(fileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
     }
 
     // Match the param names to values
@@ -415,7 +415,7 @@ void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
 
     // Check out the var.If it's not defined, raise error.
     if (const Symbol sym = symbolTracker.lookup(argName); !sym.value) {
-        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
+        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
     }
 }
 
@@ -425,7 +425,7 @@ ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {
 
         const Symbol sym = symbolTracker.lookup(name);
         if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
 
         if_.test = sym.value;
@@ -448,7 +448,7 @@ ExprPtr SemanticAnalyzer::whenResolve(WhenExpr& when) {
 
         const Symbol sym = symbolTracker.lookup(name);
         if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
 
         when.test = sym.value;
@@ -473,7 +473,7 @@ ExprPtr SemanticAnalyzer::condResolve(CondExpr& cond) {
 
             const Symbol sym = symbolTracker.lookup(name);
             if (!sym.value) {
-                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+                throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
 
             test = sym.value;
@@ -494,7 +494,7 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     const std::string varName = cast::toString(var_->name)->data;
 
     if (const Symbol sym = symbolTracker.lookup(varName); sym.isConstant) {
-        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
+        throw SemanticError(fileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
     }
 }
 
@@ -503,11 +503,11 @@ void SemanticAnalyzer::checkBool(const ExprPtr& var, const TokenType ttype) cons
         return;
 
     if (cast::toT(var)) {
-        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
+        throw SemanticError(fileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
     }
 
     if (cast::toNIL(var)) {
-        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
+        throw SemanticError(fileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
     }
 }
 
@@ -516,7 +516,7 @@ void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) {
         ttype == TokenType::LOGIOR ||
         ttype == TokenType::LOGXOR ||
         ttype == TokenType::LOGNOR) {
-        throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(n))), 0);
+        throw SemanticError(fileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(n))), 0);
     }
 }
 
@@ -582,7 +582,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
     const Symbol sym = symbolTracker.lookup(name);
 
     if (!sym.value) {
-        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
 
     var->sType = sym.sType;
@@ -638,7 +638,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
     } while (innerVar);
 
     if (!innerVar) {
-        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
 
     return nullptr;
@@ -677,7 +677,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
         const Symbol sym = symbolTracker.lookup(valueName);
 
         if (!sym.value) {
-            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
+            throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
         }
         // Update value
         var_->value = sym.value;

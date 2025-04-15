@@ -2,160 +2,160 @@
 #include <cstring>
 #include "exceptions.hpp"
 
-Lexer::Lexer(const char* fn, std::string text) : mText(std::move(text)), mPos(-1, 0, -1), mFileName(fn) {
+Lexer::Lexer(const char* fn, std::string text) : text(std::move(text)), pos(-1, 0, -1), fileName(fn) {
     advance();
 }
 
 void Lexer::process() {
-    while (mCurrentChar) {
-        if (mCurrentChar[0] == '\t' || mCurrentChar[0] == '\n' || std::isspace(mCurrentChar[0])) {
+    while (currentChar) {
+        if (currentChar[0] == '\t' || currentChar[0] == '\n' || std::isspace(currentChar[0])) {
             advance();
-        } else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
-            mTokens.emplace_back(TokenType::DOTIMES);
+        } else if (!std::strncmp("dotimes", currentChar, 7)) {
+            tokens.emplace_back(TokenType::DOTIMES);
             advance(7);
-        } else if (!std::strncmp("return", mCurrentChar, 6)) {
-            mTokens.emplace_back(TokenType::RETURN);
+        } else if (!std::strncmp("return", currentChar, 6)) {
+            tokens.emplace_back(TokenType::RETURN);
             advance(6);
-        } else if (!std::strncmp("loop", mCurrentChar, 4)) {
-            mTokens.emplace_back(TokenType::LOOP);
+        } else if (!std::strncmp("loop", currentChar, 4)) {
+            tokens.emplace_back(TokenType::LOOP);
             advance(4);
-        } else if (!std::strncmp("let", mCurrentChar, 3)) {
-            mTokens.emplace_back(TokenType::LET);
+        } else if (!std::strncmp("let", currentChar, 3)) {
+            tokens.emplace_back(TokenType::LET);
             advance(3);
-        } else if (!std::strncmp("setq", mCurrentChar, 4)) {
-            mTokens.emplace_back(TokenType::SETQ);
+        } else if (!std::strncmp("setq", currentChar, 4)) {
+            tokens.emplace_back(TokenType::SETQ);
             advance(4);
-        } else if (!std::strncmp("if", mCurrentChar, 2)) {
-            mTokens.emplace_back(TokenType::IF);
+        } else if (!std::strncmp("if", currentChar, 2)) {
+            tokens.emplace_back(TokenType::IF);
             advance(2);
-        } else if (!std::strncmp("when", mCurrentChar, 4)) {
-            mTokens.emplace_back(TokenType::WHEN);
+        } else if (!std::strncmp("when", currentChar, 4)) {
+            tokens.emplace_back(TokenType::WHEN);
             advance(4);
-        } else if (!std::strncmp("cond", mCurrentChar, 4)) {
-            mTokens.emplace_back(TokenType::COND);
+        } else if (!std::strncmp("cond", currentChar, 4)) {
+            tokens.emplace_back(TokenType::COND);
             advance(4);
-        } else if (!std::strncmp("defvar", mCurrentChar, 4)) {
-            mTokens.emplace_back(TokenType::DEFVAR);
+        } else if (!std::strncmp("defvar", currentChar, 4)) {
+            tokens.emplace_back(TokenType::DEFVAR);
             advance(6);
-        } else if (!std::strncmp("defconstant", mCurrentChar, 11)) {
-            mTokens.emplace_back(TokenType::DEFCONST);
+        } else if (!std::strncmp("defconstant", currentChar, 11)) {
+            tokens.emplace_back(TokenType::DEFCONST);
             advance(11);
-        } else if (!std::strncmp("defun", mCurrentChar, 5)) {
-            mTokens.emplace_back(TokenType::DEFUN);
+        } else if (!std::strncmp("defun", currentChar, 5)) {
+            tokens.emplace_back(TokenType::DEFUN);
             advance(5);
-        } else if (!std::strncmp("nil", mCurrentChar, 3)) {
-            mTokens.emplace_back(TokenType::NIL);
+        } else if (!std::strncmp("nil", currentChar, 3)) {
+            tokens.emplace_back(TokenType::NIL);
             advance(3);
-        } else if (!std::strncmp("logand", mCurrentChar, 6)) {
-            mTokens.emplace_back(TokenType::LOGAND);
+        } else if (!std::strncmp("logand", currentChar, 6)) {
+            tokens.emplace_back(TokenType::LOGAND);
             advance(6);
-        } else if (!std::strncmp("logior", mCurrentChar, 6)) {
-            mTokens.emplace_back(TokenType::LOGIOR);
+        } else if (!std::strncmp("logior", currentChar, 6)) {
+            tokens.emplace_back(TokenType::LOGIOR);
             advance(6);
-        } else if (!std::strncmp("logxor", mCurrentChar, 6)) {
-            mTokens.emplace_back(TokenType::LOGXOR);
+        } else if (!std::strncmp("logxor", currentChar, 6)) {
+            tokens.emplace_back(TokenType::LOGXOR);
             advance(6);
-        } else if (!std::strncmp("lognor", mCurrentChar, 6)) {
-            mTokens.emplace_back(TokenType::LOGNOR);
+        } else if (!std::strncmp("lognor", currentChar, 6)) {
+            tokens.emplace_back(TokenType::LOGNOR);
             advance(6);
-        } else if (!std::strncmp("and", mCurrentChar, 3)) {
-            mTokens.emplace_back(TokenType::AND);
+        } else if (!std::strncmp("and", currentChar, 3)) {
+            tokens.emplace_back(TokenType::AND);
             advance(3);
-        } else if (!std::strncmp("or", mCurrentChar, 2)) {
-            mTokens.emplace_back(TokenType::OR);
+        } else if (!std::strncmp("or", currentChar, 2)) {
+            tokens.emplace_back(TokenType::OR);
             advance(2);
-        } else if (!std::strncmp("not", mCurrentChar, 3)) {
-            mTokens.emplace_back(TokenType::NOT);
+        } else if (!std::strncmp("not", currentChar, 3)) {
+            tokens.emplace_back(TokenType::NOT);
             advance(3);
-        } else if ((mCurrentChar[0] == 't' && mCurrentChar[1] == ' ') ||
-                   (mCurrentChar[0] == 't' && mCurrentChar[1] == ')')) {
-            mTokens.emplace_back(TokenType::T);
+        } else if ((currentChar[0] == 't' && currentChar[1] == ' ') ||
+                   (currentChar[0] == 't' && currentChar[1] == ')')) {
+            tokens.emplace_back(TokenType::T);
             advance();
-        } else if (std::isalpha(mCurrentChar[0])) {
+        } else if (std::isalpha(currentChar[0])) {
             std::string token;
 
-            while (mCurrentChar && (std::isalnum(mCurrentChar[0]) || mCurrentChar[0] == '_'  || mCurrentChar[0] == '-')) {
-                token += mCurrentChar[0];
+            while (currentChar && (std::isalnum(currentChar[0]) || currentChar[0] == '_'  || currentChar[0] == '-')) {
+                token += currentChar[0];
                 advance();
             }
 
-            mTokens.emplace_back(TokenType::VAR, token);
-        } else if (std::isdigit(mCurrentChar[0])) {
+            tokens.emplace_back(TokenType::VAR, token);
+        } else if (std::isdigit(currentChar[0])) {
             std::string token;
             bool isDouble{false};
 
-            while (mCurrentChar && (std::isalnum(mCurrentChar[0]) || mCurrentChar[0] == '.')) {
-                if (std::isalpha(mCurrentChar[0]))
-                    throw IllegalCharError(mFileName, (token + mCurrentChar[0]).c_str(), mPos.lineNumber);
+            while (currentChar && (std::isalnum(currentChar[0]) || currentChar[0] == '.')) {
+                if (std::isalpha(currentChar[0]))
+                    throw IllegalCharError(fileName, (token + currentChar[0]).c_str(), pos.lineNumber);
 
-                if (!isDouble && mCurrentChar[0] == '.') isDouble = true;
+                if (!isDouble && currentChar[0] == '.') isDouble = true;
 
-                token += mCurrentChar[0];
+                token += currentChar[0];
                 advance();
             }
 
-            mTokens.emplace_back(isDouble ? TokenType::DOUBLE : TokenType::INT, token);
-        } else if (mCurrentChar[0] == '"') {
+            tokens.emplace_back(isDouble ? TokenType::DOUBLE : TokenType::INT, token);
+        } else if (currentChar[0] == '"') {
             std::string data;
 
             advance();
-            while (mCurrentChar && mCurrentChar[0] != '"') {
-                data += mCurrentChar[0];
+            while (currentChar && currentChar[0] != '"') {
+                data += currentChar[0];
                 advance();
             }
             advance();
-            mTokens.emplace_back(TokenType::STRING, data);
-        } else if (!std::strncmp("/=", mCurrentChar, 2)) {
-            mTokens.emplace_back(TokenType::NEQUAL);
+            tokens.emplace_back(TokenType::STRING, data);
+        } else if (!std::strncmp("/=", currentChar, 2)) {
+            tokens.emplace_back(TokenType::NEQUAL);
             advance(2);
-        } else if (!std::strncmp(">=", mCurrentChar, 2)) {
-            mTokens.emplace_back(TokenType::GREATER_THEN_EQ);
+        } else if (!std::strncmp(">=", currentChar, 2)) {
+            tokens.emplace_back(TokenType::GREATER_THEN_EQ);
             advance(2);
-        } else if (!std::strncmp("<=", mCurrentChar, 2)) {
-            mTokens.emplace_back(TokenType::LESS_THEN_EQ);
+        } else if (!std::strncmp("<=", currentChar, 2)) {
+            tokens.emplace_back(TokenType::LESS_THEN_EQ);
             advance(2);
-        } else if (mCurrentChar[0] == '+') {
-            mTokens.emplace_back(TokenType::PLUS);
+        } else if (currentChar[0] == '+') {
+            tokens.emplace_back(TokenType::PLUS);
             advance();
-        } else if (mCurrentChar[0] == '-') {
-            mTokens.emplace_back(TokenType::MINUS);
+        } else if (currentChar[0] == '-') {
+            tokens.emplace_back(TokenType::MINUS);
             advance();
-        } else if (mCurrentChar[0] == '*') {
-            mTokens.emplace_back(TokenType::MUL);
+        } else if (currentChar[0] == '*') {
+            tokens.emplace_back(TokenType::MUL);
             advance();
-        } else if (mCurrentChar[0] == '/') {
-            mTokens.emplace_back(TokenType::DIV);
+        } else if (currentChar[0] == '/') {
+            tokens.emplace_back(TokenType::DIV);
             advance();
-        } else if (mCurrentChar[0] == '=') {
-            mTokens.emplace_back(TokenType::EQUAL);
+        } else if (currentChar[0] == '=') {
+            tokens.emplace_back(TokenType::EQUAL);
             advance();
-        } else if (mCurrentChar[0] == '>') {
-            mTokens.emplace_back(TokenType::GREATER_THEN);
+        } else if (currentChar[0] == '>') {
+            tokens.emplace_back(TokenType::GREATER_THEN);
             advance();
-        } else if (mCurrentChar[0] == '<') {
-            mTokens.emplace_back(TokenType::LESS_THEN);
+        } else if (currentChar[0] == '<') {
+            tokens.emplace_back(TokenType::LESS_THEN);
             advance();
-        } else if (mCurrentChar[0] == '(') {
-            mTokens.emplace_back(TokenType::LPAREN);
+        } else if (currentChar[0] == '(') {
+            tokens.emplace_back(TokenType::LPAREN);
             advance();
-        } else if (mCurrentChar[0] == ')') {
-            mTokens.emplace_back(TokenType::RPAREN);
+        } else if (currentChar[0] == ')') {
+            tokens.emplace_back(TokenType::RPAREN);
             advance();
         } else {
-            throw IllegalCharError(mFileName, std::string(1, mCurrentChar[0]).c_str(), mPos.lineNumber);
+            throw IllegalCharError(fileName, std::string(1, currentChar[0]).c_str(), pos.lineNumber);
         }
     }
 
-    mTokens.emplace_back(TokenType::EOF_);
+    tokens.emplace_back(TokenType::EOF_);
 }
 
 void Lexer::advance() {
-    mPos.advance(mCurrentChar);
+    pos.advance(currentChar);
 
-    if (mPos.index < mText.size()) {
-        mCurrentChar = &mText[mPos.index];
+    if (pos.index < text.size()) {
+        currentChar = &text[pos.index];
     } else {
-        mCurrentChar = nullptr;
+        currentChar = nullptr;
     }
 }
 

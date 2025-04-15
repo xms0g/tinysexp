@@ -238,10 +238,10 @@ private:
 
     void expect(TokenType expected, const char* errorStr) const;
 
-    Lexer& mLexer;
-    Token mCurrentToken{};
-    int mTokenIndex;
-    const char* mFileName;
+    Lexer& lexer;
+    Token currentToken{};
+    int tokenIndex;
+    const char* fileName;
 };
 
 namespace cast {

@@ -1054,7 +1054,7 @@ void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
 
     if (isSSE(reg->rType)) {
         try {
-            double n = std::any_cast<double>(value);
+            auto n = std::any_cast<double>(value);
             uint64_t hex = *reinterpret_cast<uint64_t*>(&n);
 
             auto* regScr = register_alloc();

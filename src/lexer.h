@@ -63,20 +63,20 @@ public:
 
     void process();
 
-    [[nodiscard]] size_t getTokenSize() const { return mTokens.size(); }
+    [[nodiscard]] size_t getTokenSize() const { return tokens.size(); }
 
-    Token getToken(const int index) { return mTokens[index]; }
+    Token getToken(const int index) { return tokens[index]; }
 
 private:
     void advance();
 
     void advance(int step);
 
-    std::string mText;
-    Position mPos;
-    std::vector<Token> mTokens;
-    char* mCurrentChar{};
-    const char* mFileName;
+    std::string text;
+    Position pos;
+    std::vector<Token> tokens;
+    char* currentChar{};
+    const char* fileName;
 };
 
 #endif

@@ -101,7 +101,7 @@ private:
     };
     TypeInferenceContext tfCtx;
     /* File Name */
-    const char* mFileName;
+    const char* fileName;
 };
 
 inline bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
