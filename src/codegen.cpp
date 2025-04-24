@@ -354,9 +354,9 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
         }
     }
 
-    if (reg && isSSE(reg->rType) && reg->id != xmm0) {
+    if (reg && isSSE(reg->rType)) {
         movsd("xmm0", getRegName(reg, REG64));
-    } else if (reg && !isSSE(reg->rType) && reg->id != RAX) {
+    } else if (reg && !isSSE(reg->rType)) {
         mov("rax", getRegName(reg, REG64));
     }
 
