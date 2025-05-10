@@ -54,8 +54,6 @@ public:
 
     const char* nameFromID(uint32_t id, uint32_t size);
 
-    Register* regFromName(const char* name, uint32_t size);
-
     Register* regFromID(uint32_t id);
 
 private:

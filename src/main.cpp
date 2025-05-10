@@ -30,7 +30,6 @@ void compile(std::string& fn, const std::string& in, std::string& out) {
         lexer.process();
         ExprPtr ast = parser.parse();
         analyzer.analyze(ast);
-
         asmFile << cgen.emit(ast);
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();

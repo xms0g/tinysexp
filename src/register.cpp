@@ -21,16 +21,6 @@ const char* RegisterAllocator::nameFromID(const uint32_t id, const uint32_t size
     return registerNames[id][size];
 }
 
-Register* RegisterAllocator::regFromName(const char* name, const uint32_t size) {
-    for (int i = 0; i < REGISTER_COUNT; i++) {
-        if (std::strcmp(name, registerNames[i][size]) == 0) {
-            return &registers[i];
-        }
-    }
-
-    return nullptr;
-}
-
 Register* RegisterAllocator::regFromID(const uint32_t id) {
     return &registers[id];
 }
