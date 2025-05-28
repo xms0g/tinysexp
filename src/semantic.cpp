@@ -511,7 +511,7 @@ void SemanticAnalyzer::checkBool(const ExprPtr& var, const TokenType ttype) cons
     }
 }
 
-void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) {
+void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) const {
     if (ttype == TokenType::LOGAND ||
         ttype == TokenType::LOGIOR ||
         ttype == TokenType::LOGXOR ||
@@ -520,7 +520,7 @@ void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) {
     }
 }
 
-std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) {
+std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) const {
     auto getPrimitive = [&](const ExprPtr& n) -> std::variant<int, double> {
         if (const auto double_ = cast::toDouble(n))
             return double_->n;

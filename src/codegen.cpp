@@ -798,6 +798,7 @@ void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, const 
         case TokenType::LESS_THEN_EQ:
             emitJump("jle", label);
             break;
+        default: break;
     }
 }
 
@@ -1063,13 +1064,13 @@ void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
             mov(regScrStr, emitHex(hex));
             movq(regStr, regScrStr);
             register_free(regScr)
-        } catch (const std::bad_any_cast& e) {
+        } catch ([[maybe_unused]] const std::bad_any_cast& e) {
             movsd(regStr, std::any_cast<const char*>(value));
         }
     } else {
         try {
             mov(regStr, std::any_cast<int>(value));
-        } catch (const std::bad_any_cast& e) {
+        } catch ([[maybe_unused]] const std::bad_any_cast& e) {
             mov(regStr, std::any_cast<const char*>(value));
         }
     }

@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 
         in.resize(length);
 
-        file.read(in.data(), length);
+        file.read(in.data(), static_cast<long>(length));
 
         file.close();
     } catch (std::ifstream::failure& e) {

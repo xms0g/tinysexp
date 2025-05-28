@@ -77,9 +77,9 @@ private:
 
     void checkBool(const ExprPtr& var, TokenType ttype) const;
 
-    void checkBitwiseOp(const ExprPtr& n, TokenType ttype);
+    void checkBitwiseOp(const ExprPtr& n, TokenType ttype) const;
 
-    std::variant<int, double> getValue(const ExprPtr& num);
+    [[nodiscard]] std::variant<int, double> getValue(const ExprPtr& num) const;
 
     ExprPtr returnValue(const VarExpr& var);
 

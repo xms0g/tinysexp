@@ -1,5 +1,4 @@
 #include "register.h"
-#include <cstring>
 
 Register* RegisterAllocator::alloc(const uint8_t rt) {
     if (rt == SSE) {
