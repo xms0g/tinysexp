@@ -318,28 +318,19 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
             }
         }
     }
-    // Check out if the params are already resolved
+    // Type Resolution Phase
     for (const auto& arg: funcCall.args) {
         auto argVar = cast::toVar(arg);
 
         if (isPrimitive(argVar->value)) {
             setType(*argVar, argVar->value);
-            continue;
-        }
-
-        if (auto binop = cast::toBinop(argVar->value)) {
+        } else if (auto binop = cast::toBinop(argVar->value)) {
             auto value = binopResolve(*binop);
             setType(*argVar, value);
-            continue;
-        }
-
-        if (auto fc = cast::toFuncCall(argVar->value)) {
+        } else if (auto fc = cast::toFuncCall(argVar->value)) {
             auto value = funcCallResolve(*fc, true);
             setType(*argVar, value);
-            continue;
-        }
-
-        if (auto innerVar = cast::toVar(argVar->value)) {
+        } else if (auto innerVar = cast::toVar(argVar->value)) {
             bool found{false};
 
             do {
@@ -376,7 +367,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
             } while (innerVar);
         }
     }
-    // Make the arg type local because we'll keep them onto stack inside function
+    // Make the arg type local because we'll keep them onto stack inside the function
     int scratchIdx = 0, sseIdx = 0;
     auto makeLocal = [&](VarExpr& arg) {
         // The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
