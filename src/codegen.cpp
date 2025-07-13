@@ -9,6 +9,12 @@
 #define ret() generatedCode += "\tret\n"
 #define cqo() generatedCode += "\tcqo\n"
 #define syscall() generatedCode += "\tsyscall\n"
+#define mov(d, s) emitInstr2op("mov", d, s)
+#define movq(d, s) emitInstr2op("movq", d, s)
+#define movsd(d, s) emitInstr2op("movsd", d, s)
+#define movzx(d, s) emitInstr2op("movzx", d, s)
+#define strDirective(s) std::format("db \"{}\", 10", s)
+#define memDirective(d, n) std::format("{} {}", d, n)
 
 #define stack_alloc(size) \
     if (size > 0) { \
@@ -29,13 +35,6 @@
 #define pop(rn) \
     emitInstr1op("pop", rn); \
     stackAllocator.dealloc(8);
-
-#define mov(d, s) emitInstr2op("mov", d, s)
-#define movq(d, s) emitInstr2op("movq", d, s)
-#define movsd(d, s) emitInstr2op("movsd", d, s)
-#define movzx(d, s) emitInstr2op("movzx", d, s)
-#define strDirective(s) std::format("db \"{}\", 10", s)
-#define memDirective(d, n) std::format("{} {}", d, n)
 
 #define emitSet8L(op, reg) \
     emitInstr1op(op, getRegName(reg, REG8L)); \
