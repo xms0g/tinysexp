@@ -7,7 +7,8 @@ A subset of Lisp, including:
 **Operators:** 
 `+`,`-`,`*`,`/`,`=`, 
 `/=`,`>`,`<`,`>=`,`<=`
-`and`,`or`,`not`
+`and`,`or`,`not`,
+`logand`,`logior`,`logxor`,`lognor`
 
 **Conditionals:**
 `if`,`when`,`cond`
