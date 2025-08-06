@@ -3,23 +3,21 @@
 
 ## Features
 A subset of Lisp, including:
-
-**Operators:** 
-`+`,`-`,`*`,`/`,`=`, 
-`/=`,`>`,`<`,`>=`,`<=`
-`and`,`or`,`not`,
+### Arithmetic Operations
+`+`,`-`,`*`,`/`
+### Comparison Operations
+`=`,`/=`,`>`,`<`,`>=`,`<=`
+### Logical Operations
+`and`,`or`,`not`
+### Bitwise Operations
 `logand`,`logior`,`logxor`,`lognor`
-
-**Conditionals:**
+### Conditionals
 `if`,`when`,`cond`
-
-**Loop:**
+### Loop
 `dotimes`,`loop`
-
-**Functions:**
+### Functions
 `defun`
-
-**Variables:**
+### Variables
 `let`,`setq`,`defvar`,`defconstant`
 
 ## Usage
