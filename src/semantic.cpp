@@ -553,6 +553,8 @@ ExprPtr SemanticAnalyzer::returnValue(const VarExpr& var) {
     if (var.vType == VarType::T) {
         return std::make_shared<TExpr>();
     }
+
+    return nullptr;
 }
 
 ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
@@ -606,7 +608,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
             return value_;
         }
 
-        if (auto binop = cast::toBinop(innerVar->value)) {
+        if (const auto binop = cast::toBinop(innerVar->value)) {
             const auto value = binopResolve(*binop);
             setType(*var, value);
             var->value = innerVar->value;
@@ -621,7 +623,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
         }
         // If the value is param
         if (cast::toUninitialized(innerVar->value)) {
-            var->value = std::make_shared<DoubleExpr>(0.0);;
+            var->value = std::make_shared<DoubleExpr>(0.0);
             return var->value;
         }
 
