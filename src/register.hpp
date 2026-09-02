@@ -73,11 +73,11 @@ public:
 
 	Register* regFromID(RegisterID id);
 
-private:
-	Register* scan(std::span<const RegisterType> order, int32_t size);
-
 	static constexpr int32_t REGISTER_COUNT = 32;
 	static constexpr int32_t SIZE_COUNT = 5;
+
+private:
+	Register* scan(std::span<const RegisterType> order, int32_t size);
 
 	std::array<Register, REGISTER_COUNT> mRegisters = {{
 		{.id = RegisterID::rax, .rType = RegisterType::scratch, .status = 1},

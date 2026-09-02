@@ -13,26 +13,43 @@ struct Symbol {
 
 class ScopeTracker {
 public:
-    void enter(const std::string& scopeName);
+    void enter(std::string_view scopeName);
 
     void exit(bool isFunc = false);
 
     [[nodiscard]]
-	std::string& scopeName();
+	std::string_view scopeName();
 
     [[nodiscard]]
 	size_t level() const;
 
-    void bind(const std::string& name, const Symbol& symbol);
+    void bind(std::string_view name, const Symbol& symbol);
 
-    void update(const std::string& name, const Symbol& symbol);
+    void update(std::string_view name, Symbol symbol);
 
-    Symbol lookup(const std::string& name);
+    Symbol lookup(std::string_view name);
 
-    Symbol lookupCurrent(const std::string& name);
+    Symbol lookupCurrent(std::string_view name);
 
 private:
-    using ScopeType = std::unordered_map<std::string, Symbol>;
+	struct StringHash {
+		using is_transparent = void;
+
+		static constexpr size_t operator()(const std::string_view value) noexcept {
+			return std::hash<std::string_view>{}(value);
+		}
+
+	};
+
+	struct StringEqual {
+		using is_transparent = void;
+
+		static constexpr bool operator()(const std::string_view lhs, const std::string_view rhs) noexcept {
+			return lhs == rhs;
+		}
+	};
+
+    using ScopeType = std::unordered_map<std::string, Symbol, StringHash, StringEqual>;
     std::stack<ScopeType> mSymbolTable;
     std::stack<std::string> mScopeNames;
 };
@@ -99,7 +116,7 @@ private:
 
     struct TypeInferenceContext {
         bool isStarted{false};
-        std::string entryPoint;
+        std::string_view entryPoint;
     };
 
     TypeInferenceContext mTfCtx;

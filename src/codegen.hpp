@@ -115,13 +115,13 @@ private:
 	};
     std::vector<Function> mFunctions;
 
-    static constexpr std::string_view mMemorySize[SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
+    static constexpr std::string_view mMemorySize[RegisterAllocator::SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
 
-    static constexpr std::string_view mDataSizeInitialized[SIZE_COUNT] = {"dq", "dd", "dw", "db", "db"};
+    static constexpr std::string_view mDataSizeInitialized[RegisterAllocator::SIZE_COUNT] = {"dq", "dd", "dw", "db", "db"};
 
-    static constexpr std::string_view mDataSizeUninitialized[SIZE_COUNT] = {"resq", "resd", "resw", "resb", "resb"};
+    static constexpr std::string_view mDataSizeUninitialized[RegisterAllocator::SIZE_COUNT] = {"resq", "resd", "resw", "resb", "resb"};
 
-    static constexpr int32_t mMemorySizeInBytes[SIZE_COUNT] = {8, 4, 2, 1, 1};
+    static constexpr int32_t mMemorySizeInBytes[RegisterAllocator::SIZE_COUNT] = {8, 4, 2, 1, 1};
 
     static constexpr RegisterID mParamRegisters[] = {RegisterID::rdi, RegisterID::rsi, RegisterID::rdx, RegisterID::rcx, RegisterID::r8, RegisterID::r9};
 

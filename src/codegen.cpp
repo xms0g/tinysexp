@@ -16,13 +16,13 @@
 #define strDirective(s) std::format("db \"{}\", 10", s)
 #define memDirective(d, n) std::format("{} {}", d, n)
 
-#define stack_alloc(size) \
+#define stackAlloc(size) \
     if (size > 0) { \
         emitInstr2op("sub", "rsp", size); \
         mStackAllocator.alloc(size); \
     }
 
-#define stack_dealloc(size) \
+#define stackDealloc(size) \
     if (size > 0) { \
         emitInstr2op("add", "rsp", size); \
         mStackAllocator.dealloc(size); \
@@ -199,7 +199,7 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	auto token = Token{TokenType::lessThen};
 	ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
 	// Address of iter var
-	stack_alloc(mMemorySizeInBytes[std::to_underlying(RegisterSize::reg64)])
+	stackAlloc(mMemorySizeInBytes[std::to_underlying(RegisterSize::reg64)])
 	std::string iterVarAddr = getAddr(iterVarName, SymbolType::local, RegisterSize::reg64);
 	// Set 0 to iter var
 	mov(iterVarAddr, 0);
@@ -225,7 +225,7 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	emitJump("jmp", loopLabel);
 	emitLabel(doneLabel);
 
-	stack_dealloc(mMemorySizeInBytes[std::to_underlying(RegisterSize::reg64)])
+	stackDealloc(mMemorySizeInBytes[std::to_underlying(RegisterSize::reg64)])
 
 	return reg;
 }
@@ -277,7 +277,7 @@ Register* CodeGen::emitLet(const LetExpr& let) {
 		requiredStackMem += size;
 	}
 
-	stack_alloc(requiredStackMem)
+	stackAlloc(requiredStackMem)
 
 	for (const auto& var: let.bindings) {
 		const RegisterSize memSize = getMemSize(var);
@@ -289,7 +289,7 @@ Register* CodeGen::emitLet(const LetExpr& let) {
 		regFree(reg)
 	}
 
-	stack_dealloc(requiredStackMem)
+	stackDealloc(requiredStackMem)
 
 	return reg;
 }
@@ -336,7 +336,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 		mStackAllocator.pushStackFrame(mCurrentScope, paramName, param->sType);
 	}
 
-	stack_alloc(stackSize)
+	stackAlloc(stackSize)
 
 	scratchIdx = 0, sseIdx = 0;
 	for (const auto& arg: defun.args) {
@@ -369,7 +369,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	}
 
 	regFree(reg)
-	stack_dealloc(stackSize)
+	stackDealloc(stackSize)
 	pop("rbp")
 	ret();
 }
@@ -380,7 +380,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 
 	// Calculate the proper stack size before function call
 	uint32_t stackAlignedSize = mStackAllocator.calculateRequiredStackSize(funcCall.args);
-	stack_alloc(stackAlignedSize)
+	stackAlloc(stackAlignedSize)
 
 	Register* reg;
 	int32_t scratchIdx{0};
@@ -431,7 +431,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 		mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), "rax");
 	}
 
-	stack_dealloc(stackAlignedSize)
+	stackDealloc(stackAlignedSize)
 
 	return reg;
 }
