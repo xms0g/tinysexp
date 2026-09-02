@@ -144,21 +144,21 @@ Register* CodeGen::emitAST(const ExprPtr& ast) {
 
 Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 	switch (binop.opToken.type) {
-		case TokenType::PLUS:
+		case TokenType::plus:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "add", .opSSE = "addsd"});
-		case TokenType::MINUS:
+		case TokenType::minus:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "sub", .opSSE = "subsd"});
-		case TokenType::DIV:
+		case TokenType::div:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "idiv", .opSSE = "divsd"});
-		case TokenType::MUL:
+		case TokenType::mul:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "imul", .opSSE = "mulsd"});
-		case TokenType::LOGAND:
+		case TokenType::logand:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "and", .opSSE = ""});
-		case TokenType::LOGIOR:
+		case TokenType::logior:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "or", .opSSE = ""});
-		case TokenType::LOGXOR:
+		case TokenType::logxor:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "xor", .opSSE = ""});
-		case TokenType::LOGNOR: {
+		case TokenType::lognor: {
 			const ExprPtr negOne = std::make_shared<IntExpr>(-1);
 			// Bitwise NOT seperately
 			Register* regLhs = emitExpr(binop.lhs, negOne, {.op = "xor", .opSSE = ""});
@@ -167,16 +167,16 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 			regFree(regRhs)
 			return regLhs;
 		}
-		case TokenType::NOT:
+		case TokenType::not_:
 			return emitCmpZero(binop.lhs);
-		case TokenType::EQUAL:
-		case TokenType::NEQUAL:
-		case TokenType::GREATER_THEN:
-		case TokenType::LESS_THEN:
-		case TokenType::GREATER_THEN_EQ:
-		case TokenType::LESS_THEN_EQ:
-		case TokenType::AND:
-		case TokenType::OR:
+		case TokenType::equal:
+		case TokenType::nequal:
+		case TokenType::greaterThen:
+		case TokenType::lessThen:
+		case TokenType::greaterThenEq:
+		case TokenType::lessThenEq:
+		case TokenType::and_:
+		case TokenType::or_:
 			return emitExpr(binop.lhs, binop.rhs, {.op = "cmp", .opSSE = "ucomisd"});
 		default:
 			return nullptr;
@@ -192,15 +192,15 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	// Loop condition
 	ExprPtr name = iterVar->name;
 	ExprPtr value = std::make_shared<IntExpr>(0);
-	ExprPtr lhs = std::make_shared<VarExpr>(name, value, SymbolType::LOCAL);
+	ExprPtr lhs = std::make_shared<VarExpr>(name, value, SymbolType::local);
 	cast::toVar(lhs)->vType = iterVar->vType;
 
 	ExprPtr rhs = iterVar->value;
-	auto token = Token{TokenType::LESS_THEN};
+	auto token = Token{TokenType::lessThen};
 	ExprPtr test = std::make_shared<BinOpExpr>(lhs, rhs, token);
 	// Address of iter var
 	stack_alloc(mMemorySizeInBytes[REG64])
-	std::string iterVarAddr = getAddr(iterVarName, SymbolType::LOCAL, REG64);
+	std::string iterVarAddr = getAddr(iterVarName, SymbolType::local, REG64);
 	// Set 0 to iter var
 	mov(iterVarAddr, 0);
 	// Loop label
@@ -322,11 +322,11 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 		const auto param = cast::toVar(arg);
 		const std::string paramName = cast::toString(param->name)->data;
 
-		if (param->vType == VarType::INT) {
+		if (param->vType == VarType::int_) {
 			if (scratchIdx > 5)
 				continue;
 			scratchIdx++;
-		} else if (param->vType == VarType::DOUBLE) {
+		} else if (param->vType == VarType::double_) {
 			if (sseIdx > 7)
 				continue;
 			sseIdx++;
@@ -343,12 +343,12 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 		const auto param = cast::toVar(arg);
 		const std::string paramName = cast::toString(param->name)->data;
 
-		if ((param->vType == VarType::INT && scratchIdx > 5) || (param->vType == VarType::DOUBLE && sseIdx > 7)) {
+		if ((param->vType == VarType::int_ && scratchIdx > 5) || (param->vType == VarType::double_ && sseIdx > 7)) {
 			continue;
 		}
 
 		mov(getAddr(paramName, param->sType, REG64),
-		     mRegisterAllocator.nameFromID(param->vType == VarType::INT
+		     mRegisterAllocator.nameFromID(param->vType == VarType::int_
 			    ? mParamRegisters[scratchIdx++]
 			    : mParamRegistersSSE[sseIdx++], REG64));
 	}
@@ -390,14 +390,14 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 		const auto param = cast::toVar(arg);
 
 		// If scratch param size > 5 or sse param size > 7, push the params onto stack
-		if ((scratchIdx > 5 && param->vType == VarType::INT) || (sseIdx > 7 && param->vType == VarType::DOUBLE)) {
+		if ((scratchIdx > 5 && param->vType == VarType::int_) || (sseIdx > 7 && param->vType == VarType::double_)) {
 			pushParamOntoStack(funcName, *param, stackIdx);
 			continue;
 		}
 		// Push parameter to the appropriate register
 		if (const auto innerVar = cast::toVar(param->value)) {
 			const std::string paramName = cast::toString(innerVar->name)->data;
-			pushParamToRegister(param->vType == VarType::INT
+			pushParamToRegister(param->vType == VarType::int_
 				                    ? mParamRegisters[scratchIdx++]
 				                    : mParamRegistersSSE[sseIdx++],
 			                    getAddr(paramName, innerVar->sType, REG64).c_str());
@@ -417,9 +417,9 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			                    mRegisterAllocator.nameFromReg(reg, REG64));
 			regFree(reg)
 		} else {
-			if (param->vType == VarType::INT) {
+			if (param->vType == VarType::int_) {
 				pushParamToRegister(mParamRegisters[scratchIdx++], cast::toInt(param->value)->n);
-			} else if (param->vType == VarType::DOUBLE) {
+			} else if (param->vType == VarType::double_) {
 				pushParamToRegister(mParamRegistersSSE[sseIdx++], cast::toDouble(param->value)->n);
 			}
 		}
@@ -671,52 +671,52 @@ void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::str
 
 	if (const auto binop = cast::toBinop(test)) {
 		switch (binop->opToken.type) {
-			case TokenType::PLUS:
-			case TokenType::MINUS:
-			case TokenType::DIV:
-			case TokenType::MUL:
-			case TokenType::LOGAND:
-			case TokenType::LOGIOR:
-			case TokenType::LOGXOR:
-			case TokenType::LOGNOR: {
+			case TokenType::plus:
+			case TokenType::minus:
+			case TokenType::div:
+			case TokenType::mul:
+			case TokenType::logand:
+			case TokenType::logior:
+			case TokenType::logxor:
+			case TokenType::lognor: {
 				reg = emitBinop(*binop);
 				emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), mRegisterAllocator.nameFromReg(reg, REG64), 0);
 				emitJump("je", elseLabel);
 				regFree(reg)
 				break;
 			}
-			case TokenType::EQUAL:
-			case TokenType::NOT:
+			case TokenType::equal:
+			case TokenType::not_:
 				reg = emitBinop(*binop);
 				emitJump("jne", elseLabel);
 				regFree(reg)
 				break;
-			case TokenType::NEQUAL:
+			case TokenType::nequal:
 				reg = emitBinop(*binop);
 				emitJump("je", elseLabel);
 				regFree(reg)
 				break;
-			case TokenType::GREATER_THEN:
+			case TokenType::greaterThen:
 				reg = emitBinop(*binop);
 				emitJump("jle", elseLabel);
 				regFree(reg)
 				break;
-			case TokenType::LESS_THEN:
+			case TokenType::lessThen:
 				reg = emitBinop(*binop);
 				emitJump("jge", elseLabel);
 				regFree(reg)
 				break;
-			case TokenType::GREATER_THEN_EQ:
+			case TokenType::greaterThenEq:
 				reg = emitBinop(*binop);
 				emitJump("jl", elseLabel);
 				regFree(reg)
 				break;
-			case TokenType::LESS_THEN_EQ:
+			case TokenType::lessThenEq:
 				reg = emitBinop(*binop);
 				emitJump("jg", elseLabel);
 				regFree(reg)
 				break;
-			case TokenType::AND: {
+			case TokenType::and_: {
 				auto andComp = [&](const ExprPtr& node) {
 					if (isPrimitive(node)) {
 						Register* regLhs = emitCmpZero(node);
@@ -731,7 +731,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::str
 				andComp(binop->rhs);
 				break;
 			}
-			case TokenType::OR: {
+			case TokenType::or_: {
 				if (isPrimitive(binop->lhs)) {
 					Register* regLhs = emitCmpZero(binop->lhs);
 					emitJump("jne", trueLabel);
@@ -778,35 +778,35 @@ void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::str
 
 void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, std::string_view label) {
 	switch (type) {
-		case TokenType::PLUS:
-		case TokenType::MINUS:
-		case TokenType::DIV:
-		case TokenType::MUL:
-		case TokenType::LOGAND:
-		case TokenType::LOGIOR:
-		case TokenType::LOGXOR:
-		case TokenType::LOGNOR: {
+		case TokenType::plus:
+		case TokenType::minus:
+		case TokenType::div:
+		case TokenType::mul:
+		case TokenType::logand:
+		case TokenType::logior:
+		case TokenType::logxor:
+		case TokenType::lognor: {
 			emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), mRegisterAllocator.nameFromReg(reg, REG64), 0);
 			emitJump("jne", label);
 			break;
 		}
-		case TokenType::EQUAL:
-		case TokenType::NOT:
+		case TokenType::equal:
+		case TokenType::not_:
 			emitJump("je", label);
 			break;
-		case TokenType::NEQUAL:
+		case TokenType::nequal:
 			emitJump("jne", label);
 			break;
-		case TokenType::GREATER_THEN:
+		case TokenType::greaterThen:
 			emitJump("jg", label);
 			break;
-		case TokenType::LESS_THEN:
+		case TokenType::lessThen:
 			emitJump("jl", label);
 			break;
-		case TokenType::GREATER_THEN_EQ:
+		case TokenType::greaterThenEq:
 			emitJump("jge", label);
 			break;
-		case TokenType::LESS_THEN_EQ:
+		case TokenType::lessThenEq:
 			emitJump("jle", label);
 			break;
 		default: break;
@@ -818,44 +818,44 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 
 	if (const auto binop = cast::toBinop(set)) {
 		switch (binop->opToken.type) {
-			case TokenType::PLUS:
-			case TokenType::MINUS:
-			case TokenType::DIV:
-			case TokenType::MUL:
-			case TokenType::LOGAND:
-			case TokenType::LOGIOR:
-			case TokenType::LOGXOR:
-			case TokenType::LOGNOR:
+			case TokenType::plus:
+			case TokenType::minus:
+			case TokenType::div:
+			case TokenType::mul:
+			case TokenType::logand:
+			case TokenType::logior:
+			case TokenType::logxor:
+			case TokenType::lognor:
 				setReg = emitBinop(*binop);
 				break;
-			case TokenType::EQUAL:
-			case TokenType::NOT:
+			case TokenType::equal:
+			case TokenType::not_:
 				setReg = emitSetReg(*binop);
 				emitSet8L("sete", setReg)
 				break;
-			case TokenType::NEQUAL:
+			case TokenType::nequal:
 				setReg = emitSetReg(*binop);
 				emitSet8L("setne", setReg)
 				break;
-			case TokenType::GREATER_THEN:
+			case TokenType::greaterThen:
 				setReg = emitSetReg(*binop);
 				emitSet8L("setg", setReg)
 				break;
-			case TokenType::LESS_THEN:
+			case TokenType::lessThen:
 				setReg = emitSetReg(*binop);
 				emitSet8L("setl", setReg)
 				break;
-			case TokenType::GREATER_THEN_EQ:
+			case TokenType::greaterThenEq:
 				setReg = emitSetReg(*binop);
 				emitSet8L("setge", setReg)
 				break;
-			case TokenType::LESS_THEN_EQ:
+			case TokenType::lessThenEq:
 				setReg = emitSetReg(*binop);
 				emitSet8L("setle", setReg)
 				break;
-			case TokenType::AND:
+			case TokenType::and_:
 				return emitLogOp(*binop, "and");
-			case TokenType::OR:
+			case TokenType::or_:
 				return emitLogOp(*binop, "or");
 			default:
 				break;
@@ -945,7 +945,7 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
 		mov(getAddr(varName, var_->sType, REG64), 0);
 	} else if (cast::toT(var_->value)) {
 		mov(getAddr(varName, var_->sType, REG64), 1);
-	} else if (cast::toUninitialized(var_->value) && var_->sType == SymbolType::LOCAL) {
+	} else if (cast::toUninitialized(var_->value) && var_->sType == SymbolType::local) {
 		getAddr(varName, var_->sType, REG64);
 	} else if (const auto str = cast::toString(var_->value)) {
 		const std::string label = ".L." + varName;
@@ -982,17 +982,17 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
 	const std::string varName = cast::toString(var.name)->data;
 
 	switch (var.sType) {
-		case SymbolType::PARAM: {
+		case SymbolType::param: {
 			reg = regAlloc();
 			mov(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
 			break;
 		}
-		case SymbolType::LOCAL:
-		case SymbolType::GLOBAL: {
-			if (var.vType == VarType::INT) {
+		case SymbolType::local:
+		case SymbolType::global: {
+			if (var.vType == VarType::int_) {
 				reg = regAlloc();
 				mov(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
-			} else if (var.vType == VarType::DOUBLE) {
+			} else if (var.vType == VarType::double_) {
 				reg = mRegisterAllocator.alloc(SSE);
 				movsd(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
 			} else if (cast::toString(var.value)) {
@@ -1026,13 +1026,13 @@ void CodeGen::emitStoreMemFromReg(const std::string_view varName,
 
 std::string CodeGen::getAddr(const std::string_view varName, const SymbolType stype, const uint32_t size) {
 	switch (stype) {
-		case SymbolType::GLOBAL:
+		case SymbolType::global:
 			return std::format("{} [rel {}]", mMemorySize[size], varName);
-		case SymbolType::LOCAL:
+		case SymbolType::local:
 			return std::format("{} [rbp - {}]",
 			                   mMemorySize[size],
 			                   mStackAllocator.pushStackFrame(mCurrentScope, varName, stype));
-		case SymbolType::PARAM:
+		case SymbolType::param:
 			return std::format("{} [rbp + {}]",
 			                   mMemorySize[size],
 			                   mStackAllocator.pushStackFrame(mCurrentScope, varName, stype));
@@ -1089,7 +1089,7 @@ void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
 void CodeGen::pushParamOntoStack(const std::string_view funcName, const VarExpr& param, int32_t& stackIdx) {
 	const std::string paramName = cast::toString(param.name)->data;
 
-	mStackAllocator.pushStackFrame(funcName, paramName, SymbolType::PARAM);
+	mStackAllocator.pushStackFrame(funcName, paramName, SymbolType::param);
 
 	const std::string addr = stackIdx ? std::format("qword [rsp + {}]", stackIdx) : "qword [rsp]";
 

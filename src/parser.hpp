@@ -4,19 +4,19 @@
 #include "lexer.hpp"
 
 enum class SymbolType {
-	UNKNOWN,
-	LOCAL,
-	PARAM,
-	GLOBAL
+	unknown,
+	local,
+	param,
+	global
 };
 
 enum class VarType {
-	UNKNOWN,
-	INT,
-	DOUBLE,
-	STRING,
-	NIL,
-	T
+	unknown,
+	int_,
+	double_,
+	string,
+	nil,
+	t
 };
 
 struct IExpr {
@@ -194,7 +194,7 @@ struct VarExpr final : IExpr {
 	SymbolType sType;
 	VarType vType{};
 
-	VarExpr(ExprPtr name_, ExprPtr value_, const SymbolType type = SymbolType::UNKNOWN)
+	VarExpr(ExprPtr name_, ExprPtr value_, const SymbolType type = SymbolType::unknown)
 		: name(std::move(name_)),
 		  value(std::move(value_)),
 		  sType(type) {

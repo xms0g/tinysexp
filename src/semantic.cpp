@@ -142,7 +142,7 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 	    return condResolve(*cond);
     } else if (cast::toInt(ast) || cast::toDouble(ast) || cast::toVar(ast)) {
 	    if (cast::toVar(ast)) {
-		    return varResolve(const_cast<ExprPtr&>(ast), TokenType::VAR);
+		    return varResolve(const_cast<ExprPtr&>(ast), TokenType::var);
 	    }
 
 	    return ast;
@@ -267,7 +267,7 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     const auto var = cast::toVar(func->name);
     const std::string funcName = cast::toString(var->name)->data;
 
-    mSymbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
+    mSymbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::global});
 
     mSymbolTracker.enter(funcName);
     for (const auto& arg: func->args) {
@@ -376,11 +376,11 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
     int scratchIdx = 0, sseIdx = 0;
     auto makeLocal = [&](VarExpr& arg) {
         // The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
-        if (arg.vType == VarType::INT && scratchIdx < 6) {
-            arg.sType = SymbolType::LOCAL;
+        if (arg.vType == VarType::int_ && scratchIdx < 6) {
+            arg.sType = SymbolType::local;
             scratchIdx++;
-        } else if (arg.vType == VarType::DOUBLE && sseIdx < 8) {
-            arg.sType = SymbolType::LOCAL;
+        } else if (arg.vType == VarType::double_ && sseIdx < 8) {
+            arg.sType = SymbolType::local;
             sseIdx++;
         }
     };
@@ -495,7 +495,7 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
 }
 
 void SemanticAnalyzer::checkBool(const ExprPtr& var, const TokenType ttype) const {
-    if (ttype == TokenType::AND || ttype == TokenType::OR || ttype == TokenType::NOT)
+    if (ttype == TokenType::and_ || ttype == TokenType::or_ || ttype == TokenType::not_)
         return;
 
     if (cast::toT(var)) {
@@ -508,10 +508,10 @@ void SemanticAnalyzer::checkBool(const ExprPtr& var, const TokenType ttype) cons
 }
 
 void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) const {
-    if (ttype == TokenType::LOGAND ||
-        ttype == TokenType::LOGIOR ||
-        ttype == TokenType::LOGXOR ||
-        ttype == TokenType::LOGNOR) {
+    if (ttype == TokenType::logand ||
+        ttype == TokenType::logior ||
+        ttype == TokenType::logxor ||
+        ttype == TokenType::lognor) {
         throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(n))), 0);
     }
 }
@@ -539,23 +539,23 @@ std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) const {
 }
 
 ExprPtr SemanticAnalyzer::returnValue(const VarExpr& var) {
-    if (var.vType == VarType::INT) {
+    if (var.vType == VarType::int_) {
         return std::make_shared<IntExpr>(0);
     }
 
-    if (var.vType == VarType::DOUBLE) {
+    if (var.vType == VarType::double_) {
         return std::make_shared<DoubleExpr>(0.0);
     }
 
-    if (var.vType == VarType::STRING) {
+    if (var.vType == VarType::string) {
         return std::make_shared<StringExpr>();
     }
 
-    if (var.vType == VarType::NIL) {
+    if (var.vType == VarType::nil) {
         return std::make_shared<NILExpr>();
     }
 
-    if (var.vType == VarType::T) {
+    if (var.vType == VarType::t) {
         return std::make_shared<TExpr>();
     }
 
@@ -588,7 +588,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
     auto innerVar = cast::toVar(sym.value);
 
     // If we already know the type, return it.
-    if (innerVar->vType != VarType::UNKNOWN) {
+    if (innerVar->vType != VarType::unknown) {
         var->vType = innerVar->vType;
         var->value = innerVar->value;
         return returnValue(*innerVar);
@@ -598,14 +598,14 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
         checkBool(innerVar->value, ttype);
 
         if (isPrimitive(innerVar->value)) {
-            if (innerVar->vType == VarType::DOUBLE) {
+            if (innerVar->vType == VarType::double_) {
                 checkBitwiseOp(innerVar->value, ttype);
             }
 
             ExprPtr value_;
-            if (innerVar->vType == VarType::INT) {
+            if (innerVar->vType == VarType::int_) {
                 value_ = std::make_shared<IntExpr>(0);
-            } else if (innerVar->vType == VarType::DOUBLE) {
+            } else if (innerVar->vType == VarType::double_) {
                 value_ = std::make_shared<DoubleExpr>(0.0);
             }
             var->value = value_;
@@ -692,7 +692,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 
     ExprPtr name = var_->name;
     ExprPtr value_ = exprResolve(var_->value);
-    var_->vType = cast::toInt(value_) ? VarType::INT : VarType::DOUBLE;
+    var_->vType = cast::toInt(value_) ? VarType::int_ : VarType::double_;
 
     mSymbolTracker.bind(varName, {
                            .name = varName,
@@ -714,14 +714,14 @@ bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
 
 void SemanticAnalyzer::setType(VarExpr& var, const ExprPtr& value) {
     if (cast::toInt(value)) {
-        var.vType = VarType::INT;
+        var.vType = VarType::int_;
     } else if (cast::toDouble(value)) {
-        var.vType = VarType::DOUBLE;
+        var.vType = VarType::double_;
     } else if (cast::toString(value)) {
-        var.vType = VarType::STRING;
+        var.vType = VarType::string;
     } else if (cast::toT(value)) {
-        var.vType = VarType::T;
+        var.vType = VarType::t;
     } else if (cast::toNIL(value)) {
-        var.vType = VarType::NIL;
+        var.vType = VarType::nil;
     }
 }

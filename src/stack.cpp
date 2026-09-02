@@ -37,7 +37,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 
 	for (const auto& arg: args) {
 		const auto param = cast::toVar(arg);
-		sseCount += param->vType == VarType::DOUBLE;
+		sseCount += param->vType == VarType::double_;
 	}
 
 	if (args.size() > 6) {
@@ -59,7 +59,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 int StackAllocator::updateStackFrame(StackFrame* sf, const std::string_view varName, const SymbolType stype) {
 	int32_t offset;
 
-	if (stype == SymbolType::LOCAL) {
+	if (stype == SymbolType::local) {
 		offset = sf->currentVarOffset;
 		sf->currentVarOffset += 8;
 	} else {

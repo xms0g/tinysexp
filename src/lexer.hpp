@@ -4,28 +4,28 @@
 
 enum class TokenType {
 	// Type
-	INT, DOUBLE, STRING, VAR, NIL, T,
+	int_, double_, string, var, nil, t,
 	// Arithmetic Operators
-	PLUS, MINUS, DIV, MUL,
+	plus, minus, div, mul,
 	// Comparison Operators
-	EQUAL, NEQUAL, GREATER_THEN, LESS_THEN, GREATER_THEN_EQ, LESS_THEN_EQ,
+	equal, nequal, greaterThen, lessThen, greaterThenEq, lessThenEq,
 	// Logical Operators
-	AND, OR, NOT,
+	and_, or_, not_,
 	// Bitwise Operators
-	LOGAND, LOGIOR, LOGXOR, LOGNOR,
+	logand, logior, logxor, lognor,
 	// Loop
-	DOTIMES, LOOP,
+	dotimes, loop,
 	// Condition
-	IF, WHEN, COND,
+	if_, when, cond,
 	// Assignment
-	LET, SETQ, DEFVAR, DEFCONST,
+	let, setq, defvar, defconst,
 	// Function
-	DEFUN,
+	defun,
 	// Special function
-	RETURN,
+	return_,
 	// Others
-	LPAREN, RPAREN,
-	EOF_
+	lparen, rparen,
+	eof
 };
 
 struct Token {

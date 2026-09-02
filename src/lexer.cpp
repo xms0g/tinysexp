@@ -14,65 +14,65 @@ void Lexer::process() {
 		if (mCurrentChar[0] == '\t' || mCurrentChar[0] == '\n' || std::isspace(mCurrentChar[0])) {
 			advance();
 		} else if (!std::strncmp("dotimes", mCurrentChar, 7)) {
-			mTokens.emplace_back(TokenType::DOTIMES);
+			mTokens.emplace_back(TokenType::dotimes);
 			advance(7);
 		} else if (!std::strncmp("return", mCurrentChar, 6)) {
-			mTokens.emplace_back(TokenType::RETURN);
+			mTokens.emplace_back(TokenType::return_);
 			advance(6);
 		} else if (!std::strncmp("loop", mCurrentChar, 4)) {
-			mTokens.emplace_back(TokenType::LOOP);
+			mTokens.emplace_back(TokenType::loop);
 			advance(4);
 		} else if (!std::strncmp("let", mCurrentChar, 3)) {
-			mTokens.emplace_back(TokenType::LET);
+			mTokens.emplace_back(TokenType::let);
 			advance(3);
 		} else if (!std::strncmp("setq", mCurrentChar, 4)) {
-			mTokens.emplace_back(TokenType::SETQ);
+			mTokens.emplace_back(TokenType::setq);
 			advance(4);
 		} else if (!std::strncmp("if", mCurrentChar, 2)) {
-			mTokens.emplace_back(TokenType::IF);
+			mTokens.emplace_back(TokenType::if_);
 			advance(2);
 		} else if (!std::strncmp("when", mCurrentChar, 4)) {
-			mTokens.emplace_back(TokenType::WHEN);
+			mTokens.emplace_back(TokenType::when);
 			advance(4);
 		} else if (!std::strncmp("cond", mCurrentChar, 4)) {
-			mTokens.emplace_back(TokenType::COND);
+			mTokens.emplace_back(TokenType::cond);
 			advance(4);
 		} else if (!std::strncmp("defvar", mCurrentChar, 4)) {
-			mTokens.emplace_back(TokenType::DEFVAR);
+			mTokens.emplace_back(TokenType::defvar);
 			advance(6);
 		} else if (!std::strncmp("defconstant", mCurrentChar, 11)) {
-			mTokens.emplace_back(TokenType::DEFCONST);
+			mTokens.emplace_back(TokenType::defconst);
 			advance(11);
 		} else if (!std::strncmp("defun", mCurrentChar, 5)) {
-			mTokens.emplace_back(TokenType::DEFUN);
+			mTokens.emplace_back(TokenType::defun);
 			advance(5);
 		} else if (!std::strncmp("nil", mCurrentChar, 3)) {
-			mTokens.emplace_back(TokenType::NIL);
+			mTokens.emplace_back(TokenType::nil);
 			advance(3);
 		} else if (!std::strncmp("logand", mCurrentChar, 6)) {
-			mTokens.emplace_back(TokenType::LOGAND);
+			mTokens.emplace_back(TokenType::logand);
 			advance(6);
 		} else if (!std::strncmp("logior", mCurrentChar, 6)) {
-			mTokens.emplace_back(TokenType::LOGIOR);
+			mTokens.emplace_back(TokenType::logior);
 			advance(6);
 		} else if (!std::strncmp("logxor", mCurrentChar, 6)) {
-			mTokens.emplace_back(TokenType::LOGXOR);
+			mTokens.emplace_back(TokenType::logxor);
 			advance(6);
 		} else if (!std::strncmp("lognor", mCurrentChar, 6)) {
-			mTokens.emplace_back(TokenType::LOGNOR);
+			mTokens.emplace_back(TokenType::lognor);
 			advance(6);
 		} else if (!std::strncmp("and", mCurrentChar, 3)) {
-			mTokens.emplace_back(TokenType::AND);
+			mTokens.emplace_back(TokenType::and_);
 			advance(3);
 		} else if (!std::strncmp("or", mCurrentChar, 2)) {
-			mTokens.emplace_back(TokenType::OR);
+			mTokens.emplace_back(TokenType::or_);
 			advance(2);
 		} else if (!std::strncmp("not", mCurrentChar, 3)) {
-			mTokens.emplace_back(TokenType::NOT);
+			mTokens.emplace_back(TokenType::not_);
 			advance(3);
 		} else if ((mCurrentChar[0] == 't' && mCurrentChar[1] == ' ') ||
 		           (mCurrentChar[0] == 't' && mCurrentChar[1] == ')')) {
-			mTokens.emplace_back(TokenType::T);
+			mTokens.emplace_back(TokenType::t);
 			advance();
 		} else if (std::isalpha(mCurrentChar[0])) {
 			std::string token;
@@ -82,7 +82,7 @@ void Lexer::process() {
 				advance();
 			}
 
-			mTokens.emplace_back(TokenType::VAR, token);
+			mTokens.emplace_back(TokenType::var, token);
 		} else if (std::isdigit(mCurrentChar[0])) {
 			std::string token;
 			bool isDouble{false};
@@ -97,7 +97,7 @@ void Lexer::process() {
 				advance();
 			}
 
-			mTokens.emplace_back(isDouble ? TokenType::DOUBLE : TokenType::INT, token);
+			mTokens.emplace_back(isDouble ? TokenType::double_ : TokenType::int_, token);
 		} else if (mCurrentChar[0] == '"') {
 			std::string data;
 
@@ -107,49 +107,49 @@ void Lexer::process() {
 				advance();
 			}
 			advance();
-			mTokens.emplace_back(TokenType::STRING, data);
+			mTokens.emplace_back(TokenType::string, data);
 		} else if (!std::strncmp("/=", mCurrentChar, 2)) {
-			mTokens.emplace_back(TokenType::NEQUAL);
+			mTokens.emplace_back(TokenType::nequal);
 			advance(2);
 		} else if (!std::strncmp(">=", mCurrentChar, 2)) {
-			mTokens.emplace_back(TokenType::GREATER_THEN_EQ);
+			mTokens.emplace_back(TokenType::greaterThenEq);
 			advance(2);
 		} else if (!std::strncmp("<=", mCurrentChar, 2)) {
-			mTokens.emplace_back(TokenType::LESS_THEN_EQ);
+			mTokens.emplace_back(TokenType::lessThenEq);
 			advance(2);
 		} else if (mCurrentChar[0] == '+') {
-			mTokens.emplace_back(TokenType::PLUS);
+			mTokens.emplace_back(TokenType::plus);
 			advance();
 		} else if (mCurrentChar[0] == '-') {
-			mTokens.emplace_back(TokenType::MINUS);
+			mTokens.emplace_back(TokenType::minus);
 			advance();
 		} else if (mCurrentChar[0] == '*') {
-			mTokens.emplace_back(TokenType::MUL);
+			mTokens.emplace_back(TokenType::mul);
 			advance();
 		} else if (mCurrentChar[0] == '/') {
-			mTokens.emplace_back(TokenType::DIV);
+			mTokens.emplace_back(TokenType::div);
 			advance();
 		} else if (mCurrentChar[0] == '=') {
-			mTokens.emplace_back(TokenType::EQUAL);
+			mTokens.emplace_back(TokenType::equal);
 			advance();
 		} else if (mCurrentChar[0] == '>') {
-			mTokens.emplace_back(TokenType::GREATER_THEN);
+			mTokens.emplace_back(TokenType::greaterThen);
 			advance();
 		} else if (mCurrentChar[0] == '<') {
-			mTokens.emplace_back(TokenType::LESS_THEN);
+			mTokens.emplace_back(TokenType::lessThen);
 			advance();
 		} else if (mCurrentChar[0] == '(') {
-			mTokens.emplace_back(TokenType::LPAREN);
+			mTokens.emplace_back(TokenType::lparen);
 			advance();
 		} else if (mCurrentChar[0] == ')') {
-			mTokens.emplace_back(TokenType::RPAREN);
+			mTokens.emplace_back(TokenType::rparen);
 			advance();
 		} else {
 			throw IllegalCharError(mFileName, std::string(1, mCurrentChar[0]), mPos.lineNumber);
 		}
 	}
 
-	mTokens.emplace_back(TokenType::EOF_);
+	mTokens.emplace_back(TokenType::eof);
 }
 
 size_t Lexer::getTokenSize() const {

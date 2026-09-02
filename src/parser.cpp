@@ -13,7 +13,7 @@ ExprPtr Parser::parse() {
 	ExprPtr root = parseExpr();
 	ExprPtr prevExpr = root;
 
-	while (mCurrentToken.type != TokenType::EOF_) {
+	while (mCurrentToken.type != TokenType::eof) {
 		ExprPtr currentExpr = parseExpr();
 		prevExpr->child = currentExpr;
 		prevExpr = std::move(currentExpr);
@@ -34,67 +34,67 @@ Token Parser::advance() {
 ExprPtr Parser::parseExpr() {
 	ExprPtr expr;
 
-	consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+	consume(TokenType::lparen, MISSING_PAREN_ERROR);
 	switch (mCurrentToken.type) {
-		case TokenType::PLUS:
-		case TokenType::MINUS:
-		case TokenType::DIV:
-		case TokenType::MUL:
-		case TokenType::EQUAL:
-		case TokenType::NEQUAL:
-		case TokenType::GREATER_THEN:
-		case TokenType::LESS_THEN:
-		case TokenType::GREATER_THEN_EQ:
-		case TokenType::LESS_THEN_EQ:
-		case TokenType::AND:
-		case TokenType::OR:
-		case TokenType::NOT:
-		case TokenType::LOGAND:
-		case TokenType::LOGIOR:
-		case TokenType::LOGXOR:
-		case TokenType::LOGNOR:
+		case TokenType::plus:
+		case TokenType::minus:
+		case TokenType::div:
+		case TokenType::mul:
+		case TokenType::equal:
+		case TokenType::nequal:
+		case TokenType::greaterThen:
+		case TokenType::lessThen:
+		case TokenType::greaterThenEq:
+		case TokenType::lessThenEq:
+		case TokenType::and_:
+		case TokenType::or_:
+		case TokenType::not_:
+		case TokenType::logand:
+		case TokenType::logior:
+		case TokenType::logxor:
+		case TokenType::lognor:
 			expr = parseSExpr();
 			break;
-		case TokenType::DOTIMES:
+		case TokenType::dotimes:
 			expr = parseDotimes();
 			break;
-		case TokenType::LOOP:
+		case TokenType::loop:
 			expr = parseLoop();
 			break;
-		case TokenType::LET:
+		case TokenType::let:
 			expr = parseLet();
 			break;
-		case TokenType::SETQ:
+		case TokenType::setq:
 			expr = parseSetq();
 			break;
-		case TokenType::DEFVAR:
+		case TokenType::defvar:
 			expr = parseDefvar();
 			break;
-		case TokenType::DEFCONST:
+		case TokenType::defconst:
 			expr = parseDefconst();
 			break;
-		case TokenType::DEFUN:
+		case TokenType::defun:
 			expr = parseDefun();
 			break;
-		case TokenType::IF:
+		case TokenType::if_:
 			expr = parseIf();
 			break;
-		case TokenType::WHEN:
+		case TokenType::when:
 			expr = parseWhen();
 			break;
-		case TokenType::COND:
+		case TokenType::cond:
 			expr = parseCond();
 			break;
-		case TokenType::VAR:
+		case TokenType::var:
 			expr = parseFuncCall();
 			break;
-		case TokenType::RETURN:
+		case TokenType::return_:
 			expr = parseReturn();
 			break;
 		default:
 			throw InvalidSyntaxError(mFileName, mCurrentToken.lexeme.c_str(), 0);
 	}
-	consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+	consume(TokenType::rparen, MISSING_PAREN_ERROR);
 
 	return expr;
 }
@@ -105,19 +105,19 @@ ExprPtr Parser::parseSExpr() {
 	Token token = mCurrentToken;
 	advance();
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		left = parseExpr();
 	} else {
 		left = parseAtom();
 	}
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		right = parseExpr();
 	} else {
 		right = parseAtom();
 	}
 
-	if (token.type == TokenType::NOT && !cast::toUninitialized(right)) {
+	if (token.type == TokenType::not_ && !cast::toUninitialized(right)) {
 		throw InvalidSyntaxError(mFileName, ERROR(OP_INVALID_NUMBER_OF_ARGS_ERROR, "NOT", 2), 0);
 	}
 
@@ -130,22 +130,20 @@ ExprPtr Parser::parseDotimes() {
 
 	advance();
 
-	consume(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DOTIMES"));
+	consume(TokenType::lparen, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DOTIMES"));
 	ExprPtr var = parseAtom();
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		value = parseExpr();
 	} else {
 		value = parseAtom();
 	}
 
 	cast::toVar(var)->value = std::move(value);
-	cast::toVar(var)->sType = SymbolType::LOCAL;
+	cast::toVar(var)->sType = SymbolType::local;
+	consume(TokenType::rparen, MISSING_PAREN_ERROR);
 
-	consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
-
-
-	while (mCurrentToken.type == TokenType::LPAREN) {
+	while (mCurrentToken.type == TokenType::lparen) {
 		statements.push_back(parseExpr());
 	}
 
@@ -157,7 +155,7 @@ ExprPtr Parser::parseLoop() {
 
 	advance();
 
-	while (mCurrentToken.type == TokenType::LPAREN) {
+	while (mCurrentToken.type == TokenType::lparen) {
 		sexprs.push_back(parseExpr());
 	}
 
@@ -171,38 +169,38 @@ ExprPtr Parser::parseLet() {
 
 	advance();
 
-	consume(TokenType::LPAREN, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "LET"));
+	consume(TokenType::lparen, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "LET"));
 	for (;;) {
 		// Check out (let (x))
-		while (mCurrentToken.type == TokenType::VAR) {
+		while (mCurrentToken.type == TokenType::var) {
 			var = parseAtom();
-			cast::toVar(var)->sType = SymbolType::LOCAL;
+			cast::toVar(var)->sType = SymbolType::local;
 			bindings.push_back(var);
 		}
 
 		// Check out (let ((x 11)) )
-		while (mCurrentToken.type == TokenType::LPAREN) {
-			consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+		while (mCurrentToken.type == TokenType::lparen) {
+			consume(TokenType::lparen, MISSING_PAREN_ERROR);
 			var = parseAtom();
 
-			if (mCurrentToken.type == TokenType::LPAREN) {
+			if (mCurrentToken.type == TokenType::lparen) {
 				value = parseExpr();
 			} else {
 				value = parseAtom();
 			}
 
 			cast::toVar(var)->value = std::move(value);
-			cast::toVar(var)->sType = SymbolType::LOCAL;
+			cast::toVar(var)->sType = SymbolType::local;
 			bindings.push_back(var);
-			consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+			consume(TokenType::rparen, MISSING_PAREN_ERROR);
 		}
 
-		if (mCurrentToken.type == TokenType::RPAREN)
+		if (mCurrentToken.type == TokenType::rparen)
 			break;
 	}
-	consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+	consume(TokenType::rparen, MISSING_PAREN_ERROR);
 
-	while (mCurrentToken.type == TokenType::LPAREN) {
+	while (mCurrentToken.type == TokenType::lparen) {
 		body.push_back(parseExpr());
 	}
 
@@ -210,17 +208,17 @@ ExprPtr Parser::parseLet() {
 }
 
 ExprPtr Parser::parseSetq() {
-	ExprPtr var = createVar(SymbolType::UNKNOWN);
+	ExprPtr var = createVar(SymbolType::unknown);
 	return std::make_shared<SetqExpr>(var);
 }
 
 ExprPtr Parser::parseDefvar() {
-	ExprPtr var = createVar(SymbolType::GLOBAL);
+	ExprPtr var = createVar(SymbolType::global);
 	return std::make_shared<DefvarExpr>(var);
 }
 
 ExprPtr Parser::parseDefconst() {
-	ExprPtr var = createVar(SymbolType::GLOBAL, true);
+	ExprPtr var = createVar(SymbolType::global, true);
 	return std::make_shared<DefconstExpr>(var);
 }
 
@@ -233,22 +231,22 @@ ExprPtr Parser::parseDefun() {
 	ExprPtr name = parseAtom();
 
 	// Parse params
-	consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
-	while (mCurrentToken.type == TokenType::VAR) {
+	consume(TokenType::lparen, MISSING_PAREN_ERROR);
+	while (mCurrentToken.type == TokenType::var) {
 		ExprPtr arg = parseAtom();
-		cast::toVar(arg)->sType = SymbolType::PARAM;
+		cast::toVar(arg)->sType = SymbolType::param;
 		args.push_back(arg);
 	}
-	consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+	consume(TokenType::rparen, MISSING_PAREN_ERROR);
 	// Parse body
 	for (;;) {
-		if (mCurrentToken.type == TokenType::LPAREN) {
+		if (mCurrentToken.type == TokenType::lparen) {
 			forms.push_back(parseExpr());
 		} else {
 			forms.push_back(parseAtom());
 		}
 
-		if (mCurrentToken.type == TokenType::RPAREN)
+		if (mCurrentToken.type == TokenType::rparen)
 			break;
 	}
 
@@ -261,7 +259,7 @@ ExprPtr Parser::parseFuncCall() {
 	ExprPtr name = parseAtom();
 
 	for (;;) {
-		if (mCurrentToken.type == TokenType::LPAREN) {
+		if (mCurrentToken.type == TokenType::lparen) {
 			args.push_back(parseExpr());
 		} else {
 			ExprPtr arg = parseAtom();
@@ -272,7 +270,7 @@ ExprPtr Parser::parseFuncCall() {
 			args.push_back(arg);
 		}
 
-		if (mCurrentToken.type == TokenType::RPAREN)
+		if (mCurrentToken.type == TokenType::rparen)
 			break;
 	}
 
@@ -292,19 +290,19 @@ ExprPtr Parser::parseIf() {
 
 	advance();
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		test = parseExpr();
 	} else {
 		test = parseAtom();
 	}
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		then = parseExpr();
 	} else {
 		then = parseAtom();
 	}
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		else_ = parseExpr();
 	} else {
 		else_ = parseAtom();
@@ -319,20 +317,20 @@ ExprPtr Parser::parseWhen() {
 
 	advance();
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		test = parseExpr();
 	} else {
 		test = parseAtom();
 	}
 
 	for (;;) {
-		if (mCurrentToken.type == TokenType::LPAREN) {
+		if (mCurrentToken.type == TokenType::lparen) {
 			then.push_back(parseExpr());
 		} else {
 			then.push_back(parseAtom());
 		}
 
-		if (mCurrentToken.type == TokenType::RPAREN)
+		if (mCurrentToken.type == TokenType::rparen)
 			break;
 	}
 
@@ -345,39 +343,39 @@ ExprPtr Parser::parseCond() {
 
 	advance();
 
-	while (mCurrentToken.type == TokenType::LPAREN) {
-		consume(TokenType::LPAREN, MISSING_PAREN_ERROR);
+	while (mCurrentToken.type == TokenType::lparen) {
+		consume(TokenType::lparen, MISSING_PAREN_ERROR);
 
-		if (mCurrentToken.type == TokenType::LPAREN) {
+		if (mCurrentToken.type == TokenType::lparen) {
 			test = parseExpr();
 		} else {
 			test = parseAtom();
 		}
 
 		std::vector<ExprPtr> statements;
-		if (mCurrentToken.type != TokenType::LPAREN) {
+		if (mCurrentToken.type != TokenType::lparen) {
 			statements.push_back(parseAtom());
 		}
 
-		while (mCurrentToken.type == TokenType::LPAREN) {
+		while (mCurrentToken.type == TokenType::lparen) {
 			statements.push_back(parseExpr());
 		}
 
 		variants.emplace_back(test, statements);
-		consume(TokenType::RPAREN, MISSING_PAREN_ERROR);
+		consume(TokenType::rparen, MISSING_PAREN_ERROR);
 	}
 
 	return std::make_shared<CondExpr>(variants);
 }
 
 ExprPtr Parser::parseAtom() {
-	if (mCurrentToken.type == TokenType::STRING) {
+	if (mCurrentToken.type == TokenType::string) {
 		Token token = mCurrentToken;
 		advance();
 		return std::make_shared<StringExpr>(token.lexeme);
 	}
 
-	if (mCurrentToken.type == TokenType::VAR) {
+	if (mCurrentToken.type == TokenType::var) {
 		Token token = mCurrentToken;
 		advance();
 		ExprPtr name = std::make_shared<StringExpr>(token.lexeme);
@@ -385,17 +383,17 @@ ExprPtr Parser::parseAtom() {
 		return std::make_shared<VarExpr>(name, value);
 	}
 
-	if (mCurrentToken.type == TokenType::NIL) {
+	if (mCurrentToken.type == TokenType::nil) {
 		advance();
 		return std::make_shared<NILExpr>();
 	}
 
-	if (mCurrentToken.type == TokenType::T) {
+	if (mCurrentToken.type == TokenType::t) {
 		advance();
 		return std::make_shared<TExpr>();
 	}
 
-	if (mCurrentToken.type == TokenType::RPAREN) {
+	if (mCurrentToken.type == TokenType::rparen) {
 		return std::make_shared<Uninitialized>();
 	}
 
@@ -406,10 +404,10 @@ ExprPtr Parser::parseNumber() {
 	const auto token = mCurrentToken;
 	advance();
 
-	if (token.type == TokenType::INT) {
+	if (token.type == TokenType::int_) {
 		return std::make_shared<IntExpr>(std::stoi(token.lexeme));
 	}
-	if (token.type == TokenType::DOUBLE) {
+	if (token.type == TokenType::double_) {
 		return std::make_shared<DoubleExpr>(std::stof(token.lexeme));
 	}
 
@@ -422,7 +420,7 @@ ExprPtr Parser::createVar(const SymbolType type, const bool isConstant) {
 
 	ExprPtr var = parseAtom();
 
-	if (mCurrentToken.type == TokenType::LPAREN) {
+	if (mCurrentToken.type == TokenType::lparen) {
 		if (isConstant)
 			throw InvalidSyntaxError(mFileName, ERROR(SEXPR_ERROR, "DEFCONSTANT"), 0);
 		value = parseExpr();
