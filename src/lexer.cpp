@@ -1,9 +1,8 @@
 #include "lexer.hpp"
-#include <cstring>
 #include "exceptions.hpp"
 
-Lexer::Lexer(const std::string_view fn, std::string text)
-	: mText(std::move(text)),
+Lexer::Lexer(const std::string_view fn, std::string_view text)
+	: mText(text),
 	  mPos(-1, 0, -1),
 	  mFileName(fn) {
 	advance();

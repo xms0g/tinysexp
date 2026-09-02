@@ -64,7 +64,7 @@ struct Position {
 
 class Lexer {
 public:
-	Lexer(std::string_view fn, std::string text);
+	Lexer(std::string_view fn, std::string_view text);
 
 	void process();
 
@@ -78,9 +78,9 @@ private:
 
 	void advance(int32_t step);
 
-	std::string mText;
+	std::string_view mText;
 	Position mPos;
 	std::vector<Token> mTokens;
-	char* mCurrentChar{};
+	const char* mCurrentChar{};
 	std::string_view mFileName;
 };

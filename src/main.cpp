@@ -17,13 +17,13 @@
 #define ERROR_COLOR "\x1b[31m"
 #define RESET_COLOR "\x1b[0m"
 
-static void compile(std::string& fn, const std::string& in, std::string& out) {
+static void compile(const std::string_view fn, const std::string_view in, const std::string_view out) {
     std::ofstream asmFile;
     asmFile.open(out);
 
     try {
-        Lexer lexer{fn.c_str(), in};
-        Parser parser{fn.c_str(), lexer};
+        Lexer lexer{fn, in};
+        Parser parser{fn, lexer};
         SemanticAnalyzer analyzer{fn};
         CodeGen cgen;
 
