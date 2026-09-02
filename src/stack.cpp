@@ -1,4 +1,4 @@
-#include "stack.h"
+#include "stack.hpp"
 
 void StackAllocator::alloc(const uint32_t size) {
     stackOffset += size;

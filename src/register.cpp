@@ -1,4 +1,4 @@
-#include "register.h"
+#include "register.hpp"
 
 Register* RegisterAllocator::alloc(const uint8_t rt) {
     if (rt == SSE) {

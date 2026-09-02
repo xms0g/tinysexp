@@ -1,9 +1,7 @@
-#ifndef STACK_H
-#define STACK_H
-
+#pragma once
 #include <string>
 #include <unordered_map>
-#include "parser.h"
+#include "parser.hpp"
 
 class StackAllocator {
 public:
@@ -26,5 +24,3 @@ private:
     std::unordered_map<std::string, StackFrame> stack{};
     uint32_t stackOffset{0};
 };
-
-#endif //STACK_H

@@ -1,4 +1,4 @@
-#include "semantic.h"
+#include "semantic.hpp"
 #include "exceptions.hpp"
 
 void ScopeTracker::enter(const std::string& scopeName) {

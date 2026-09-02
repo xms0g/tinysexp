@@ -1,9 +1,9 @@
 #include <iostream>
 #include <fstream>
-#include "lexer.h"
-#include "parser.h"
-#include "semantic.h"
-#include "codegen.h"
+#include "lexer.hpp"
+#include "parser.hpp"
+#include "semantic.hpp"
+#include "codegen.hpp"
 #include "exceptions.hpp"
 
 #define VERSION_MAJOR 0

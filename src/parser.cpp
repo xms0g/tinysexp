@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "parser.hpp"
 #include "exceptions.hpp"
 
 Parser::Parser(const char* fn, Lexer& lexer) : lexer(lexer), tokenIndex(-1), fileName(fn) {

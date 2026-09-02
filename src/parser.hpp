@@ -3,7 +3,7 @@
 
 #include <utility>
 #include <memory>
-#include "lexer.h"
+#include "lexer.hpp"
 
 enum class SymbolType {
     UNKNOWN,

@@ -1,4 +1,4 @@
-#include "codegen.h"
+#include "codegen.hpp"
 #include <format>
 
 #define emitHex(n) std::format("0x{:X}", n)

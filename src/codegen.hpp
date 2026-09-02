@@ -4,9 +4,9 @@
 #include <any>
 #include <string>
 #include <unordered_map>
-#include "parser.h"
-#include "stack.h"
-#include "register.h"
+#include "parser.hpp"
+#include "stack.hpp"
+#include "register.hpp"
 
 class CodeGen {
 public:
