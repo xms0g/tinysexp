@@ -1,5 +1,7 @@
 #pragma once
+#include <array>
 #include <cstdint>
+#include <span>
 
 #define INUSE 1 << 0
 #define isINUSE(status) (status & INUSE)
@@ -55,9 +57,9 @@ public:
 	Register* regFromID(uint32_t id);
 
 private:
-	Register* scan(const uint32_t* priorityOrder, int size);
+	Register* scan(std::span<const uint32_t> order, int32_t size);
 
-	Register registers[REGISTER_COUNT] = {
+	Register mRegisters[REGISTER_COUNT] = {
 		{.id = RAX, .rType = SCRATCH, .status = INUSE},
 		{.id = RDI, .rType = SCRATCH | PARAM, .status = 0},
 		{.id = RSI, .rType = SCRATCH | PARAM, .status = 0},
@@ -92,7 +94,7 @@ private:
 		{.id = xmm15, .rType = SSE, .status = 0},
 	};
 
-	static constexpr const char* registerNames[REGISTER_COUNT][SIZE_COUNT] = {
+	static constexpr const char* mRegisterNames[REGISTER_COUNT][SIZE_COUNT] = {
 		{"rax", "eax", "ax", "ah", "al"},
 		{"rdi", "edi", "di", "", "dil"},
 		{"rsi", "esi", "si", "", "sil"},
@@ -127,7 +129,7 @@ private:
 		{"xmm15", "", "", "", ""},
 	};
 
-	static constexpr uint32_t priorityOrder[3] = {SCRATCH, SCRATCH | PARAM, PRESERVED};
+	static constexpr std::array<uint32_t, 3> mPriorityOrder = {SCRATCH, SCRATCH | PARAM, PRESERVED};
 
-	static constexpr uint32_t priorityOrderSSE[2] = {SSE | PARAM, SSE};
+	static constexpr std::array<uint32_t, 2> mPriorityOrderSSE = {SSE | PARAM, SSE};
 };

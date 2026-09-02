@@ -1,18 +1,18 @@
 #include "stack.hpp"
 
 void StackAllocator::alloc(const uint32_t size) {
-	stackOffset += size;
+	mStackOffset += size;
 }
 
 void StackAllocator::dealloc(const uint32_t size) {
-	stackOffset -= size;
+	mStackOffset -= size;
 }
 
 int StackAllocator::pushStackFrame(const std::string& funcName, const std::string& varName, const SymbolType stype) {
 	StackFrame* sf = nullptr;
 
-	if (stack.contains(funcName)) {
-		sf = &stack.at(funcName);
+	if (mStack.contains(funcName)) {
+		sf = &mStack.at(funcName);
 
 		if (sf->offsets.contains(varName)) {
 			return sf->offsets.at(varName);
@@ -23,7 +23,7 @@ int StackAllocator::pushStackFrame(const std::string& funcName, const std::strin
 		StackFrame stackFrame;
 
 		const int32_t offset = updateStackFrame(&stackFrame, varName, stype);
-		stack.emplace(funcName, stackFrame);
+		mStack.emplace(funcName, stackFrame);
 
 		return offset;
 	}
@@ -48,12 +48,12 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 		}
 	}
 
-	uint32_t alignedSize = stackOffset + (stackParamCount > 0 ? stackParamCount * 8 : 0);
+	uint32_t alignedSize = mStackOffset + (stackParamCount > 0 ? stackParamCount * 8 : 0);
 
 	if (alignedSize % 16 != 0)
 		alignedSize += 8;
 
-	return alignedSize - stackOffset;
+	return alignedSize - mStackOffset;
 }
 
 int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName, const SymbolType stype) {

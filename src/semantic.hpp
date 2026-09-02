@@ -33,13 +33,13 @@ public:
 
 private:
     using ScopeType = std::unordered_map<std::string, Symbol>;
-    std::stack<ScopeType> symbolTable;
-    std::stack<std::string> scopeNames;
+    std::stack<ScopeType> mSymbolTable;
+    std::stack<std::string> mScopeNames;
 };
 
 class SemanticAnalyzer {
 public:
-    explicit SemanticAnalyzer(const char* fn);
+    explicit SemanticAnalyzer(std::string_view fn);
 
     void analyze(const ExprPtr& ast);
 
@@ -80,7 +80,8 @@ private:
 
     void checkBitwiseOp(const ExprPtr& n, TokenType ttype) const;
 
-    [[nodiscard]] std::variant<int, double> getValue(const ExprPtr& num) const;
+    [[nodiscard]]
+	std::variant<int, double> getValue(const ExprPtr& num) const;
 
     ExprPtr returnValue(const VarExpr& var);
 
@@ -94,13 +95,13 @@ private:
 
     void setType(VarExpr& var, const ExprPtr& value);
 
-    ScopeTracker symbolTracker;
+    ScopeTracker mSymbolTracker;
 
     struct TypeInferenceContext {
         bool isStarted{false};
         std::string entryPoint;
     };
 
-    TypeInferenceContext tfCtx;
-    const char* fileName;
+    TypeInferenceContext mTfCtx;
+    std::string_view mFileName;
 };

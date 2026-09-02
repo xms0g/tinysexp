@@ -3,47 +3,47 @@
 
 void ScopeTracker::enter(const std::string& scopeName) {
     const std::unordered_map<std::string, Symbol> scope;
-    symbolTable.push(scope);
+    mSymbolTable.push(scope);
 
     if (!scopeName.empty()) {
-        scopeNames.push(scopeName);
+        mScopeNames.push(scopeName);
     }
 }
 
 void ScopeTracker::exit(const bool isFunc) {
-    symbolTable.pop();
+    mSymbolTable.pop();
 
     if (isFunc) {
-        scopeNames.pop();
+        mScopeNames.pop();
     }
 }
 
 std::string& ScopeTracker::scopeName() {
-    return scopeNames.top();
+    return mScopeNames.top();
 }
 
 size_t ScopeTracker::level() const {
-    return symbolTable.size();
+    return mSymbolTable.size();
 }
 
 void ScopeTracker::bind(const std::string& name, const Symbol& symbol) {
     if (lookup(name).value) {
         update(name, symbol);
     } else {
-        auto currentScope = symbolTable.top();
-        symbolTable.pop();
+        auto currentScope = mSymbolTable.top();
+        mSymbolTable.pop();
 
         currentScope.emplace(name, symbol);
-        symbolTable.push(currentScope);
+        mSymbolTable.push(currentScope);
     }
 }
 
 void ScopeTracker::update(const std::string& name, const Symbol& symbol) {
     std::stack<ScopeType> scopes;
   
-    while (!symbolTable.empty()) {
-        ScopeType scope = symbolTable.top();
-        symbolTable.pop();
+    while (!mSymbolTable.empty()) {
+        ScopeType scope = mSymbolTable.top();
+        mSymbolTable.pop();
         
         if (scope.contains(name)) {
             scope[name] = symbol;
@@ -57,7 +57,7 @@ void ScopeTracker::update(const std::string& name, const Symbol& symbol) {
 
     // reconstruct the scopes
     while (!scopes.empty()) {
-        symbolTable.push(scopes.top());
+        mSymbolTable.push(scopes.top());
         scopes.pop();
     }
 }
@@ -66,9 +66,9 @@ Symbol ScopeTracker::lookup(const std::string& name) {
     Symbol sym{};
     std::stack<ScopeType> scopes;
 
-    while (!symbolTable.empty()) {
-        ScopeType scope = symbolTable.top();
-        symbolTable.pop();
+    while (!mSymbolTable.empty()) {
+        ScopeType scope = mSymbolTable.top();
+        mSymbolTable.pop();
         scopes.push(scope);
 
         if (scope.contains(name)) {
@@ -79,7 +79,7 @@ Symbol ScopeTracker::lookup(const std::string& name) {
     }
     // reconstruct the scopes
     while (!scopes.empty()) {
-        symbolTable.push(scopes.top());
+        mSymbolTable.push(scopes.top());
         scopes.pop();
     }
 
@@ -87,25 +87,25 @@ Symbol ScopeTracker::lookup(const std::string& name) {
 }
 
 Symbol ScopeTracker::lookupCurrent(const std::string& name) {
-    if (ScopeType currentScope = symbolTable.top(); currentScope.contains(name)) {
+    if (ScopeType currentScope = mSymbolTable.top(); currentScope.contains(name)) {
         return currentScope[name];
     }
 
     return {};
 }
 
-SemanticAnalyzer::SemanticAnalyzer(const char* fn) : fileName(fn) {
+SemanticAnalyzer::SemanticAnalyzer(const std::string_view fn) : mFileName(fn) {
 }
 
 void SemanticAnalyzer::analyze(const ExprPtr& ast) {
     auto next = ast;
 
-    symbolTracker.enter("global");
+    mSymbolTracker.enter("global");
     while (next != nullptr) {
         exprResolve(next);
         next = next->child;
     }
-    symbolTracker.exit();
+    mSymbolTracker.exit();
 }
 
 ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
@@ -167,7 +167,7 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 }
 
 ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
-    symbolTracker.enter("");
+    mSymbolTracker.enter("");
     checkConstantVar(dotimes.iterationCount);
 
     const auto var = cast::toVar(dotimes.iterationCount);
@@ -179,7 +179,7 @@ ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
     for (const auto& statement: dotimes.statements) {
         result = exprResolve(statement);
     }
-    symbolTracker.exit();
+    mSymbolTracker.exit();
 
     return result;
 }
@@ -195,14 +195,14 @@ ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
 }
 
 ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
-    symbolTracker.enter("");
+    mSymbolTracker.enter("");
     for (const auto& var: let.bindings) {
         const auto var_ = cast::toVar(var);
         const std::string varName = cast::toString(var_->name)->data;
 
         // Check out the var in the current scope, if it's already defined, raise error
-        if (const Symbol sym = symbolTracker.lookupCurrent(varName); sym.value) {
-            throw SemanticError(fileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
+        if (const Symbol sym = mSymbolTracker.lookupCurrent(varName); sym.value) {
+            throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
         }
 
         // Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
@@ -215,7 +215,7 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
         result = exprResolve(statement);
     }
 
-    symbolTracker.exit();
+    mSymbolTracker.exit();
 
     return result;
 }
@@ -227,10 +227,10 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
     const std::string varName = cast::toString(var->name)->data;
 
     // Check out the var.If it's not defined, raise error.
-    const Symbol sym = symbolTracker.lookup(varName);
+    const Symbol sym = mSymbolTracker.lookup(varName);
 
     if (!sym.value) {
-        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
     }
     // Resolve the var scope.
     var->sType = sym.sType;
@@ -244,8 +244,8 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
     const auto var = cast::toVar(defvar.pair);
     const std::string varName = cast::toString(var->name)->data;
 
-    if (symbolTracker.level() > 1) {
-        throw SemanticError(fileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
+    if (mSymbolTracker.level() > 1) {
+        throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
     }
 
     valueResolve(var);
@@ -255,8 +255,8 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
     const auto var = cast::toVar(defconst.pair);
     const std::string varName = cast::toString(var->name)->data;
 
-    if (symbolTracker.level() > 1) {
-        throw SemanticError(fileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
+    if (mSymbolTracker.level() > 1) {
+        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
     }
 
     valueResolve(var, true);
@@ -267,20 +267,20 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
     const auto var = cast::toVar(func->name);
     const std::string funcName = cast::toString(var->name)->data;
 
-    symbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
+    mSymbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::GLOBAL});
 
-    symbolTracker.enter(funcName);
+    mSymbolTracker.enter(funcName);
     for (const auto& arg: func->args) {
         const auto argVar = cast::toVar(arg);
         const std::string argName = cast::toString(argVar->name)->data;
-        symbolTracker.bind(argName, {.name = argName, .value = arg, .sType = argVar->sType});
+        mSymbolTracker.bind(argName, {.name = argName, .value = arg, .sType = argVar->sType});
     }
 
     ExprPtr result;
     for (const auto& statement: func->forms) {
         result = exprResolve(statement);
     }
-    symbolTracker.exit(true);
+    mSymbolTracker.exit(true);
 
     return result;
 }
@@ -289,21 +289,21 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
     const auto var = cast::toVar(funcCall.name);
     const std::string funcName = cast::toString(var->name)->data;
 
-    if (!isParam && symbolTracker.level() == 1) {
-        tfCtx.isStarted = true;
-        tfCtx.entryPoint = funcName;
+    if (!isParam && mSymbolTracker.level() == 1) {
+        mTfCtx.isStarted = true;
+        mTfCtx.entryPoint = funcName;
     }
 
-    Symbol sym = symbolTracker.lookup(funcName);
+    Symbol sym = mSymbolTracker.lookup(funcName);
 
     if (!sym.value || !cast::toDefun(sym.value)) {
-        throw SemanticError(fileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
+        throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
     }
 
     const auto func = cast::toDefun(sym.value);
 
     if (funcCall.args.size() != func->args.size()) {
-        throw SemanticError(fileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
+        throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
     }
 
     // Match the param names to values
@@ -341,7 +341,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
             do {
                 const std::string innerVarName = cast::toString(innerVar->name)->data;
 
-                sym = symbolTracker.lookup(innerVarName);
+                sym = mSymbolTracker.lookup(innerVarName);
 
                 if (sym.value) {
                     auto sym_value = cast::toVar(sym.value);
@@ -385,18 +385,18 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
         }
     };
 
-    if (tfCtx.isStarted) {
+    if (mTfCtx.isStarted) {
         for (size_t i = 0; i < funcCall.args.size(); ++i) {
             auto arg = cast::toVar(funcCall.args[i]);
             makeLocal(*arg);
             func->args[i] = funcCall.args[i];
         }
         // Find the proper type of variables and the return type of the function
-        if (std::string& currentScope = symbolTracker.scopeName(); currentScope != funcName) {
+        if (std::string& currentScope = mSymbolTracker.scopeName(); currentScope != funcName) {
             funcCall.returnType = defunResolve(func);
 
-            if (funcName == tfCtx.entryPoint)
-                tfCtx.isStarted = false;
+            if (funcName == mTfCtx.entryPoint)
+                mTfCtx.isStarted = false;
         }
     }
 
@@ -410,8 +410,8 @@ void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
     const std::string argName = cast::toString(arg->name)->data;
 
     // Check out the var.If it's not defined, raise error.
-    if (const Symbol sym = symbolTracker.lookup(argName); !sym.value) {
-        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
+    if (const Symbol sym = mSymbolTracker.lookup(argName); !sym.value) {
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
     }
 }
 
@@ -419,9 +419,9 @@ ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {
     if (const auto test = cast::toVar(if_.test)) {
         const std::string name = cast::toString(test->name)->data;
 
-        const Symbol sym = symbolTracker.lookup(name);
+        const Symbol sym = mSymbolTracker.lookup(name);
         if (!sym.value) {
-            throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
 
         if_.test = sym.value;
@@ -442,9 +442,9 @@ ExprPtr SemanticAnalyzer::whenResolve(WhenExpr& when) {
     if (const auto test = cast::toVar(when.test)) {
         const std::string name = cast::toString(test->name)->data;
 
-        const Symbol sym = symbolTracker.lookup(name);
+        const Symbol sym = mSymbolTracker.lookup(name);
         if (!sym.value) {
-            throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
         }
 
         when.test = sym.value;
@@ -467,9 +467,9 @@ ExprPtr SemanticAnalyzer::condResolve(CondExpr& cond) {
         if (const auto test_ = cast::toVar(test)) {
             const std::string name = cast::toString(test_->name)->data;
 
-            const Symbol sym = symbolTracker.lookup(name);
+            const Symbol sym = mSymbolTracker.lookup(name);
             if (!sym.value) {
-                throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+                throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
             }
 
             test = sym.value;
@@ -489,8 +489,8 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
     const auto var_ = cast::toVar(var);
     const std::string varName = cast::toString(var_->name)->data;
 
-    if (const Symbol sym = symbolTracker.lookup(varName); sym.isConstant) {
-        throw SemanticError(fileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
+    if (const Symbol sym = mSymbolTracker.lookup(varName); sym.isConstant) {
+        throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
     }
 }
 
@@ -499,11 +499,11 @@ void SemanticAnalyzer::checkBool(const ExprPtr& var, const TokenType ttype) cons
         return;
 
     if (cast::toT(var)) {
-        throw SemanticError(fileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
+        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "t"), 0);
     }
 
     if (cast::toNIL(var)) {
-        throw SemanticError(fileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
+        throw SemanticError(mFileName, ERROR(NOT_NUMBER_ERROR, "nil"), 0);
     }
 }
 
@@ -512,7 +512,7 @@ void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) c
         ttype == TokenType::LOGIOR ||
         ttype == TokenType::LOGXOR ||
         ttype == TokenType::LOGNOR) {
-        throw SemanticError(fileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(n))), 0);
+        throw SemanticError(mFileName, ERROR(NOT_INT_ERROR, std::get<double>(getValue(n))), 0);
     }
 }
 
@@ -577,10 +577,10 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
     const auto var = cast::toVar(n);
     const std::string name = cast::toString(var->name)->data;
 
-    const Symbol sym = symbolTracker.lookup(name);
+    const Symbol sym = mSymbolTracker.lookup(name);
 
     if (!sym.value) {
-        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
 
     var->sType = sym.sType;
@@ -636,7 +636,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
     } while (innerVar);
 
     if (!innerVar) {
-        throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
+        throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
     }
 
     return nullptr;
@@ -661,7 +661,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
     if (isPrimitive(var_->value) || cast::toUninitialized(var_->value)) {
         setType(*var_, var_->value);
 
-        symbolTracker.bind(varName, {
+        mSymbolTracker.bind(varName, {
                                .name = varName,
                                .value = var,
                                .sType = var_->sType,
@@ -672,16 +672,16 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 
     if (const auto value = cast::toVar(var_->value)) {
         const std::string valueName = cast::toString(value->name)->data;
-        const Symbol sym = symbolTracker.lookup(valueName);
+        const Symbol sym = mSymbolTracker.lookup(valueName);
 
         if (!sym.value) {
-            throw SemanticError(fileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
+            throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
         }
         // Update value
         var_->value = sym.value;
         var_->vType = cast::toVar(sym.value)->vType;
 
-        symbolTracker.bind(varName, {
+        mSymbolTracker.bind(varName, {
                                .name = varName,
                                .value = var,
                                .sType = var_->sType,
@@ -694,7 +694,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
     ExprPtr value_ = exprResolve(var_->value);
     var_->vType = cast::toInt(value_) ? VarType::INT : VarType::DOUBLE;
 
-    symbolTracker.bind(varName, {
+    mSymbolTracker.bind(varName, {
                            .name = varName,
                            .value = var,
                            .sType = var_->sType,

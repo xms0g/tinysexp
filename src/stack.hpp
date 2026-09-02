@@ -23,6 +23,6 @@ private:
 
 	int updateStackFrame(StackFrame* sf, const std::string& varName, SymbolType stype);
 
-	std::unordered_map<std::string, StackFrame> stack{};
-	uint32_t stackOffset{0};
+	std::unordered_map<std::string, StackFrame> mStack{};
+	uint32_t mStackOffset{0};
 };

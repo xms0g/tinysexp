@@ -17,14 +17,14 @@
 #define ERROR_COLOR "\x1b[31m"
 #define RESET_COLOR "\x1b[0m"
 
-void compile(std::string& fn, const std::string& in, std::string& out) {
+static void compile(std::string& fn, const std::string& in, std::string& out) {
     std::ofstream asmFile;
     asmFile.open(out);
 
     try {
         Lexer lexer{fn.c_str(), in};
         Parser parser{fn.c_str(), lexer};
-        SemanticAnalyzer analyzer{fn.c_str()};
+        SemanticAnalyzer analyzer{fn};
         CodeGen cgen;
 
         lexer.process();
@@ -43,7 +43,7 @@ void compile(std::string& fn, const std::string& in, std::string& out) {
 }
 
 int main(int argc, char** argv) {
-    static const char* usage =
+    static auto usage =
             "OVERVIEW: Lisp compiler for x86-64 architecture\n\n"
             "USAGE: tinysexp [options] file\n\n"
             "OPTIONS:\n"

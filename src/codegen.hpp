@@ -8,8 +8,7 @@
 
 class CodeGen {
 public:
-    CodeGen() : currentScope("main") {
-    }
+    CodeGen();
 
     std::string emit(const ExprPtr& ast);
 
@@ -80,7 +79,7 @@ private:
 
     void pushParamToRegister(uint32_t rid, const std::any& value);
 
-    void pushParamOntoStack(const std::string& funcName, const VarExpr& param, int& stackIdx);
+    void pushParamOntoStack(const std::string& funcName, const VarExpr& param, int32_t& stackIdx);
 
     const char* getRegName(const Register* reg, uint32_t size);
 
@@ -92,29 +91,29 @@ private:
 
     static bool isPrimitive(const ExprPtr& var);
 
-    std::string generatedCode;
+    std::string mGeneratedCode;
     // Label
-    int currentLabelCount{0};
+    int32_t mCurrentLabelCount{0};
     // Scope
-    std::string currentScope;
+    std::string mCurrentScope;
     // Register
-    RegisterAllocator registerAllocator;
+    RegisterAllocator mRegisterAllocator;
     // Stack
-    StackAllocator stackAllocator;
+    StackAllocator mStackAllocator;
     // Sections
-    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > sections;
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > mSections;
     // Functions
-    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > functions;
+    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > mFunctions;
 
-    static constexpr const char* memorySize[SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
+    static constexpr const char* mMemorySize[SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
 
-    static constexpr const char* dataSizeInitialized[SIZE_COUNT] = {"dq", "dd", "dw", "db", "db"};
+    static constexpr const char* mDataSizeInitialized[SIZE_COUNT] = {"dq", "dd", "dw", "db", "db"};
 
-    static constexpr const char* dataSizeUninitialized[SIZE_COUNT] = {"resq", "resd", "resw", "resb", "resb"};
+    static constexpr const char* mDataSizeUninitialized[SIZE_COUNT] = {"resq", "resd", "resw", "resb", "resb"};
 
-    static constexpr int memorySizeInBytes[SIZE_COUNT] = {8, 4, 2, 1, 1};
+    static constexpr int32_t mMemorySizeInBytes[SIZE_COUNT] = {8, 4, 2, 1, 1};
 
-    static constexpr int paramRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
+    static constexpr int32_t mParamRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
 
-    static constexpr int paramRegistersSSE[] = {xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7};
+    static constexpr int32_t mParamRegistersSSE[] = {xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7};
 };
