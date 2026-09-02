@@ -5,9 +5,6 @@
 #include <string_view>
 #include <utility>
 
-static constexpr int REGISTER_COUNT = 32;
-static constexpr int SIZE_COUNT = 5;
-
 enum class RegisterID : uint32_t {
 	rax, rdi, rsi,
 	rdx, rcx, r8,
@@ -79,7 +76,10 @@ public:
 private:
 	Register* scan(std::span<const RegisterType> order, int32_t size);
 
-	Register mRegisters[REGISTER_COUNT] = {
+	static constexpr int32_t REGISTER_COUNT = 32;
+	static constexpr int32_t SIZE_COUNT = 5;
+
+	std::array<Register, REGISTER_COUNT> mRegisters = {{
 		{.id = RegisterID::rax, .rType = RegisterType::scratch, .status = 1},
 		{.id = RegisterID::rdi, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
 		{.id = RegisterID::rsi, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
@@ -112,9 +112,9 @@ private:
 		{.id = RegisterID::xmm13, .rType = RegisterType::sse, .status = 0},
 		{.id = RegisterID::xmm14, .rType = RegisterType::sse, .status = 0},
 		{.id = RegisterID::xmm15, .rType = RegisterType::sse, .status = 0},
-	};
+	}};
 
-	static constexpr std::string_view mRegisterNames[REGISTER_COUNT][SIZE_COUNT] = {
+	static constexpr auto mRegisterNames = std::to_array<std::array<std::string_view, SIZE_COUNT> >({
 		{"rax", "eax", "ax", "ah", "al"},
 		{"rdi", "edi", "di", "", "dil"},
 		{"rsi", "esi", "si", "", "sil"},
@@ -147,9 +147,13 @@ private:
 		{"xmm13", "", "", "", ""},
 		{"xmm14", "", "", "", ""},
 		{"xmm15", "", "", "", ""},
+	});
+
+	static constexpr std::array<RegisterType, 3> mPriorityOrder = {
+		RegisterType::scratch, RegisterType::scratch | RegisterType::param, RegisterType::preserved
 	};
 
-	static constexpr std::array<RegisterType, 3> mPriorityOrder = {RegisterType::scratch, RegisterType::scratch | RegisterType::param, RegisterType::preserved};
-
-	static constexpr std::array<RegisterType, 2> mPriorityOrderSSE = {RegisterType::sse | RegisterType::param, RegisterType::sse};
+	static constexpr std::array<RegisterType, 2> mPriorityOrderSSE = {
+		RegisterType::sse | RegisterType::param, RegisterType::sse
+	};
 };
