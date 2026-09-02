@@ -59,9 +59,9 @@ private:
 
     void emitSection(const ExprPtr& var, bool isConstant = false);
 
-    void emitTest(const ExprPtr& test, const std::string& trueLabel, const std::string& elseLabel);
+    void emitTest(const ExprPtr& test, std::string_view trueLabel, std::string_view elseLabel);
 
-    void emitJmpTrueLabel(const Register* reg, TokenType type, const std::string& label);
+    void emitJmpTrueLabel(const Register* reg, TokenType type, std::string_view label);
 
     Register* emitSet(const ExprPtr& set);
 
@@ -77,19 +77,15 @@ private:
 
     Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
 
-    void emitStoreMemFromReg(const std::string& varName, SymbolType stype, const Register* reg, uint32_t size);
+    void emitStoreMemFromReg(std::string_view varName, SymbolType stype, const Register* reg, uint32_t size);
 
-    std::string getAddr(const std::string& varName, SymbolType stype, uint32_t size);
+    std::string getAddr(std::string_view varName, SymbolType stype, uint32_t size);
 
     uint32_t getMemSize(const ExprPtr& var);
 
     void pushParamToRegister(uint32_t rid, const std::any& value);
 
-    void pushParamOntoStack(const std::string& funcName, const VarExpr& param, int32_t& stackIdx);
-
-    const char* getRegName(const Register* reg, uint32_t size);
-
-    const char* getRegNameByID(uint32_t id, uint32_t size);
+    void pushParamOntoStack(std::string_view funcName, const VarExpr& param, int32_t& stackIdx);
 
     std::string createLabel();
 

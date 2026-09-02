@@ -8,14 +8,14 @@ void StackAllocator::dealloc(const uint32_t size) {
 	mStackOffset -= size;
 }
 
-int StackAllocator::pushStackFrame(const std::string& funcName, const std::string& varName, const SymbolType stype) {
+int32_t StackAllocator::pushStackFrame(const std::string_view funcName, const std::string_view varName, const SymbolType stype) {
 	StackFrame* sf = nullptr;
 
-	if (mStack.contains(funcName)) {
-		sf = &mStack.at(funcName);
+	if (const auto it = mStack.find(funcName); it != mStack.end()) {
+		sf = &it->second;
 
-		if (sf->offsets.contains(varName)) {
-			return sf->offsets.at(varName);
+		if (const auto it2 = sf->offsets.find(varName); it2 != sf->offsets.end()) {
+			return it2->second;
 		}
 	}
 
@@ -56,7 +56,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 	return alignedSize - mStackOffset;
 }
 
-int StackAllocator::updateStackFrame(StackFrame* sf, const std::string& varName, const SymbolType stype) {
+int StackAllocator::updateStackFrame(StackFrame* sf, const std::string_view varName, const SymbolType stype) {
 	int32_t offset;
 
 	if (stype == SymbolType::LOCAL) {

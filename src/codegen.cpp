@@ -37,13 +37,13 @@
     mStackAllocator.dealloc(8);
 
 #define emitSet8L(op, reg) \
-    emitInstr1op(op, getRegName(reg, REG8L)); \
-    movzx(getRegName(reg, REG64), getRegName(reg, REG8L));
+    emitInstr1op(op, mRegisterAllocator.nameFromReg(reg, REG8L)); \
+    movzx(mRegisterAllocator.nameFromReg(reg, REG64), mRegisterAllocator.nameFromReg(reg, REG8L));
 
 #define regAlloc() ([&]() { \
     auto* reg = mRegisterAllocator.alloc(); \
     if (reg && isPRESERVED(reg->rType)) { \
-        push(getRegName(reg, REG64)) \
+        push(mRegisterAllocator.nameFromReg(reg, REG64)) \
     } \
     return reg; \
     }())
@@ -52,7 +52,7 @@
     if (reg) { \
         mRegisterAllocator.free(reg); \
         if (isPRESERVED(reg->rType)) { \
-            pop(getRegName(reg, REG64)) \
+            pop(mRegisterAllocator.nameFromReg(reg, REG64)) \
         } \
     }
 
@@ -163,7 +163,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 			// Bitwise NOT seperately
 			Register* regLhs = emitExpr(binop.lhs, negOne, {.op = "xor", .opSSE = ""});
 			Register* regRhs = emitExpr(binop.rhs, negOne, {.op = "xor", .opSSE = ""});
-			emitInstr2op("and", getRegName(regLhs, REG64), getRegName(regRhs, REG64));
+			emitInstr2op("and", mRegisterAllocator.nameFromReg(regLhs, REG64), mRegisterAllocator.nameFromReg(regRhs, REG64));
 			regFree(regRhs)
 			return regLhs;
 		}
@@ -214,7 +214,7 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	}
 	// Increment iteration count
 	reg = regAlloc();
-	auto regStr = getRegName(reg, REG64);
+	auto regStr = mRegisterAllocator.nameFromReg(reg, REG64);
 
 	mov(regStr, iterVarAddr);
 	emitInstr2op("add", regStr, 1);
@@ -348,7 +348,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 		}
 
 		mov(getAddr(paramName, param->sType, REG64),
-		    getRegNameByID(param->vType == VarType::INT
+		     mRegisterAllocator.nameFromID(param->vType == VarType::INT
 			    ? mParamRegisters[scratchIdx++]
 			    : mParamRegistersSSE[sseIdx++], REG64));
 	}
@@ -363,9 +363,9 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	}
 
 	if (reg && isSSE(reg->rType)) {
-		movsd("xmm0", getRegName(reg, REG64));
+		movsd("xmm0", mRegisterAllocator.nameFromReg(reg, REG64));
 	} else if (reg && !isSSE(reg->rType)) {
-		mov("rax", getRegName(reg, REG64));
+		mov("rax", mRegisterAllocator.nameFromReg(reg, REG64));
 	}
 
 	regFree(reg)
@@ -406,7 +406,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			pushParamToRegister(isSSE(reg->rType)
 				                    ? mParamRegistersSSE[sseIdx++]
 				                    : mParamRegisters[scratchIdx++],
-			                    getRegName(reg, REG64));
+			                    mRegisterAllocator.nameFromReg(reg, REG64));
 			regFree(reg)
 		} else if (const auto fc = cast::toFuncCall(param->value)) {
 			reg = emitFuncCall(*fc);
@@ -414,7 +414,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			pushParamToRegister(isSSE(reg->rType)
 				                    ? mParamRegistersSSE[sseIdx++]
 				                    : mParamRegisters[scratchIdx++],
-			                    getRegName(reg, REG64));
+			                    mRegisterAllocator.nameFromReg(reg, REG64));
 			regFree(reg)
 		} else {
 			if (param->vType == VarType::INT) {
@@ -429,10 +429,10 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 
 	if (cast::toDouble(funcCall.returnType)) {
 		reg = mRegisterAllocator.alloc(SSE);
-		movsd(getRegName(reg, REG64), "xmm0");
+		movsd(mRegisterAllocator.nameFromReg(reg, REG64), "xmm0");
 	} else {
 		reg = regAlloc();
-		mov(getRegName(reg, REG64), "rax");
+		mov(mRegisterAllocator.nameFromReg(reg, REG64), "rax");
 	}
 
 	stack_dealloc(stackAlignedSize)
@@ -514,7 +514,7 @@ Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
 		const std::string varName = cast::toString(var->name)->data;
 
 		Register* reg = regAlloc();
-		mov(getRegName(reg, REG64), getAddr(varName, var->sType, REG64));
+		mov(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var->sType, REG64));
 
 		return reg;
 	}
@@ -524,20 +524,20 @@ Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
 
 Register* CodeGen::emitInt(const IntExpr& int_) {
 	Register* reg = regAlloc();
-	mov(getRegName(reg, REG64), int_.n);
+	mov(mRegisterAllocator.nameFromReg(reg, REG64), int_.n);
 	return reg;
 }
 
 Register* CodeGen::emitDouble(const DoubleExpr& double_) {
 	Register* reg = regAlloc();
-	auto regStr = getRegName(reg, REG64);
+	auto regStr = mRegisterAllocator.nameFromReg(reg, REG64);
 
 	Register* regSSE = mRegisterAllocator.alloc(SSE);
 
 	uint64_t hex = *reinterpret_cast<const uint64_t*>(&double_.n);
 
 	mov(regStr, emitHex(hex));
-	movq(getRegName(regSSE, REG64), regStr);
+	movq(mRegisterAllocator.nameFromReg(regSSE, REG64), regStr);
 
 	regFree(reg)
 
@@ -575,12 +575,12 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 
 	if (isSSE(regLhs->rType) && !isSSE(regRhs->rType)) {
 		Register* newReg = mRegisterAllocator.alloc(SSE);
-		auto newRegStr = getRegName(newReg, REG64);
+		auto newRegStr = mRegisterAllocator.nameFromReg(newReg, REG64);
 
-		emitInstr2op("cvtsi2sd", newRegStr, getRegName(regRhs, REG64));
+		emitInstr2op("cvtsi2sd", newRegStr, mRegisterAllocator.nameFromReg(regRhs, REG64));
 		regFree(regRhs)
 
-		emitInstr2op(opcode.opSSE, getRegName(regLhs, REG64), newRegStr);
+		emitInstr2op(opcode.opSSE, mRegisterAllocator.nameFromReg(regLhs, REG64), newRegStr);
 		regFree(newReg);
 
 		return regLhs;
@@ -588,10 +588,10 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 
 	if (!isSSE(regLhs->rType) && isSSE(regRhs->rType)) {
 		Register* newReg = mRegisterAllocator.alloc(SSE);
-		auto newRegStr = getRegName(newReg, REG64);
-		auto regRhsStr = getRegName(regRhs, REG64);
+		auto newRegStr = mRegisterAllocator.nameFromReg(newReg, REG64);
+		auto regRhsStr = mRegisterAllocator.nameFromReg(regRhs, REG64);
 
-		emitInstr2op("cvtsi2sd", newRegStr, getRegName(regLhs, REG64));
+		emitInstr2op("cvtsi2sd", newRegStr, mRegisterAllocator.nameFromReg(regLhs, REG64));
 		regFree(regLhs)
 
 		emitInstr2op(opcode.opSSE, newRegStr, regRhsStr);
@@ -601,7 +601,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 	}
 
 	if (isSSE(regLhs->rType) && isSSE(regRhs->rType)) {
-		emitInstr2op(opcode.opSSE, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
+		emitInstr2op(opcode.opSSE, mRegisterAllocator.nameFromReg(regLhs, REG64), mRegisterAllocator.nameFromReg(regRhs, REG64));
 		regFree(regRhs);
 		return regLhs;
 	}
@@ -609,12 +609,12 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 	// rax -> dividend
 	// idiv divisor[register/memory]
 	if (opcode.op == "idiv") {
-		mov("rax", getRegName(regLhs, REG64));
+		mov("rax", mRegisterAllocator.nameFromReg(regLhs, REG64));
 		cqo();
-		emitInstr1op("idiv", getRegName(regRhs, REG64));
-		mov(getRegName(regLhs, REG64), "rax");
+		emitInstr1op("idiv", mRegisterAllocator.nameFromReg(regRhs, REG64));
+		mov(mRegisterAllocator.nameFromReg(regLhs, REG64), "rax");
 	} else {
-		emitInstr2op(opcode.op, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
+		emitInstr2op(opcode.op, mRegisterAllocator.nameFromReg(regLhs, REG64), mRegisterAllocator.nameFromReg(regRhs, REG64));
 	}
 
 	regFree(regRhs);
@@ -666,7 +666,7 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant) {
 	}
 }
 
-void CodeGen::emitTest(const ExprPtr& test, const std::string& trueLabel, const std::string& elseLabel) {
+void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::string_view elseLabel) {
 	Register* reg;
 
 	if (const auto binop = cast::toBinop(test)) {
@@ -680,7 +680,7 @@ void CodeGen::emitTest(const ExprPtr& test, const std::string& trueLabel, const 
 			case TokenType::LOGXOR:
 			case TokenType::LOGNOR: {
 				reg = emitBinop(*binop);
-				emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
+				emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), mRegisterAllocator.nameFromReg(reg, REG64), 0);
 				emitJump("je", elseLabel);
 				regFree(reg)
 				break;
@@ -760,12 +760,12 @@ void CodeGen::emitTest(const ExprPtr& test, const std::string& trueLabel, const 
 		}
 	} else if (const auto funcCall = cast::toFuncCall(test)) {
 		reg = emitFuncCall(*funcCall);
-		emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
+		emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), mRegisterAllocator.nameFromReg(reg, REG64), 0);
 		emitJump("je", elseLabel);
 		regFree(reg)
 	} else if (const auto var = cast::toVar(test)) {
 		reg = emitLoadRegFromMem(*var, REG64);
-		emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
+		emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), mRegisterAllocator.nameFromReg(reg, REG64), 0);
 		emitJump("je", elseLabel);
 		regFree(reg)
 	} else if (cast::toNIL(test)) {
@@ -776,7 +776,7 @@ void CodeGen::emitTest(const ExprPtr& test, const std::string& trueLabel, const 
 	}
 }
 
-void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, const std::string& label) {
+void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, std::string_view label) {
 	switch (type) {
 		case TokenType::PLUS:
 		case TokenType::MINUS:
@@ -786,7 +786,7 @@ void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, const 
 		case TokenType::LOGIOR:
 		case TokenType::LOGXOR:
 		case TokenType::LOGNOR: {
-			emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), getRegName(reg, REG64), 0);
+			emitInstr2op((isSSE(reg->rType) ? "ucomisd" : "cmp"), mRegisterAllocator.nameFromReg(reg, REG64), 0);
 			emitJump("jne", label);
 			break;
 		}
@@ -879,8 +879,8 @@ Register* CodeGen::emitLogOp(const BinOpExpr& binop, std::string_view op) {
 		regInfo.reg = emitCmpZero(node);
 		regInfo.setReg = isSSE(regInfo.reg->rType) ? regAlloc() : regInfo.reg;
 
-		regInfo.setRegStr = getRegName(regInfo.setReg, REG64);
-		regInfo.setReg8LStr = getRegName(regInfo.setReg, REG8L);
+		regInfo.setRegStr = mRegisterAllocator.nameFromReg(regInfo.setReg, REG64);
+		regInfo.setReg8LStr = mRegisterAllocator.nameFromReg(regInfo.setReg, REG8L);
 
 		emitInstr2op("xor", regInfo.setRegStr, regInfo.setRegStr);
 		emitInstr1op("setne", regInfo.setReg8LStr);
@@ -896,7 +896,7 @@ Register* CodeGen::emitLogOp(const BinOpExpr& binop, std::string_view op) {
 	movzx(lhs.setRegStr, lhs.setReg8LStr);
 
 	if (isSSE(lhs.reg->rType)) {
-		emitInstr2op("cvtsi2sd", getRegName(lhs.reg, REG64), lhs.setRegStr);
+		emitInstr2op("cvtsi2sd", mRegisterAllocator.nameFromReg(lhs.reg, REG64), lhs.setRegStr);
 		regFree(lhs.setReg)
 	}
 
@@ -932,7 +932,7 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
 		mov(getAddr(varName, var_->sType, REG64), int_->n);
 	} else if (const auto double_ = cast::toDouble(var_->value)) {
 		Register* reg = regAlloc();
-		auto regStr = getRegName(reg, REG64);
+		auto regStr = mRegisterAllocator.nameFromReg(reg, REG64);
 
 		uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
 
@@ -955,7 +955,7 @@ void CodeGen::handleAssignment(const ExprPtr& var, const uint32_t size) {
 		updateSections("\nsection .data\n", {.name = label, .data = strDirective(str->data)});
 
 		Register* reg = regAlloc();
-		auto regStr = getRegName(reg, REG64);
+		auto regStr = mRegisterAllocator.nameFromReg(reg, REG64);
 
 		emitInstr2op("lea", regStr, labelAddr);
 		mov(varAddr, regStr);
@@ -984,23 +984,23 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
 	switch (var.sType) {
 		case SymbolType::PARAM: {
 			reg = regAlloc();
-			mov(getRegName(reg, REG64), getAddr(varName, var.sType, size));
+			mov(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
 			break;
 		}
 		case SymbolType::LOCAL:
 		case SymbolType::GLOBAL: {
 			if (var.vType == VarType::INT) {
 				reg = regAlloc();
-				mov(getRegName(reg, REG64), getAddr(varName, var.sType, size));
+				mov(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
 			} else if (var.vType == VarType::DOUBLE) {
 				reg = mRegisterAllocator.alloc(SSE);
-				movsd(getRegName(reg, REG64), getAddr(varName, var.sType, size));
+				movsd(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
 			} else if (cast::toString(var.value)) {
 				reg = regAlloc();
-				emitInstr2op("lea", getRegName(reg, REG64), getAddr(varName, var.sType, size));
+				emitInstr2op("lea", mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
 			} else if (cast::toNIL(var.value) || cast::toT(var.value)) {
 				reg = regAlloc();
-				movzx(getRegName(reg, REG64), getAddr(varName, var.sType, size));
+				movzx(mRegisterAllocator.nameFromReg(reg, REG64), getAddr(varName, var.sType, size));
 			}
 			break;
 		}
@@ -1011,11 +1011,11 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const uint32_t size) {
 	return reg;
 }
 
-void CodeGen::emitStoreMemFromReg(const std::string& varName,
+void CodeGen::emitStoreMemFromReg(const std::string_view varName,
                                   const SymbolType stype,
                                   const Register* reg,
                                   const uint32_t size) {
-	auto regStr = getRegName(reg, size);
+	auto regStr = mRegisterAllocator.nameFromReg(reg, size);
 
 	if (isSSE(reg->rType)) {
 		movsd(getAddr(varName, stype, size), regStr);
@@ -1024,7 +1024,7 @@ void CodeGen::emitStoreMemFromReg(const std::string& varName,
 	}
 }
 
-std::string CodeGen::getAddr(const std::string& varName, const SymbolType stype, const uint32_t size) {
+std::string CodeGen::getAddr(const std::string_view varName, const SymbolType stype, const uint32_t size) {
 	switch (stype) {
 		case SymbolType::GLOBAL:
 			return std::format("{} [rel {}]", mMemorySize[size], varName);
@@ -1061,7 +1061,7 @@ uint32_t CodeGen::getMemSize(const ExprPtr& var) {
 
 void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
 	const Register* reg = mRegisterAllocator.regFromID(rid);
-	auto regStr = getRegName(reg, REG64);
+	auto regStr = mRegisterAllocator.nameFromReg(reg, REG64);
 
 	if (isSSE(reg->rType)) {
 		try {
@@ -1069,7 +1069,7 @@ void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
 			uint64_t hex = *reinterpret_cast<uint64_t*>(&n);
 
 			Register* regScr = regAlloc();
-			auto regScrStr = getRegName(regScr, REG64);
+			auto regScrStr = mRegisterAllocator.nameFromReg(regScr, REG64);
 
 			mov(regScrStr, emitHex(hex));
 			movq(regStr, regScrStr);
@@ -1086,7 +1086,7 @@ void CodeGen::pushParamToRegister(const uint32_t rid, const std::any& value) {
 	}
 }
 
-void CodeGen::pushParamOntoStack(const std::string& funcName, const VarExpr& param, int32_t& stackIdx) {
+void CodeGen::pushParamOntoStack(const std::string_view funcName, const VarExpr& param, int32_t& stackIdx) {
 	const std::string paramName = cast::toString(param.name)->data;
 
 	mStackAllocator.pushStackFrame(funcName, paramName, SymbolType::PARAM);
@@ -1097,7 +1097,7 @@ void CodeGen::pushParamOntoStack(const std::string& funcName, const VarExpr& par
 		mov(addr, int_->n);
 	} else if (const auto double_ = cast::toDouble(param.value)) {
 		Register* regScr = regAlloc();
-		auto regScrStr = getRegName(regScr, REG64);
+		auto regScrStr = mRegisterAllocator.nameFromReg(regScr, REG64);
 
 		uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
 
@@ -1108,14 +1108,6 @@ void CodeGen::pushParamOntoStack(const std::string& funcName, const VarExpr& par
 	}
 
 	stackIdx += 8;
-}
-
-const char* CodeGen::getRegName(const Register* reg, const uint32_t size) {
-	return mRegisterAllocator.nameFromReg(reg, size);
-}
-
-const char* CodeGen::getRegNameByID(const uint32_t id, const uint32_t size) {
-	return mRegisterAllocator.nameFromID(id, size);
 }
 
 std::string CodeGen::createLabel() {
