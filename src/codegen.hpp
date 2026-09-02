@@ -65,7 +65,7 @@ private:
 
     Register* emitSet(const ExprPtr& set);
 
-    Register* emitLogOp(const BinOpExpr& binop, const char* op);
+    Register* emitLogOp(const BinOpExpr& binop, std::string_view op);
 
     Register* emitSetReg(const BinOpExpr& binop);
 
@@ -93,7 +93,12 @@ private:
 
     std::string createLabel();
 
-    void updateSections(const char* name, const std::pair<std::string, std::string>& data);
+	struct Section {
+		std::string name;
+		std::string data;
+	};
+
+    void updateSections(std::string_view sectionName, Section section);
 
     static bool isPrimitive(const ExprPtr& var);
 
@@ -107,7 +112,7 @@ private:
     // Stack
     StackAllocator mStackAllocator;
     // Sections
-    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string> > > mSections;
+    std::unordered_map<std::string, std::vector<Section>> mSections;
     // Functions
     std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > mFunctions;
 
