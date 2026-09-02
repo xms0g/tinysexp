@@ -2,7 +2,7 @@
 #include "exceptions.hpp"
 
 void ScopeTracker::enter(const std::string& scopeName) {
-    std::unordered_map<std::string, Symbol> scope;
+    const std::unordered_map<std::string, Symbol> scope;
     symbolTable.push(scope);
 
     if (!scopeName.empty()) {
@@ -109,38 +109,43 @@ void SemanticAnalyzer::analyze(const ExprPtr& ast) {
 }
 
 ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
-    if (auto binop = cast::toBinop(ast)) {
+    if (const auto binop = cast::toBinop(ast)) {
         return binopResolve(*binop);
-    } else if (const auto dotimes = cast::toDotimes(ast)) {
-        return dotimesResolve(*dotimes);
-    } else if (const auto loop = cast::toLoop(ast)) {
-        return loopResolve(*loop);
-    } else if (const auto let = cast::toLet(ast)) {
-        return letResolve(*let);
-    } else if (const auto setq = cast::toSetq(ast)) {
-        return setqResolve(*setq);
-    } else if (const auto defvar = cast::toDefvar(ast)) {
-        defvarResolve(*defvar);
+    }
+    if (const auto dotimes = cast::toDotimes(ast)) {
+	    return dotimesResolve(*dotimes);
+    }
+    if (const auto loop = cast::toLoop(ast)) {
+	    return loopResolve(*loop);
+    }
+    if (const auto let = cast::toLet(ast)) {
+	    return letResolve(*let);
+    }
+    if (const auto setq = cast::toSetq(ast)) {
+	    return setqResolve(*setq);
+    }
+    if (const auto defvar = cast::toDefvar(ast)) {
+	    defvarResolve(*defvar);
     } else if (const auto defconst = cast::toDefconstant(ast)) {
-        defconstResolve(*defconst);
+	    defconstResolve(*defconst);
     } else if (cast::toDefun(ast)) {
-        return defunResolve(ast);
+	    return defunResolve(ast);
     } else if (const auto funcCall = cast::toFuncCall(ast)) {
-        return funcCallResolve(*funcCall);
+	    return funcCallResolve(*funcCall);
     } else if (const auto return_ = cast::toReturn(ast)) {
-        returnResolve(*return_);
+	    returnResolve(*return_);
     } else if (const auto if_ = cast::toIf(ast)) {
-        return ifResolve(*if_);
+	    return ifResolve(*if_);
     } else if (const auto when = cast::toWhen(ast)) {
-        return whenResolve(*when);
+	    return whenResolve(*when);
     } else if (const auto cond = cast::toCond(ast)) {
-        return condResolve(*cond);
+	    return condResolve(*cond);
     } else if (cast::toInt(ast) || cast::toDouble(ast) || cast::toVar(ast)) {
-        if (cast::toVar(ast)) {
-            return varResolve(const_cast<ExprPtr&>(ast), TokenType::VAR);
-        }
+	    if (cast::toVar(ast)) {
+		    return varResolve(const_cast<ExprPtr&>(ast), TokenType::VAR);
+	    }
 
-        return ast;
+	    return ast;
     }
 
     return nullptr;
@@ -697,6 +702,14 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
                        });
 
     return value_;
+}
+
+bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
+	return cast::toInt(var) ||
+	   cast::toDouble(var) ||
+	   cast::toNIL(var) ||
+	   cast::toT(var) ||
+	   cast::toString(var);
 }
 
 void SemanticAnalyzer::setType(VarExpr& var, const ExprPtr& value) {

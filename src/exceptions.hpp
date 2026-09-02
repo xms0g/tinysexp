@@ -1,6 +1,4 @@
-#ifndef EXCEPTIONS_HPP
-#define EXCEPTIONS_HPP
-
+#pragma once
 #include <exception>
 #include <format>
 #include <string>
@@ -64,5 +62,3 @@ public:
     explicit SemanticError(const char* fn, const char* detail, const int ln) : IError("Error: ", fn, detail, ln) {
     }
 };
-
-#endif

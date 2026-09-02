@@ -5,22 +5,24 @@
 
 class StackAllocator {
 public:
-    void alloc(uint32_t size);
+	void alloc(uint32_t size);
 
-    void dealloc(uint32_t size);
+	void dealloc(uint32_t size);
 
-    int pushStackFrame(const std::string& funcName, const std::string& varName, SymbolType stype);
+	int pushStackFrame(const std::string& funcName, const std::string& varName, SymbolType stype);
 
-    [[nodiscard]] uint32_t calculateRequiredStackSize(const std::vector<ExprPtr>& args) const;
+	[[nodiscard]]
+	uint32_t calculateRequiredStackSize(const std::vector<ExprPtr>& args) const;
 
 private:
-    struct StackFrame {
-        int currentVarOffset{8}, currentParamOffset{16};
-        std::unordered_map<std::string, int> offsets;
-    };
+	struct StackFrame {
+		int32_t currentVarOffset{8};
+		int32_t currentParamOffset{16};
+		std::unordered_map<std::string, int32_t> offsets;
+	};
 
-    int updateStackFrame(StackFrame* sf, const std::string& varName, SymbolType stype);
+	int updateStackFrame(StackFrame* sf, const std::string& varName, SymbolType stype);
 
-    std::unordered_map<std::string, StackFrame> stack{};
-    uint32_t stackOffset{0};
+	std::unordered_map<std::string, StackFrame> stack{};
+	uint32_t stackOffset{0};
 };

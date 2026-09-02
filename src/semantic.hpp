@@ -1,6 +1,4 @@
-#ifndef SEMANTIC_H
-#define SEMANTIC_H
-
+#pragma once
 #include <stack>
 #include <unordered_map>
 #include <variant>
@@ -19,9 +17,11 @@ public:
 
     void exit(bool isFunc = false);
 
-    [[nodiscard]] std::string& scopeName();
+    [[nodiscard]]
+	std::string& scopeName();
 
-    [[nodiscard]] size_t level() const;
+    [[nodiscard]]
+	size_t level() const;
 
     void bind(const std::string& name, const Symbol& symbol);
 
@@ -100,17 +100,7 @@ private:
         bool isStarted{false};
         std::string entryPoint;
     };
+
     TypeInferenceContext tfCtx;
-    /* File Name */
     const char* fileName;
 };
-
-inline bool SemanticAnalyzer::isPrimitive(const ExprPtr& var) {
-    return cast::toInt(var) ||
-           cast::toDouble(var) ||
-           cast::toNIL(var) ||
-           cast::toT(var) ||
-           cast::toString(var);
-}
-
-#endif //SEMANTIC_H

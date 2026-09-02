@@ -1,6 +1,4 @@
-#ifndef CODEGEN_H
-#define CODEGEN_H
-
+#pragma once
 #include <any>
 #include <string>
 #include <unordered_map>
@@ -120,14 +118,3 @@ private:
 
     static constexpr int paramRegistersSSE[] = {xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7};
 };
-
-inline bool CodeGen::isPrimitive(const ExprPtr& var) {
-    return cast::toInt(var) ||
-           cast::toDouble(var) ||
-           cast::toNIL(var) ||
-           cast::toT(var) ||
-           cast::toString(var) ||
-           cast::toVar(var);
-}
-
-#endif

@@ -1,6 +1,4 @@
-#ifndef PARSER_H
-#define PARSER_H
-
+#pragma once
 #include <utility>
 #include <memory>
 #include "lexer.hpp"
@@ -325,5 +323,3 @@ inline std::shared_ptr<Uninitialized> toUninitialized(const ExprPtr& expr) {
     return std::dynamic_pointer_cast<Uninitialized>(expr);
 }
 }
-
-#endif

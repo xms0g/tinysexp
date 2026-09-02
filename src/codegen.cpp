@@ -1118,3 +1118,12 @@ void CodeGen::updateSections(const char* name, const std::pair<std::string, std:
 
     sections.at(name).emplace_back(data.first, data.second);
 }
+
+bool CodeGen::isPrimitive(const ExprPtr& var) {
+	return cast::toInt(var) ||
+		   cast::toDouble(var) ||
+		   cast::toNIL(var) ||
+		   cast::toT(var) ||
+		   cast::toString(var) ||
+		   cast::toVar(var);
+}

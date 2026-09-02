@@ -1,6 +1,4 @@
-#ifndef LEXER_H
-#define LEXER_H
-
+#pragma once
 #include <string>
 #include <vector>
 
@@ -78,5 +76,3 @@ private:
     char* currentChar{};
     const char* fileName;
 };
-
-#endif
