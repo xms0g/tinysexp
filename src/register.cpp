@@ -1,7 +1,23 @@
 #include "register.hpp"
 
-Register* RegisterAllocator::alloc(const uint8_t rt) {
-    if (rt == SSE) {
+bool Register::isInuse() const {
+	return (status & 1) != 0;
+}
+
+bool Register::isSSE() const {
+	return ((rType >> 0) & 1) == RegisterType::sse;
+}
+
+bool Register::isScratch() const {
+	return ((rType >> 1) & 1) == RegisterType::scratch;
+}
+
+bool Register::isPreserved() const {
+	return ((rType >> 2) & 1) == RegisterType::preserved;
+}
+
+Register* RegisterAllocator::alloc(const RegisterType rt) {
+    if (rt == RegisterType::sse) {
         return scan(mPriorityOrderSSE, 2);
     }
 
@@ -9,26 +25,26 @@ Register* RegisterAllocator::alloc(const uint8_t rt) {
 }
 
 void RegisterAllocator::free(Register* reg) {
-    reg->status &= ~INUSE;
+    reg->status &= ~1;
 }
 
-const char* RegisterAllocator::nameFromReg(const Register* reg, const uint32_t size) {
-    return mRegisterNames[reg->id][size];
+std::string_view RegisterAllocator::nameFromReg(const Register* reg, const RegisterSize size) {
+    return mRegisterNames[std::to_underlying(reg->id)][std::to_underlying(size)];
 }
 
-const char* RegisterAllocator::nameFromID(const uint32_t id, const uint32_t size) {
-    return mRegisterNames[id][size];
+std::string_view RegisterAllocator::nameFromID(const RegisterID id, const RegisterSize size) {
+    return mRegisterNames[std::to_underlying(id)][std::to_underlying(size)];
 }
 
-Register* RegisterAllocator::regFromID(const uint32_t id) {
-    return &mRegisters[id];
+Register* RegisterAllocator::regFromID(const RegisterID id) {
+    return &mRegisters[std::to_underlying(id)];
 }
 
-Register* RegisterAllocator::scan(const std::span<const uint32_t> order, const int32_t size) {
+Register* RegisterAllocator::scan(const std::span<const RegisterType> order, const int32_t size) {
     for (int i = 0; i < size; ++i) {
         for (auto& reg: mRegisters) {
-            if (order[i] == reg.rType && !isINUSE(reg.status)) {
-                reg.status |= INUSE;
+            if (order[i] == reg.rType && !reg.isInuse()) {
+                reg.status |= 1;
                 return &reg;
             }
         }

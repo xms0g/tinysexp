@@ -6,12 +6,6 @@
 #include "stack.hpp"
 #include "register.hpp"
 
-struct OpcodePair {
-	std::string_view op;
-	std::string_view opSSE;
-};
-
-
 class CodeGen {
 public:
     CodeGen();
@@ -55,6 +49,11 @@ private:
 
     Register* emitNode(const ExprPtr& node);
 
+	struct OpcodePair {
+		std::string_view op;
+		std::string_view opSSE;
+	};
+
     Register* emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair opcode);
 
     void emitSection(const ExprPtr& var, bool isConstant = false);
@@ -71,19 +70,19 @@ private:
 
     Register* emitCmpZero(const ExprPtr& node);
 
-    void handleAssignment(const ExprPtr& var, uint32_t size);
+    void handleAssignment(const ExprPtr& var, RegisterSize size);
 
-    void handleVariable(const VarExpr& var, uint32_t size);
+    void handleVariable(const VarExpr& var, RegisterSize size);
 
-    Register* emitLoadRegFromMem(const VarExpr& var, uint32_t size);
+    Register* emitLoadRegFromMem(const VarExpr& var, RegisterSize size);
 
-    void emitStoreMemFromReg(std::string_view varName, SymbolType stype, const Register* reg, uint32_t size);
+    void emitStoreMemFromReg(std::string_view varName, SymbolType stype, const Register* reg, RegisterSize size);
 
-    std::string getAddr(std::string_view varName, SymbolType stype, uint32_t size);
+    std::string getAddr(std::string_view varName, SymbolType stype, RegisterSize size);
 
-    uint32_t getMemSize(const ExprPtr& var);
+    RegisterSize getMemSize(const ExprPtr& var);
 
-    void pushParamToRegister(uint32_t rid, const std::any& value);
+    void pushParamToRegister(RegisterID rid, const std::any& value);
 
     void pushParamOntoStack(std::string_view funcName, const VarExpr& param, int32_t& stackIdx);
 
@@ -110,7 +109,11 @@ private:
     // Sections
     std::unordered_map<std::string, std::vector<Section>> mSections;
     // Functions
-    std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > mFunctions;
+	struct Function {
+		void(CodeGen::*func)(const DefunExpr&);
+		const DefunExpr& defun;
+	};
+    std::vector<Function> mFunctions;
 
     static constexpr std::string_view mMemorySize[SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
 
@@ -120,7 +123,7 @@ private:
 
     static constexpr int32_t mMemorySizeInBytes[SIZE_COUNT] = {8, 4, 2, 1, 1};
 
-    static constexpr int32_t mParamRegisters[] = {RDI, RSI, RDX, RCX, R8, R9};
+    static constexpr RegisterID mParamRegisters[] = {RegisterID::rdi, RegisterID::rsi, RegisterID::rdx, RegisterID::rcx, RegisterID::r8, RegisterID::r9};
 
-    static constexpr int32_t mParamRegistersSSE[] = {xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7};
+    static constexpr RegisterID mParamRegistersSSE[] = {RegisterID::xmm0, RegisterID::xmm1, RegisterID::xmm2, RegisterID::xmm3, RegisterID::xmm4, RegisterID::xmm5, RegisterID::xmm6, RegisterID::xmm7};
 };

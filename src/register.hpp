@@ -2,29 +2,18 @@
 #include <array>
 #include <cstdint>
 #include <span>
-
-#define INUSE 1 << 0
-#define isINUSE(status) (status & INUSE)
-
-#define isSSE(type) ((type >> 0) & 1)
-#define isSCRATCH(type) ((type >> 1) & 1)
-#define isPRESERVED(type) ((type >> 2) & 1)
+#include <string_view>
+#include <utility>
 
 static constexpr int REGISTER_COUNT = 32;
 static constexpr int SIZE_COUNT = 5;
 
-struct Register {
-	uint32_t id;
-	uint8_t rType: 4;
-	uint8_t status: 1;
-};
-
-enum RegisterID : uint32_t {
-	RAX, RDI, RSI,
-	RDX, RCX, R8,
-	R9, R10, R11,
-	RBP, RSP, RBX,
-	R12, R13, R14, R15,
+enum class RegisterID : uint32_t {
+	rax, rdi, rsi,
+	rdx, rcx, r8,
+	r9, r10, r11,
+	rbp, rsp, rbx,
+	r12, r13, r14, r15,
 	xmm0, xmm1, xmm2,
 	xmm3, xmm4, xmm5,
 	xmm6, xmm7, xmm8,
@@ -33,68 +22,99 @@ enum RegisterID : uint32_t {
 	xmm15
 };
 
-enum RegisterSize: uint32_t {
-	REG64, REG32, REG16, REG8H, REG8L
+enum class RegisterSize: uint32_t {
+	reg64, reg32, reg16, reg8h, reg8l, zero
 };
 
-enum RegisterType : uint8_t {
-	SSE = 1 << 0,
-	SCRATCH = 1 << 1,
-	PRESERVED = 1 << 2,
-	PARAM = 1 << 3,
+enum class RegisterType : uint8_t {
+	sse = 1 << 0,
+	scratch = 1 << 1,
+	preserved = 1 << 2,
+	param = 1 << 3,
+};
+
+constexpr RegisterType operator|(const RegisterType lhs, const RegisterType rhs) {
+	return static_cast<RegisterType>(std::to_underlying(lhs) | std::to_underlying(rhs));
+}
+
+constexpr RegisterType operator&(const RegisterType lhs, const int32_t rhs) {
+	return static_cast<RegisterType>(std::to_underlying(lhs) & rhs);
+}
+
+constexpr RegisterType operator>>(const RegisterType lhs, const int32_t rhs) {
+	return static_cast<RegisterType>(std::to_underlying(lhs) >> rhs);
+}
+
+
+struct Register {
+	RegisterID id;
+	RegisterType rType: 4;
+	uint8_t status: 1;
+
+	[[nodiscard]]
+	bool isInuse() const;
+
+	[[nodiscard]]
+	bool isSSE() const;
+
+	[[nodiscard]]
+	bool isScratch() const;
+
+	[[nodiscard]]
+	bool isPreserved() const;
 };
 
 class RegisterAllocator {
 public:
-	Register* alloc(uint8_t rt = 0);
+	Register* alloc(RegisterType rt);
 
 	void free(Register* reg);
 
-	const char* nameFromReg(const Register* reg, uint32_t size);
+	std::string_view nameFromReg(const Register* reg, RegisterSize size);
 
-	const char* nameFromID(uint32_t id, uint32_t size);
+	std::string_view nameFromID(RegisterID id, RegisterSize size);
 
-	Register* regFromID(uint32_t id);
+	Register* regFromID(RegisterID id);
 
 private:
-	Register* scan(std::span<const uint32_t> order, int32_t size);
+	Register* scan(std::span<const RegisterType> order, int32_t size);
 
 	Register mRegisters[REGISTER_COUNT] = {
-		{.id = RAX, .rType = SCRATCH, .status = INUSE},
-		{.id = RDI, .rType = SCRATCH | PARAM, .status = 0},
-		{.id = RSI, .rType = SCRATCH | PARAM, .status = 0},
-		{.id = RDX, .rType = SCRATCH | PARAM, .status = 0},
-		{.id = RCX, .rType = SCRATCH | PARAM, .status = 0},
-		{.id = R8, .rType = SCRATCH | PARAM, .status = 0},
-		{.id = R9, .rType = SCRATCH | PARAM, .status = 0},
-		{.id = R10, .rType = SCRATCH, .status = 0},
-		{.id = R11, .rType = SCRATCH, .status = 0},
-		{.id = RBP, .rType = PRESERVED, .status = INUSE},
-		{.id = RSP, .rType = PRESERVED, .status = INUSE},
-		{.id = RBX, .rType = PRESERVED, .status = 0},
-		{.id = R12, .rType = PRESERVED, .status = 0},
-		{.id = R13, .rType = PRESERVED, .status = 0},
-		{.id = R14, .rType = PRESERVED, .status = 0},
-		{.id = R15, .rType = PRESERVED, .status = 0},
-		{.id = xmm0, .rType = SSE | PARAM, .status = INUSE},
-		{.id = xmm1, .rType = SSE | PARAM, .status = 0},
-		{.id = xmm2, .rType = SSE | PARAM, .status = 0},
-		{.id = xmm3, .rType = SSE | PARAM, .status = 0},
-		{.id = xmm4, .rType = SSE | PARAM, .status = 0},
-		{.id = xmm5, .rType = SSE | PARAM, .status = 0},
-		{.id = xmm6, .rType = SSE | PARAM, .status = 0},
-		{.id = xmm7, .rType = SSE | PARAM, .status = 0},
-		{.id = xmm8, .rType = SSE, .status = 0},
-		{.id = xmm9, .rType = SSE, .status = 0},
-		{.id = xmm10, .rType = SSE, .status = 0},
-		{.id = xmm11, .rType = SSE, .status = 0},
-		{.id = xmm12, .rType = SSE, .status = 0},
-		{.id = xmm13, .rType = SSE, .status = 0},
-		{.id = xmm14, .rType = SSE, .status = 0},
-		{.id = xmm15, .rType = SSE, .status = 0},
+		{.id = RegisterID::rax, .rType = RegisterType::scratch, .status = 1},
+		{.id = RegisterID::rdi, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
+		{.id = RegisterID::rsi, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
+		{.id = RegisterID::rdx, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
+		{.id = RegisterID::rcx, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
+		{.id = RegisterID::r8, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
+		{.id = RegisterID::r9, .rType = RegisterType::scratch | RegisterType::param, .status = 0},
+		{.id = RegisterID::r10, .rType = RegisterType::scratch, .status = 0},
+		{.id = RegisterID::r11, .rType = RegisterType::scratch, .status = 0},
+		{.id = RegisterID::rbp, .rType = RegisterType::preserved, .status = 1},
+		{.id = RegisterID::rsp, .rType = RegisterType::preserved, .status = 1},
+		{.id = RegisterID::rbx, .rType = RegisterType::preserved, .status = 0},
+		{.id = RegisterID::r12, .rType = RegisterType::preserved, .status = 0},
+		{.id = RegisterID::r13, .rType = RegisterType::preserved, .status = 0},
+		{.id = RegisterID::r14, .rType = RegisterType::preserved, .status = 0},
+		{.id = RegisterID::r15, .rType = RegisterType::preserved, .status = 0},
+		{.id = RegisterID::xmm0, .rType = RegisterType::sse | RegisterType::param, .status = 1},
+		{.id = RegisterID::xmm1, .rType = RegisterType::sse | RegisterType::param, .status = 0},
+		{.id = RegisterID::xmm2, .rType = RegisterType::sse | RegisterType::param, .status = 0},
+		{.id = RegisterID::xmm3, .rType = RegisterType::sse | RegisterType::param, .status = 0},
+		{.id = RegisterID::xmm4, .rType = RegisterType::sse | RegisterType::param, .status = 0},
+		{.id = RegisterID::xmm5, .rType = RegisterType::sse | RegisterType::param, .status = 0},
+		{.id = RegisterID::xmm6, .rType = RegisterType::sse | RegisterType::param, .status = 0},
+		{.id = RegisterID::xmm7, .rType = RegisterType::sse | RegisterType::param, .status = 0},
+		{.id = RegisterID::xmm8, .rType = RegisterType::sse, .status = 0},
+		{.id = RegisterID::xmm9, .rType = RegisterType::sse, .status = 0},
+		{.id = RegisterID::xmm10, .rType = RegisterType::sse, .status = 0},
+		{.id = RegisterID::xmm11, .rType = RegisterType::sse, .status = 0},
+		{.id = RegisterID::xmm12, .rType = RegisterType::sse, .status = 0},
+		{.id = RegisterID::xmm13, .rType = RegisterType::sse, .status = 0},
+		{.id = RegisterID::xmm14, .rType = RegisterType::sse, .status = 0},
+		{.id = RegisterID::xmm15, .rType = RegisterType::sse, .status = 0},
 	};
 
-	static constexpr const char* mRegisterNames[REGISTER_COUNT][SIZE_COUNT] = {
+	static constexpr std::string_view mRegisterNames[REGISTER_COUNT][SIZE_COUNT] = {
 		{"rax", "eax", "ax", "ah", "al"},
 		{"rdi", "edi", "di", "", "dil"},
 		{"rsi", "esi", "si", "", "sil"},
@@ -129,7 +149,7 @@ private:
 		{"xmm15", "", "", "", ""},
 	};
 
-	static constexpr std::array<uint32_t, 3> mPriorityOrder = {SCRATCH, SCRATCH | PARAM, PRESERVED};
+	static constexpr std::array<RegisterType, 3> mPriorityOrder = {RegisterType::scratch, RegisterType::scratch | RegisterType::param, RegisterType::preserved};
 
-	static constexpr std::array<uint32_t, 2> mPriorityOrderSSE = {SSE | PARAM, SSE};
+	static constexpr std::array<RegisterType, 2> mPriorityOrderSSE = {RegisterType::sse | RegisterType::param, RegisterType::sse};
 };
