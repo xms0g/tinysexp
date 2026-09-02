@@ -45,7 +45,10 @@ struct Position {
 	int32_t lineNumber;
 	int32_t columnNumber;
 
-	Position(const int32_t idx, const int32_t ln, const int32_t coln) : index(idx), lineNumber(ln), columnNumber(coln) {
+	Position(const int32_t idx, const int32_t ln, const int32_t coln)
+		: index(idx),
+		  lineNumber(ln),
+		  columnNumber(coln) {
 	}
 
 	void advance(const char* token) {

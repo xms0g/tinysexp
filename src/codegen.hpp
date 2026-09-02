@@ -6,6 +6,12 @@
 #include "stack.hpp"
 #include "register.hpp"
 
+struct OpcodePair {
+	std::string_view op;
+	std::string_view opSSE;
+};
+
+
 class CodeGen {
 public:
     CodeGen();
@@ -49,7 +55,7 @@ private:
 
     Register* emitNode(const ExprPtr& node);
 
-    Register* emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op);
+    Register* emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair opcode);
 
     void emitSection(const ExprPtr& var, bool isConstant = false);
 
@@ -105,11 +111,11 @@ private:
     // Functions
     std::vector<std::pair<void(CodeGen::*)(const DefunExpr&), const DefunExpr&> > mFunctions;
 
-    static constexpr const char* mMemorySize[SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
+    static constexpr std::string_view mMemorySize[SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
 
-    static constexpr const char* mDataSizeInitialized[SIZE_COUNT] = {"dq", "dd", "dw", "db", "db"};
+    static constexpr std::string_view mDataSizeInitialized[SIZE_COUNT] = {"dq", "dd", "dw", "db", "db"};
 
-    static constexpr const char* mDataSizeUninitialized[SIZE_COUNT] = {"resq", "resd", "resw", "resb", "resb"};
+    static constexpr std::string_view mDataSizeUninitialized[SIZE_COUNT] = {"resq", "resd", "resw", "resb", "resb"};
 
     static constexpr int32_t mMemorySizeInBytes[SIZE_COUNT] = {8, 4, 2, 1, 1};
 

@@ -145,24 +145,24 @@ Register* CodeGen::emitAST(const ExprPtr& ast) {
 Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 	switch (binop.opToken.type) {
 		case TokenType::PLUS:
-			return emitExpr(binop.lhs, binop.rhs, {"add", "addsd"});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "add", .opSSE = "addsd"});
 		case TokenType::MINUS:
-			return emitExpr(binop.lhs, binop.rhs, {"sub", "subsd"});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "sub", .opSSE = "subsd"});
 		case TokenType::DIV:
-			return emitExpr(binop.lhs, binop.rhs, {"idiv", "divsd"});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "idiv", .opSSE = "divsd"});
 		case TokenType::MUL:
-			return emitExpr(binop.lhs, binop.rhs, {"imul", "mulsd"});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "imul", .opSSE = "mulsd"});
 		case TokenType::LOGAND:
-			return emitExpr(binop.lhs, binop.rhs, {"and", nullptr});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "and", .opSSE = ""});
 		case TokenType::LOGIOR:
-			return emitExpr(binop.lhs, binop.rhs, {"or", nullptr});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "or", .opSSE = ""});
 		case TokenType::LOGXOR:
-			return emitExpr(binop.lhs, binop.rhs, {"xor", nullptr});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "xor", .opSSE = ""});
 		case TokenType::LOGNOR: {
 			const ExprPtr negOne = std::make_shared<IntExpr>(-1);
 			// Bitwise NOT seperately
-			Register* regLhs = emitExpr(binop.lhs, negOne, {"xor", nullptr});
-			Register* regRhs = emitExpr(binop.rhs, negOne, {"xor", nullptr});
+			Register* regLhs = emitExpr(binop.lhs, negOne, {.op = "xor", .opSSE = ""});
+			Register* regRhs = emitExpr(binop.rhs, negOne, {.op = "xor", .opSSE = ""});
 			emitInstr2op("and", getRegName(regLhs, REG64), getRegName(regRhs, REG64));
 			register_free(regRhs)
 			return regLhs;
@@ -177,7 +177,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 		case TokenType::LESS_THEN_EQ:
 		case TokenType::AND:
 		case TokenType::OR:
-			return emitExpr(binop.lhs, binop.rhs, {"cmp", "ucomisd"});
+			return emitExpr(binop.lhs, binop.rhs, {.op = "cmp", .opSSE = "ucomisd"});
 		default:
 			return nullptr;
 	}
@@ -254,7 +254,7 @@ Register* CodeGen::emitLoop(const LoopExpr& loop) {
 				continue;
 			}
 
-			emitTest(when->test, std::string(), loopLabel);
+			emitTest(when->test, "", loopLabel);
 			emitJump("jmp", doneLabel);
 			hasReturn = true;
 			break;
@@ -569,7 +569,7 @@ Register* CodeGen::emitNode(const ExprPtr& node) {
 	return emitNumb(node);
 }
 
-Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<const char*, const char*> op) {
+Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair opcode) {
 	Register* regLhs = emitNode(lhs);
 	Register* regRhs = emitNode(rhs);
 
@@ -580,7 +580,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 		emitInstr2op("cvtsi2sd", newRegStr, getRegName(regRhs, REG64));
 		register_free(regRhs)
 
-		emitInstr2op(op.second, getRegName(regLhs, REG64), newRegStr);
+		emitInstr2op(opcode.opSSE, getRegName(regLhs, REG64), newRegStr);
 		register_free(newReg);
 
 		return regLhs;
@@ -594,27 +594,27 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, std::pair<co
 		emitInstr2op("cvtsi2sd", newRegStr, getRegName(regLhs, REG64));
 		register_free(regLhs)
 
-		emitInstr2op(op.second, newRegStr, regRhsStr);
+		emitInstr2op(opcode.opSSE, newRegStr, regRhsStr);
 		movsd(regRhsStr, newRegStr);
 		register_free(newReg);
 		return regRhs;
 	}
 
 	if (isSSE(regLhs->rType) && isSSE(regRhs->rType)) {
-		emitInstr2op(op.second, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
+		emitInstr2op(opcode.opSSE, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
 		register_free(regRhs);
 		return regLhs;
 	}
 
 	// rax -> dividend
 	// idiv divisor[register/memory]
-	if (std::strcmp(op.first, "idiv") == 0) {
+	if (opcode.op == "idiv") {
 		mov("rax", getRegName(regLhs, REG64));
 		cqo();
 		emitInstr1op("idiv", getRegName(regRhs, REG64));
 		mov(getRegName(regLhs, REG64), "rax");
 	} else {
-		emitInstr2op(op.first, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
+		emitInstr2op(opcode.op, getRegName(regLhs, REG64), getRegName(regRhs, REG64));
 	}
 
 	register_free(regRhs);
