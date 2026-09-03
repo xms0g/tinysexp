@@ -5,15 +5,15 @@ bool Register::isInuse() const {
 }
 
 bool Register::isSSE() const {
-	return ((rType >> 0) & 1) == RegisterType::sse;
+	return rType == RegisterType::sse;
 }
 
 bool Register::isScratch() const {
-	return ((rType >> 1) & 1) == RegisterType::scratch;
+	return rType == RegisterType::scratch;
 }
 
 bool Register::isPreserved() const {
-	return ((rType >> 2) & 1) == RegisterType::preserved;
+	return rType == RegisterType::preserved;
 }
 
 Register* RegisterAllocator::alloc(const RegisterType rt) {

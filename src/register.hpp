@@ -150,7 +150,7 @@ private:
 	});
 
 	static constexpr std::array<RegisterType, 3> mPriorityOrder = {
-		RegisterType::scratch, RegisterType::scratch | RegisterType::param, RegisterType::preserved
+		RegisterType::scratch | RegisterType::param, RegisterType::scratch, RegisterType::preserved
 	};
 
 	static constexpr std::array<RegisterType, 2> mPriorityOrderSSE = {
