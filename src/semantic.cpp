@@ -200,7 +200,7 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
 	mSymbolTracker.enter("");
 	for (const auto& var: let.bindings) {
 		const auto var_ = cast::toVar(var);
-		const std::string varName = cast::toString(var_->name)->data;
+		const std::string_view varName = cast::toString(var_->name)->data;
 
 		// Check out the var in the current scope, if it's already defined, raise error
 		if (const Symbol sym = mSymbolTracker.lookupCurrent(varName); sym.value) {
@@ -226,7 +226,7 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 	checkConstantVar(setq.pair);
 
 	const auto var = cast::toVar(setq.pair);
-	const std::string varName = cast::toString(var->name)->data;
+	const std::string_view varName = cast::toString(var->name)->data;
 
 	// Check out the var.If it's not defined, raise error.
 	const Symbol sym = mSymbolTracker.lookup(varName);
@@ -244,7 +244,7 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
 	const auto var = cast::toVar(defvar.pair);
-	const std::string varName = cast::toString(var->name)->data;
+	const std::string_view varName = cast::toString(var->name)->data;
 
 	if (mSymbolTracker.level() > 1) {
 		throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
@@ -255,7 +255,7 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
 
 void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
 	const auto var = cast::toVar(defconst.pair);
-	const std::string varName = cast::toString(var->name)->data;
+	const std::string_view varName = cast::toString(var->name)->data;
 
 	if (mSymbolTracker.level() > 1) {
 		throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
@@ -289,7 +289,7 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 
 ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) {
 	const auto var = cast::toVar(funcCall.name);
-	const std::string funcName = cast::toString(var->name)->data;
+	const std::string_view funcName = cast::toString(var->name)->data;
 
 	if (!isParam && mSymbolTracker.level() == 1) {
 		mTfCtx.isStarted = true;
@@ -411,7 +411,7 @@ void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
 		return;
 
 	const auto arg = cast::toVar(return_.arg);
-	const std::string argName = cast::toString(arg->name)->data;
+	const std::string_view argName = cast::toString(arg->name)->data;
 
 	// Check out the var.If it's not defined, raise error.
 	if (const Symbol sym = mSymbolTracker.lookup(argName); !sym.value) {
@@ -421,7 +421,7 @@ void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
 
 ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {
 	if (const auto test = cast::toVar(if_.test)) {
-		const std::string name = cast::toString(test->name)->data;
+		const std::string_view name = cast::toString(test->name)->data;
 
 		const Symbol sym = mSymbolTracker.lookup(name);
 		if (!sym.value) {
@@ -444,7 +444,7 @@ ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {
 
 ExprPtr SemanticAnalyzer::whenResolve(WhenExpr& when) {
 	if (const auto test = cast::toVar(when.test)) {
-		const std::string name = cast::toString(test->name)->data;
+		const std::string_view name = cast::toString(test->name)->data;
 
 		const Symbol sym = mSymbolTracker.lookup(name);
 		if (!sym.value) {
@@ -469,7 +469,7 @@ ExprPtr SemanticAnalyzer::condResolve(CondExpr& cond) {
 
 	for (auto& [test, statements]: cond.variants) {
 		if (const auto test_ = cast::toVar(test)) {
-			const std::string name = cast::toString(test_->name)->data;
+			const std::string_view name = cast::toString(test_->name)->data;
 
 			const Symbol sym = mSymbolTracker.lookup(name);
 			if (!sym.value) {
@@ -491,7 +491,7 @@ ExprPtr SemanticAnalyzer::condResolve(CondExpr& cond) {
 
 void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
 	const auto var_ = cast::toVar(var);
-	const std::string varName = cast::toString(var_->name)->data;
+	const std::string_view varName = cast::toString(var_->name)->data;
 
 	if (const Symbol sym = mSymbolTracker.lookup(varName); sym.isConstant) {
 		throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
@@ -579,7 +579,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
 	checkBool(n, ttype);
 
 	const auto var = cast::toVar(n);
-	const std::string name = cast::toString(var->name)->data;
+	const std::string_view name = cast::toString(var->name)->data;
 
 	const Symbol sym = mSymbolTracker.lookup(name);
 
@@ -674,7 +674,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 	}
 
 	if (const auto value = cast::toVar(var_->value)) {
-		const std::string valueName = cast::toString(value->name)->data;
+		const std::string_view valueName = cast::toString(value->name)->data;
 		const Symbol sym = mSymbolTracker.lookup(valueName);
 
 		if (!sym.value) {

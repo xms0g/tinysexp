@@ -185,7 +185,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 
 Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	const auto iterVar = cast::toVar(dotimes.iterationCount);
-	const std::string iterVarName = cast::toString(iterVar->name)->data;
+	const std::string_view iterVarName = cast::toString(iterVar->name)->data;
 	// Labels
 	const std::string loopLabel = createLabel();
 	const std::string doneLabel = createLabel();
@@ -320,7 +320,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	int32_t sseIdx{0};
 	for (auto& arg: defun.args) {
 		const auto param = cast::toVar(arg);
-		const std::string paramName = cast::toString(param->name)->data;
+		const std::string_view paramName = cast::toString(param->name)->data;
 
 		if (param->vType == VarType::int_) {
 			if (scratchIdx > 5)
@@ -341,7 +341,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	scratchIdx = 0, sseIdx = 0;
 	for (const auto& arg: defun.args) {
 		const auto param = cast::toVar(arg);
-		const std::string paramName = cast::toString(param->name)->data;
+		const std::string_view paramName = cast::toString(param->name)->data;
 
 		if ((param->vType == VarType::int_ && scratchIdx > 5) || (param->vType == VarType::double_ && sseIdx > 7)) {
 			continue;
@@ -376,7 +376,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 	const auto func = cast::toVar(funcCall.name);
-	const std::string funcName = cast::toString(func->name)->data;
+	const std::string_view funcName = cast::toString(func->name)->data;
 
 	// Calculate the proper stack size before function call
 	uint32_t stackAlignedSize = mStackAllocator.calculateRequiredStackSize(funcCall.args);
@@ -507,7 +507,7 @@ Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
 	}
 
 	if (const auto var = cast::toVar(prim)) {
-		const std::string varName = cast::toString(var->name)->data;
+		const std::string_view varName = cast::toString(var->name)->data;
 
 		Register* reg = regAlloc();
 		mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var->sType, RegisterSize::reg64));
@@ -922,7 +922,7 @@ Register* CodeGen::emitCmpZero(const ExprPtr& node) {
 
 void CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
 	const auto var_ = cast::toVar(var);
-	const std::string varName = cast::toString(var_->name)->data;
+	const std::string_view varName = cast::toString(var_->name)->data;
 
 	if (const auto int_ = cast::toInt(var_->value)) {
 		mov(getAddr(varName, var_->sType, RegisterSize::reg64), int_->n);
@@ -944,7 +944,8 @@ void CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
 	} else if (cast::toUninitialized(var_->value) && var_->sType == SymbolType::local) {
 		getAddr(varName, var_->sType, RegisterSize::reg64);
 	} else if (const auto str = cast::toString(var_->value)) {
-		const std::string label = ".L." + varName;
+		std::string label = ".L.";
+		label += varName;
 		std::string labelAddr = getAddr(label, var_->sType, size);
 		std::string varAddr = getAddr(varName, var_->sType, size);
 
@@ -964,7 +965,7 @@ void CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
 }
 
 void CodeGen::handleVariable(const VarExpr& var, const RegisterSize size) {
-	const std::string varName = cast::toString(var.name)->data;
+	const std::string_view varName = cast::toString(var.name)->data;
 	const auto value = cast::toVar(var.value);
 
 	if (Register* reg = emitLoadRegFromMem(*value, size)) {
@@ -975,7 +976,7 @@ void CodeGen::handleVariable(const VarExpr& var, const RegisterSize size) {
 
 Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const RegisterSize size) {
 	Register* reg = nullptr;
-	const std::string varName = cast::toString(var.name)->data;
+	const std::string_view varName = cast::toString(var.name)->data;
 
 	switch (var.sType) {
 		case SymbolType::param: {
