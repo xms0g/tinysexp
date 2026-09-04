@@ -90,8 +90,8 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 		(this->*func)(defun);
 	}
 
-	for (const auto& rf: mRuntimeFunctions) {
-		mGeneratedCode += rf;
+	for (const auto& [name, content]: mRuntimeFunctions) {
+		mGeneratedCode += content;
 	}
 	// Sections
 	for (const auto& [section, data]: mSections) {
@@ -384,7 +384,9 @@ void CodeGen::emitPrint(const PrintExpr& print) {
 	const FuncCallExpr printFunc(funcName, {print.arg});
 	emitFuncCall(printFunc);
 
-	mRuntimeFunctions.emplace_back(PRINT_FUNC);
+	if (!mRuntimeFunctions.contains("print_int")) {
+		mRuntimeFunctions["print_int"] = PRINT_FUNC;
+	}
 }
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {

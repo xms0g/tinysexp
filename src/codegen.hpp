@@ -116,8 +116,7 @@ private:
 		const DefunExpr& defun;
 	};
     std::vector<Function> mFunctions;
-
-	std::vector<std::string> mRuntimeFunctions;
+	std::unordered_map<std::string, std::string> mRuntimeFunctions;
 
     static constexpr std::string_view mMemorySize[RegisterAllocator::SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
 
