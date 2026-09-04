@@ -1,60 +1,4 @@
 #include "codegen.hpp"
-#include <format>
-
-#define emitHex(n) std::format("0x{:X}", n)
-#define emitLabel(label) mGeneratedCode += std::format("{}:\n", label)
-#define emitInstr1op(op, d) mGeneratedCode += std::format("\t{} {}\n", op, d)
-#define emitInstr2op(op, d, s) mGeneratedCode += std::format("\t{} {}, {}\n", op, d, s)
-#define emitJump(jmp, label) emitInstr1op(jmp, label)
-#define ret() mGeneratedCode += "\tret\n"
-#define cqo() mGeneratedCode += "\tcqo\n"
-#define syscall() mGeneratedCode += "\tsyscall\n"
-#define mov(d, s) emitInstr2op("mov", d, s)
-#define movq(d, s) emitInstr2op("movq", d, s)
-#define movsd(d, s) emitInstr2op("movsd", d, s)
-#define movzx(d, s) emitInstr2op("movzx", d, s)
-#define strDirective(s) std::format("db \"{}\", 10", s)
-#define memDirective(d, n) std::format("{} {}", d, n)
-
-#define stackAlloc(size) \
-    if (size > 0) { \
-        emitInstr2op("sub", "rsp", size); \
-        mStackAllocator.alloc(size); \
-    }
-
-#define stackDealloc(size) \
-    if (size > 0) { \
-        emitInstr2op("add", "rsp", size); \
-        mStackAllocator.dealloc(size); \
-    }
-
-#define push(v) \
-    emitInstr1op("push", v); \
-    mStackAllocator.alloc(8);
-
-#define pop(rn) \
-    emitInstr1op("pop", rn); \
-    mStackAllocator.dealloc(8);
-
-#define emitSet8L(op, reg) \
-    emitInstr1op(op, mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l)); \
-    movzx(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l));
-
-#define regAlloc() ([&]() { \
-    auto* reg = mRegisterAllocator.alloc(RegisterType::scratch); \
-    if (reg && reg->isPreserved()) { \
-        push(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64)) \
-    } \
-    return reg; \
-    }())
-
-#define regFree(reg) \
-    if (reg) { \
-        mRegisterAllocator.free(reg); \
-        if (reg->isPreserved()) { \
-            pop(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64)) \
-        } \
-    }
 
 CodeGen::CodeGen()
 	: mCurrentScope("main") {
@@ -69,7 +13,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 			"\tglobal _main\n"
 			"_main:\n";
 #elif defined(__linux__)
-			"\tglobal main\n"
+	"\tglobal main\n"
 			"main:\n";
 #else
 	throw std::runtime_error("Unsupported Operating System");
@@ -422,19 +366,29 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			} else if (const auto binop = cast::toBinop(param->value)) {
 				reg = emitBinop(*binop);
 				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 				regFree(reg)
 			} else if (const auto fc = cast::toFuncCall(param->value)) {
 				reg = emitFuncCall(*fc);
 
 				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 				regFree(reg)
 			} else {
+				const std::string_view paramName = cast::toString(param->name)->data;
+
 				if (param->vType == VarType::int_) {
-					pushParamToRegister(mParamRegisters[scratchIdx++], cast::toInt(param->value)->n);
+					if (param->sType == SymbolType::unknown) {
+						pushParamToRegister(mParamRegisters[scratchIdx++], cast::toInt(param->value)->n);
+					} else {
+						pushParamToRegister(mParamRegisters[scratchIdx++], getAddr(paramName, param->sType, RegisterSize::reg64).c_str());
+					}
 				} else if (param->vType == VarType::double_) {
-					pushParamToRegister(mParamRegistersSSE[sseIdx++], cast::toDouble(param->value)->n);
+					if (param->sType == SymbolType::unknown) {
+						pushParamToRegister(mParamRegistersSSE[sseIdx++], cast::toDouble(param->value)->n);
+					} else {
+						pushParamToRegister(mParamRegistersSSE[sseIdx++], getAddr(paramName, param->sType, RegisterSize::reg64).c_str());
+					}
 				}
 			}
 		} else if (const auto binop = cast::toBinop(arg)) {
@@ -446,7 +400,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			reg = emitFuncCall(*fc);
 
 			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-								mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
 			regFree(reg)
 		}
 	}
@@ -1104,33 +1058,6 @@ RegisterSize CodeGen::getMemSize(const ExprPtr& var) {
 	} while (var_);
 
 	return RegisterSize::zero;
-}
-
-void CodeGen::pushParamToRegister(const RegisterID rid, const std::any& value) {
-	const Register* reg = mRegisterAllocator.regFromID(rid);
-	auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
-
-	if (reg->isSSE()) {
-		try {
-			auto n = std::any_cast<double>(value);
-			uint64_t hex = *reinterpret_cast<uint64_t*>(&n);
-
-			Register* regScr = regAlloc();
-			auto regScrStr = mRegisterAllocator.nameFromReg(regScr, RegisterSize::reg64);
-
-			mov(regScrStr, emitHex(hex));
-			movq(regStr, regScrStr);
-			regFree(regScr)
-		} catch ([[maybe_unused]] const std::bad_any_cast& e) {
-			movsd(regStr, std::any_cast<std::string_view>(value));
-		}
-	} else {
-		try {
-			mov(regStr, std::any_cast<int>(value));
-		} catch ([[maybe_unused]] const std::bad_any_cast& e) {
-			mov(regStr, std::any_cast<std::string_view>(value));
-		}
-	}
 }
 
 void CodeGen::pushParamOntoStack(const std::string_view funcName, const VarExpr& param, int32_t& stackIdx) {

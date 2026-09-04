@@ -8,7 +8,8 @@ void StackAllocator::dealloc(const uint32_t size) {
 	mStackOffset -= size;
 }
 
-int32_t StackAllocator::pushStackFrame(const std::string_view funcName, const std::string_view varName,
+int32_t StackAllocator::pushStackFrame(const std::string_view funcName,
+                                       const std::string_view varName,
                                        const SymbolType stype) {
 	StackFrame* sf = nullptr;
 
