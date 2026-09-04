@@ -292,13 +292,7 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 void SemanticAnalyzer::printResolve(const ExprPtr& print) {
 	const auto print_ = cast::toPrint(print);
 
-	if (const auto arg = cast::toVar(print_->arg)) {
-		const std::string_view argName = cast::toString(arg->name)->data;
-
-		if (const Symbol sym = mSymbolTracker.lookup(argName); !sym.value) {
-			throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
-		}
-	} else if (cast::toInt(print_->arg)) {
+	if (cast::toInt(print_->arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("print_int_var");
 		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
 		cast::toVar(print_->arg)->vType = VarType::int_;
