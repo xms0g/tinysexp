@@ -76,6 +76,9 @@ ExprPtr Parser::parseExpr() {
 		case TokenType::defun:
 			expr = parseDefun();
 			break;
+		case TokenType::print:
+			expr = parsePrint();
+			break;
 		case TokenType::if_:
 			expr = parseIf();
 			break;
@@ -92,7 +95,7 @@ ExprPtr Parser::parseExpr() {
 			expr = parseReturn();
 			break;
 		default:
-			throw InvalidSyntaxError(mFileName, mCurrentToken.lexeme.c_str(), 0);
+			throw InvalidSyntaxError(mFileName, mCurrentToken.lexeme, 0);
 	}
 	consume(TokenType::rparen, MISSING_PAREN_ERROR);
 
@@ -251,6 +254,20 @@ ExprPtr Parser::parseDefun() {
 	}
 
 	return std::make_shared<DefunExpr>(name, args, forms);
+}
+
+ExprPtr Parser::parsePrint() {
+	advance();
+
+	ExprPtr expr;
+
+	if (mCurrentToken.type == TokenType::lparen) {
+		expr = parseExpr();
+	} else {
+		expr = parseAtom();
+	}
+
+	return std::make_shared<PrintExpr>(expr);
 }
 
 ExprPtr Parser::parseFuncCall() {

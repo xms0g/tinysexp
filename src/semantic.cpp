@@ -132,6 +132,8 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 		defconstResolve(*defconst);
 	} else if (cast::toDefun(ast)) {
 		return defunResolve(ast);
+	} else if (const auto print = cast::toPrint(ast)) {
+		printResolve(ast);
 	} else if (const auto funcCall = cast::toFuncCall(ast)) {
 		return funcCallResolve(*funcCall);
 	} else if (const auto return_ = cast::toReturn(ast)) {
@@ -287,6 +289,27 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 	return result;
 }
 
+void SemanticAnalyzer::printResolve(const ExprPtr& print) {
+	const auto print_ = cast::toPrint(print);
+
+	ExprPtr expr = exprResolve(print_->arg);
+	print_->returnType = std::move(expr);
+
+	if (cast::toInt(print_->arg)) {
+		ExprPtr name = std::make_shared<StringExpr>("print_int_var");
+		print_->arg = std::make_shared<VarExpr>(name, expr);
+		cast::toVar(print_->arg)->vType = VarType::int_;
+	} else if (cast::toDouble(print_->arg)) {
+		ExprPtr name = std::make_shared<StringExpr>("print_double_var");
+		print_->arg = std::make_shared<VarExpr>(name, expr);
+		cast::toVar(print_->arg)->vType = VarType::double_;
+	} else if (cast::toString(print_->arg)) {
+		ExprPtr name = std::make_shared<StringExpr>("print_string_var");
+		print_->arg = std::make_shared<VarExpr>(name, expr);
+		cast::toVar(print_->arg)->vType = VarType::string;
+	}
+}
+
 ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) {
 	const auto var = cast::toVar(funcCall.name);
 	const std::string_view funcName = cast::toString(var->name)->data;
@@ -314,7 +337,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
 		const auto fcargVar = cast::toVar(fcarg);
 
 		if ((fcargVar && cast::toUninitialized(fcargVar->value)) || isPrimitive(fcarg) || cast::toBinop(fcarg) ||
-			cast::toFuncCall(fcarg)) {
+		    cast::toFuncCall(fcarg)) {
 			for (size_t i = 0; i < func->args.size(); ++i) {
 				const auto fArg = cast::toVar(func->args[i]);
 
@@ -341,12 +364,12 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
 			bool found{false};
 
 			do {
-				const std::string innerVarName = cast::toString(innerVar->name)->data;
+				const std::string_view innerVarName = cast::toString(innerVar->name)->data;
 
 				sym = mSymbolTracker.lookup(innerVarName);
 
 				if (sym.value) {
-					auto sym_value = cast::toVar(sym.value);
+					const auto sym_value = cast::toVar(sym.value);
 					innerVar->value = sym_value->value;
 					innerVar->sType = sym_value->sType;
 					// Loop sym value until finding a primitive. Update var.
@@ -669,7 +692,8 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 			                    .name = varName,
 			                    .value = var,
 			                    .sType = var_->sType,
-			                    .isConstant = isConstant});
+			                    .isConstant = isConstant
+		                    });
 		return var_->value;
 	}
 
@@ -688,7 +712,8 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 			                    .name = varName,
 			                    .value = var,
 			                    .sType = var_->sType,
-			                    .isConstant = isConstant});
+			                    .isConstant = isConstant
+		                    });
 		return var_->value;
 	}
 
@@ -700,7 +725,8 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 		                    .name = varName,
 		                    .value = var,
 		                    .sType = var_->sType,
-		                    .isConstant = isConstant});
+		                    .isConstant = isConstant
+	                    });
 	return value_;
 }
 

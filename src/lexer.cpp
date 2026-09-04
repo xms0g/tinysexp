@@ -45,6 +45,9 @@ void Lexer::process() {
 		} else if (!std::strncmp("defun", mCurrentChar, 5)) {
 			mTokens.emplace_back(TokenType::defun);
 			advance(5);
+		} else if (!std::strncmp("print", mCurrentChar, 5)) {
+			mTokens.emplace_back(TokenType::print);
+			advance(5);
 		} else if (!std::strncmp("nil", mCurrentChar, 3)) {
 			mTokens.emplace_back(TokenType::nil);
 			advance(3);
@@ -88,7 +91,7 @@ void Lexer::process() {
 
 			while (mCurrentChar && (std::isalnum(mCurrentChar[0]) || mCurrentChar[0] == '.')) {
 				if (std::isalpha(mCurrentChar[0]))
-					throw IllegalCharError(mFileName, (token + mCurrentChar[0]).c_str(), mPos.lineNumber);
+					throw IllegalCharError(mFileName, token + mCurrentChar[0], mPos.lineNumber);
 
 				if (!isDouble && mCurrentChar[0] == '.') isDouble = true;
 
@@ -169,6 +172,7 @@ void Lexer::advance() {
 	}
 }
 
-void Lexer::advance(const int step) {
-	for (int i = 0; i < step; ++i) advance();
+void Lexer::advance(const uint32_t step) {
+	for (int i = 0; i < step; ++i)
+		advance();
 }

@@ -141,6 +141,15 @@ struct DefunExpr final : IExpr {
 	}
 };
 
+struct PrintExpr final : IExpr {
+	ExprPtr arg;
+	ExprPtr returnType;
+
+	explicit PrintExpr(ExprPtr arg_)
+		: arg(std::move(arg_)) {
+	}
+};
+
 struct FuncCallExpr final : IExpr {
 	ExprPtr name;
 	ExprPtr returnType;
@@ -231,6 +240,8 @@ private:
 
 	ExprPtr parseDefun();
 
+	ExprPtr parsePrint();
+
 	ExprPtr parseFuncCall();
 
 	ExprPtr parseReturn();
@@ -288,6 +299,10 @@ inline std::shared_ptr<DefconstExpr> toDefconstant(const ExprPtr& expr) {
 
 inline std::shared_ptr<DefunExpr> toDefun(const ExprPtr& expr) {
 	return std::dynamic_pointer_cast<DefunExpr>(expr);
+}
+
+inline std::shared_ptr<PrintExpr> toPrint(const ExprPtr& expr) {
+	return std::dynamic_pointer_cast<PrintExpr>(expr);
 }
 
 inline std::shared_ptr<FuncCallExpr> toFuncCall(const ExprPtr& expr) {

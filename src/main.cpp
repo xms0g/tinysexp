@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "semantic.hpp"
@@ -17,12 +18,14 @@
 #define ERROR_COLOR "\x1b[31m"
 #define RESET_COLOR "\x1b[0m"
 
-static void compile(const std::string_view fn, const std::string_view in, const std::string_view out) {
+static void compile(const std::string_view fn, const std::string_view src, const std::string_view outFn) {
     std::ofstream asmFile;
-    asmFile.open(out);
+
+	auto outFnStr = std::string(outFn) + ".asm";
+    asmFile.open(outFnStr);
 
     try {
-        Lexer lexer{fn, in};
+        Lexer lexer{fn, src};
         Parser parser{fn, lexer};
         SemanticAnalyzer analyzer{fn};
         CodeGen cgen;
@@ -31,6 +34,10 @@ static void compile(const std::string_view fn, const std::string_view in, const 
         ExprPtr ast = parser.parse();
         analyzer.analyze(ast);
         asmFile << cgen.emit(ast);
+    	asmFile.close();
+
+    	std::system(std::format("nasm -f macho64 {} -o {}.o", outFnStr, outFnStr).c_str());
+    	std::system(std::format("clang {}.o -o {}_exec", outFnStr, outFn).c_str());
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();
     } catch (InvalidSyntaxError& e) {
@@ -38,8 +45,6 @@ static void compile(const std::string_view fn, const std::string_view in, const 
     } catch (SemanticError& e) {
         std::cerr << ERROR_COLOR << e.what();
     }
-
-    asmFile.close();
 }
 
 int main(int argc, char** argv) {
@@ -66,19 +71,19 @@ int main(int argc, char** argv) {
         return EXIT_SUCCESS;
     }
 
-    std::string fn, in, out;
+    std::string fn, src, outFn;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
-            out = argv[++i];
+            outFn = argv[++i];
         } else {
             fn = argv[i];
         }
     }
 
-    if (out.empty()) {
+    if (outFn.empty()) {
         size_t pos = fn.rfind('.');
         std::string base = pos != std::string::npos ? fn.substr(0, pos) : fn;
-        out = base + ".s";
+        outFn = base;
     }
 
     std::ifstream file;
@@ -90,9 +95,9 @@ int main(int argc, char** argv) {
         const std::size_t length = file.tellg();
         file.seekg(0, std::ios::beg);
 
-        in.resize(length);
+        src.resize(length);
 
-        file.read(in.data(), static_cast<long>(length));
+        file.read(src.data(), static_cast<long>(length));
 
         file.close();
     } catch (std::ifstream::failure& e) {
@@ -100,7 +105,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    compile(fn, in, out);
+    compile(fn, src, outFn);
 
     return 0;
 }

@@ -1,5 +1,6 @@
 #include "codegen.hpp"
 #include <format>
+#include "runtimeFuncs.hpp"
 
 #define emitHex(n) std::format("0x{:X}", n)
 #define emitLabel(label) mGeneratedCode += std::format("{}:\n", label)
@@ -62,13 +63,17 @@ CodeGen::CodeGen()
 
 std::string CodeGen::emit(const ExprPtr& ast) {
 	mGeneratedCode =
-			"[bits 64]\n"
 			"section .text\n"
-			"\tglobal _start\n"
-			"_start:\n";
+#if defined(__APPLE__) || defined(__MACH__)
+			"\tglobal _main\n"
+			"_main:\n";
+#elif defined(__linux__)
+			"\tglobal main\n"
+			"main:\n";
+#else
+	throw std::runtime_error("Unsupported Operating System");
+#endif
 
-	push("rbp")
-	mov("rbp", "rsp");
 
 	auto next = ast;
 	while (next != nullptr) {
@@ -77,22 +82,16 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 		next = next->child;
 	}
 
-	pop("rbp")
-
-#if defined(__APPLE__) || defined(__MACH__)
-	mov("rax", emitHex(0x2000001));
-#elif defined(__linux__)
-	mov("rax", 60);
-#else
-	throw std::runtime_error("Unsupported Operating System");
-#endif
-
-	emitInstr2op("xor", "rdi", "rdi");
-	syscall();
+	emitInstr2op("xor", "rax", "rax");
+	ret();
 
 	// Function definitions
 	for (const auto& [func, defun]: mFunctions) {
 		(this->*func)(defun);
+	}
+
+	for (const auto& rf: mRuntimeFunctions) {
+		mGeneratedCode += rf;
 	}
 	// Sections
 	for (const auto& [section, data]: mSections) {
@@ -127,6 +126,8 @@ Register* CodeGen::emitAST(const ExprPtr& ast) {
 		emitDefconst(*defconst);
 	} else if (const auto defun = cast::toDefun(ast)) {
 		mFunctions.emplace_back(&CodeGen::emitDefun, *defun);
+	} else if (const auto print = cast::toPrint(ast)) {
+		emitPrint(*print);
 	} else if (const auto funcCall = cast::toFuncCall(ast)) {
 		return emitFuncCall(*funcCall);
 	} else if (const auto if_ = cast::toIf(ast)) {
@@ -163,7 +164,8 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 			// Bitwise NOT seperately
 			Register* regLhs = emitExpr(binop.lhs, negOne, {.op = "xor", .opSSE = ""});
 			Register* regRhs = emitExpr(binop.rhs, negOne, {.op = "xor", .opSSE = ""});
-			emitInstr2op("and", mRegisterAllocator.nameFromReg(regLhs, RegisterSize::reg64), mRegisterAllocator.nameFromReg(regRhs, RegisterSize::reg64));
+			emitInstr2op("and", mRegisterAllocator.nameFromReg(regLhs, RegisterSize::reg64),
+			             mRegisterAllocator.nameFromReg(regRhs, RegisterSize::reg64));
 			regFree(regRhs)
 			return regLhs;
 		}
@@ -348,7 +350,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 		}
 
 		mov(getAddr(paramName, param->sType, RegisterSize::reg64),
-		     mRegisterAllocator.nameFromID(param->vType == VarType::int_
+		    mRegisterAllocator.nameFromID(param->vType == VarType::int_
 			    ? mParamRegisters[scratchIdx++]
 			    : mParamRegistersSSE[sseIdx++], RegisterSize::reg64));
 	}
@@ -374,6 +376,17 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	ret();
 }
 
+void CodeGen::emitPrint(const PrintExpr& print) {
+	ExprPtr name = std::make_shared<StringExpr>("print_int");
+	ExprPtr value = std::make_shared<Uninitialized>();
+	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
+
+	const FuncCallExpr printFunc(funcName, {print.arg});
+	emitFuncCall(printFunc);
+
+	mRuntimeFunctions.emplace_back(PRINT_FUNC);
+}
+
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 	const auto func = cast::toVar(funcCall.name);
 	const std::string_view funcName = cast::toString(func->name)->data;
@@ -387,37 +400,42 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 	int32_t sseIdx{0};
 	int32_t stackIdx{0};
 	for (const auto& arg: funcCall.args) {
-		const auto param = cast::toVar(arg);
+		if (const auto param = cast::toVar(arg)) {
+			// If scratch param size > 5 or sse param size > 7, push the params onto stack
+			if ((scratchIdx > 5 && param->vType == VarType::int_) || (sseIdx > 7 && param->vType == VarType::double_)) {
+				pushParamOntoStack(funcName, *param, stackIdx);
+				continue;
+			}
+			// Push parameter to the appropriate register
+			if (const auto innerVar = cast::toVar(param->value)) {
+				const std::string_view paramName = cast::toString(innerVar->name)->data;
+				pushParamToRegister(param->vType == VarType::int_
+					                    ? mParamRegisters[scratchIdx++]
+					                    : mParamRegistersSSE[sseIdx++],
+				                    getAddr(paramName, innerVar->sType, RegisterSize::reg64).c_str());
+			} else if (const auto binop = cast::toBinop(param->value)) {
+				reg = emitBinop(*binop);
+				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
+				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+				regFree(reg)
+			} else if (const auto fc = cast::toFuncCall(param->value)) {
+				reg = emitFuncCall(*fc);
 
-		// If scratch param size > 5 or sse param size > 7, push the params onto stack
-		if ((scratchIdx > 5 && param->vType == VarType::int_) || (sseIdx > 7 && param->vType == VarType::double_)) {
-			pushParamOntoStack(funcName, *param, stackIdx);
-			continue;
-		}
-		// Push parameter to the appropriate register
-		if (const auto innerVar = cast::toVar(param->value)) {
-			const std::string paramName = cast::toString(innerVar->name)->data;
-			pushParamToRegister(param->vType == VarType::int_
-				                    ? mParamRegisters[scratchIdx++]
-				                    : mParamRegistersSSE[sseIdx++],
-			                    getAddr(paramName, innerVar->sType, RegisterSize::reg64).c_str());
-		} else if (const auto binop = cast::toBinop(param->value)) {
+				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
+				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+				regFree(reg)
+			} else {
+				if (param->vType == VarType::int_) {
+					pushParamToRegister(mParamRegisters[scratchIdx++], cast::toInt(param->value)->n);
+				} else if (param->vType == VarType::double_) {
+					pushParamToRegister(mParamRegistersSSE[sseIdx++], cast::toDouble(param->value)->n);
+				}
+			}
+		} else if (const auto binop = cast::toBinop(arg)) {
 			reg = emitBinop(*binop);
 			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
 			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
 			regFree(reg)
-		} else if (const auto fc = cast::toFuncCall(param->value)) {
-			reg = emitFuncCall(*fc);
-
-			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
-			regFree(reg)
-		} else {
-			if (param->vType == VarType::int_) {
-				pushParamToRegister(mParamRegisters[scratchIdx++], cast::toInt(param->value)->n);
-			} else if (param->vType == VarType::double_) {
-				pushParamToRegister(mParamRegistersSSE[sseIdx++], cast::toDouble(param->value)->n);
-			}
 		}
 	}
 
@@ -510,7 +528,8 @@ Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
 		const std::string_view varName = cast::toString(var->name)->data;
 
 		Register* reg = regAlloc();
-		mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var->sType, RegisterSize::reg64));
+		mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
+		    getAddr(varName, var->sType, RegisterSize::reg64));
 
 		return reg;
 	}
@@ -597,7 +616,8 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 	}
 
 	if (regLhs->isSSE() && regRhs->isSSE()) {
-		emitInstr2op(opcode.opSSE, mRegisterAllocator.nameFromReg(regLhs, RegisterSize::reg64), mRegisterAllocator.nameFromReg(regRhs, RegisterSize::reg64));
+		emitInstr2op(opcode.opSSE, mRegisterAllocator.nameFromReg(regLhs, RegisterSize::reg64),
+		             mRegisterAllocator.nameFromReg(regRhs, RegisterSize::reg64));
 		regFree(regRhs);
 		return regLhs;
 	}
@@ -610,7 +630,8 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 		emitInstr1op("idiv", mRegisterAllocator.nameFromReg(regRhs, RegisterSize::reg64));
 		mov(mRegisterAllocator.nameFromReg(regLhs, RegisterSize::reg64), "rax");
 	} else {
-		emitInstr2op(opcode.op, mRegisterAllocator.nameFromReg(regLhs, RegisterSize::reg64), mRegisterAllocator.nameFromReg(regRhs, RegisterSize::reg64));
+		emitInstr2op(opcode.op, mRegisterAllocator.nameFromReg(regLhs, RegisterSize::reg64),
+		             mRegisterAllocator.nameFromReg(regRhs, RegisterSize::reg64));
 	}
 
 	regFree(regRhs);
@@ -623,42 +644,57 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant) {
 	if (cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
 		updateSections("\nsection .bss\n", {
 			               .name = cast::toString(var_->name)->data,
-			               .data = memDirective(mDataSizeUninitialized[std::to_underlying(RegisterSize::reg64)], 1)});
+			               .data = memDirective(mDataSizeUninitialized[std::to_underlying(RegisterSize::reg64)], 1)
+		               });
 
 		handleAssignment(var, RegisterSize::reg64);
 	} else if (cast::toUninitialized(var_->value)) {
 		updateSections("\nsection .bss\n",
 		               {
 			               .name = cast::toString(var_->name)->data,
-			               .data = memDirective(mDataSizeUninitialized[std::to_underlying(RegisterSize::reg64)], 1)});
+			               .data = memDirective(mDataSizeUninitialized[std::to_underlying(RegisterSize::reg64)], 1)
+		               });
 	} else if (cast::toNIL(var_->value)) {
 		updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
-		               {.name = cast::toString(var_->name)->data,
-		                              .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg8l)], 0)});
+		               {
+			               .name = cast::toString(var_->name)->data,
+			               .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg8l)], 0)
+		               });
 	} else if (cast::toT(var_->value)) {
 		updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
-		               {.name = cast::toString(var_->name)->data,
-		                              .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg8l)], 1)});
+		               {
+			               .name = cast::toString(var_->name)->data,
+			               .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg8l)], 1)
+		               });
 	} else if (const auto int_ = cast::toInt(var_->value)) {
 		updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
-		               {.name = cast::toString(var_->name)->data,
-		                              .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg64)], int_->n)});
+		               {
+			               .name = cast::toString(var_->name)->data,
+			               .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg64)], int_->n)
+		               });
 	} else if (const auto double_ = cast::toDouble(var_->value)) {
 		uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
 		updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
-		               {.name = cast::toString(var_->name)->data,
-		                              .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg64)], emitHex(hex))});
+		               {
+			               .name = cast::toString(var_->name)->data,
+			               .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg64)],
+			                                    emitHex(hex))
+		               });
 	} else if (cast::toVar(var_->value)) {
 		const RegisterSize memSize = getMemSize(var_);
 
 		updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
-		               {.name = cast::toString(var_->name)->data,
-		                              .data = memDirective(mDataSizeInitialized[std::to_underlying(memSize)], 0)});
+		               {
+			               .name = cast::toString(var_->name)->data,
+			               .data = memDirective(mDataSizeInitialized[std::to_underlying(memSize)], 0)
+		               });
 		handleAssignment(var, memSize);
 	} else if (const auto str = cast::toString(var_->value)) {
 		updateSections("\nsection .rodata\n",
-		               {.name = cast::toString(var_->name)->data,
-		                              .data = strDirective(str->data)});
+		               {
+			               .name = cast::toString(var_->name)->data,
+			               .data = strDirective(str->data)
+		               });
 	}
 }
 
@@ -676,7 +712,8 @@ void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::str
 			case TokenType::logxor:
 			case TokenType::lognor: {
 				reg = emitBinop(*binop);
-				emitInstr2op(reg->isSSE() ? "ucomisd" : "cmp", mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), 0);
+				emitInstr2op(reg->isSSE() ? "ucomisd" : "cmp", mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
+				             0);
 				emitJump("je", elseLabel);
 				regFree(reg)
 				break;
@@ -994,7 +1031,8 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const RegisterSize siz
 				movsd(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var.sType, size));
 			} else if (cast::toString(var.value)) {
 				reg = regAlloc();
-				emitInstr2op("lea", mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var.sType, size));
+				emitInstr2op("lea", mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
+				             getAddr(varName, var.sType, size));
 			} else if (cast::toNIL(var.value) || cast::toT(var.value)) {
 				reg = regAlloc();
 				movzx(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var.sType, size));
@@ -1078,7 +1116,7 @@ void CodeGen::pushParamToRegister(const RegisterID rid, const std::any& value) {
 		try {
 			mov(regStr, std::any_cast<int>(value));
 		} catch ([[maybe_unused]] const std::bad_any_cast& e) {
-			mov(regStr, std::any_cast<const char*>(value));
+			mov(regStr, std::any_cast<std::string_view>(value));
 		}
 	}
 }

@@ -31,6 +31,8 @@ private:
 
     void emitDefun(const DefunExpr& defun);
 
+	void emitPrint(const PrintExpr& print);
+
     Register* emitFuncCall(const FuncCallExpr& funcCall);
 
     Register* emitIf(const IfExpr& if_);
@@ -114,6 +116,8 @@ private:
 		const DefunExpr& defun;
 	};
     std::vector<Function> mFunctions;
+
+	std::vector<std::string> mRuntimeFunctions;
 
     static constexpr std::string_view mMemorySize[RegisterAllocator::SIZE_COUNT] = {"qword", "dword", "word", "byte", "byte"};
 

@@ -21,6 +21,8 @@ enum class TokenType {
 	let, setq, defvar, defconst,
 	// Function
 	defun,
+	// print
+	print,
 	// Special function
 	return_,
 	// Others
@@ -76,7 +78,7 @@ public:
 private:
 	void advance();
 
-	void advance(int32_t step);
+	void advance(uint32_t step);
 
 	std::string_view mText;
 	Position mPos;

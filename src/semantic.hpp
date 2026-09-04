@@ -81,6 +81,8 @@ private:
 
     ExprPtr defunResolve(const ExprPtr& defun);
 
+	void printResolve(const ExprPtr& print);
+
     ExprPtr funcCallResolve(FuncCallExpr& funcCall, bool isParam = false);
 
     void returnResolve(const ReturnExpr& return_);
