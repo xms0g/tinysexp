@@ -4,4 +4,4 @@
             (setq sum (+ sum i)))
        (/ sum n)))
 
-(average 10)
+(print (average 10))

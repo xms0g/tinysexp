@@ -436,6 +436,12 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
 			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
 			regFree(reg)
+		} else if (const auto fc = cast::toFuncCall(arg)) {
+			reg = emitFuncCall(*fc);
+
+			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
+								mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+			regFree(reg)
 		}
 	}
 

@@ -13,4 +13,4 @@
 (setq add-result (calculator 1 2 1))
 (setq sub-result (calculator 3 2 2))
 (setq mul-result (calculator 3 2 3))
-(setq div-result (calculator 4 2 4))
+(setq div-result (calculator 4 6 3))
