@@ -63,6 +63,7 @@ CodeGen::CodeGen()
 std::string CodeGen::emit(const ExprPtr& ast) {
 	mGeneratedCode =
 			"extern _lrt_print_int\n"
+			"extern _lrt_print_double\n"
 			"section .text\n"
 #if defined(__APPLE__) || defined(__MACH__)
 			"\tglobal _main\n"
@@ -376,9 +377,17 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 }
 
 void CodeGen::emitPrint(const PrintExpr& print) {
-	ExprPtr name = std::make_shared<StringExpr>("_lrt_print_int");
-	ExprPtr value = std::make_shared<Uninitialized>();
-	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
+	ExprPtr funcName;
+
+	if (const auto var = cast::toVar(print.arg); var && var->vType == VarType::int_) {
+		ExprPtr name = std::make_shared<StringExpr>("_lrt_print_int");
+		ExprPtr value = std::make_shared<Uninitialized>();
+		funcName = std::make_shared<VarExpr>(name, value);
+	} else if (var && var->vType == VarType::double_) {
+		ExprPtr name = std::make_shared<StringExpr>("_lrt_print_double");
+		ExprPtr value = std::make_shared<Uninitialized>();
+		funcName = std::make_shared<VarExpr>(name, value);
+	}
 
 	const FuncCallExpr printFunc(funcName, {print.arg});
 	emitFuncCall(printFunc);
@@ -1113,7 +1122,7 @@ void CodeGen::pushParamToRegister(const RegisterID rid, const std::any& value) {
 			movq(regStr, regScrStr);
 			regFree(regScr)
 		} catch ([[maybe_unused]] const std::bad_any_cast& e) {
-			movsd(regStr, std::any_cast<const char*>(value));
+			movsd(regStr, std::any_cast<std::string_view>(value));
 		}
 	} else {
 		try {

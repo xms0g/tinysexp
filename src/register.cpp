@@ -5,11 +5,11 @@ bool Register::isInuse() const {
 }
 
 bool Register::isSSE() const {
-	return rType == RegisterType::sse;
+	return rType == (RegisterType::sse | RegisterType::param);
 }
 
 bool Register::isScratch() const {
-	return rType == RegisterType::scratch;
+	return rType == (RegisterType::scratch | RegisterType::param);
 }
 
 bool Register::isPreserved() const {
