@@ -292,21 +292,27 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 void SemanticAnalyzer::printResolve(const ExprPtr& print) {
 	const auto print_ = cast::toPrint(print);
 
-	ExprPtr expr = exprResolve(print_->arg);
-	print_->returnType = std::move(expr);
+	if (const auto arg = cast::toVar(print_->arg)) {
+		const std::string_view argName = cast::toString(arg->name)->data;
 
-	if (cast::toInt(print_->arg)) {
+		if (const Symbol sym = mSymbolTracker.lookup(argName); !sym.value) {
+			throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
+		}
+	} else if (cast::toInt(print_->arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("print_int_var");
-		print_->arg = std::make_shared<VarExpr>(name, expr);
+		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
 		cast::toVar(print_->arg)->vType = VarType::int_;
 	} else if (cast::toDouble(print_->arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("print_double_var");
-		print_->arg = std::make_shared<VarExpr>(name, expr);
+		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
 		cast::toVar(print_->arg)->vType = VarType::double_;
 	} else if (cast::toString(print_->arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("print_string_var");
-		print_->arg = std::make_shared<VarExpr>(name, expr);
+		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
 		cast::toVar(print_->arg)->vType = VarType::string;
+	} else {
+		ExprPtr expr = exprResolve(print_->arg);
+		print_->returnType = std::move(expr);
 	}
 }
 
@@ -418,7 +424,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
 			func->args[i] = funcCall.args[i];
 		}
 		// Find the proper type of variables and the return type of the function
-		if (auto currentScope = mSymbolTracker.scopeName(); currentScope != funcName) {
+		if (const auto currentScope = mSymbolTracker.scopeName(); currentScope != funcName) {
 			funcCall.returnType = defunResolve(func);
 
 			if (funcName == mTfCtx.entryPoint)
