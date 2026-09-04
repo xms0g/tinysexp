@@ -1,45 +1,44 @@
-[bits 64]
+extern _lrt_print_int
 section .text
-	global _start
-_start:
+	global _main
+_main:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 8
 	mov rdi, 1
 	mov rsi, 2
 	mov rdx, 1
 	call calculator
 	mov r10, rax
-	add rsp, 8
-	mov qword [rel add-result], r10
-	sub rsp, 8
+	mov rdi, r10
+	call _lrt_print_int
+	mov r10, rax
 	mov rdi, 3
 	mov rsi, 2
 	mov rdx, 2
 	call calculator
-	mov r10, rax
-	add rsp, 8
-	mov qword [rel sub-result], r10
-	sub rsp, 8
+	mov r11, rax
+	mov rdi, r11
+	call _lrt_print_int
+	mov r11, rax
 	mov rdi, 3
 	mov rsi, 2
 	mov rdx, 3
 	call calculator
-	mov r10, rax
-	add rsp, 8
-	mov qword [rel mul-result], r10
-	sub rsp, 8
-	mov rdi, 4
-	mov rsi, 2
+	mov rdi, rax
+	mov rdi, rdi
+	call _lrt_print_int
+	mov rdi, rax
+	mov rdi, 6
+	mov rsi, 3
 	mov rdx, 4
 	call calculator
-	mov r10, rax
-	add rsp, 8
-	mov qword [rel div-result], r10
+	mov rsi, rax
+	mov rdi, rsi
+	call _lrt_print_int
+	mov rsi, rax
+	xor rax, rax
 	pop rbp
-	mov rax, 0x2000001
-	xor rdi, rdi
-	syscall
+	ret
 
 calculator:
 	push rbp
@@ -48,53 +47,47 @@ calculator:
 	mov qword [rbp - 8], rdi
 	mov qword [rbp - 16], rsi
 	mov qword [rbp - 24], rdx
-	mov r10, qword [rbp - 24]
-	mov r11, 1
-	cmp r10, r11
+	mov rdx, qword [rbp - 24]
+	mov rcx, 1
+	cmp rdx, rcx
 	jne .L1
-	mov r10, qword [rbp - 8]
-	mov r11, qword [rbp - 16]
-	add r10, r11
+	mov rdx, qword [rbp - 8]
+	mov rcx, qword [rbp - 16]
+	add rdx, rcx
 	jmp .L0
 .L1:
-	mov r10, qword [rbp - 24]
-	mov r11, 2
-	cmp r10, r11
+	mov rdx, qword [rbp - 24]
+	mov rcx, 2
+	cmp rdx, rcx
 	jne .L2
-	mov r10, qword [rbp - 8]
-	mov r11, qword [rbp - 16]
-	sub r10, r11
+	mov rdx, qword [rbp - 8]
+	mov rcx, qword [rbp - 16]
+	sub rdx, rcx
 	jmp .L0
 .L2:
-	mov r10, qword [rbp - 24]
-	mov r11, 3
-	cmp r10, r11
+	mov rdx, qword [rbp - 24]
+	mov rcx, 3
+	cmp rdx, rcx
 	jne .L3
-	mov r10, qword [rbp - 8]
-	mov r11, qword [rbp - 16]
-	imul r10, r11
+	mov rdx, qword [rbp - 8]
+	mov rcx, qword [rbp - 16]
+	imul rdx, rcx
 	jmp .L0
 .L3:
-	mov r10, qword [rbp - 24]
-	mov r11, 4
-	cmp r10, r11
+	mov rdx, qword [rbp - 24]
+	mov rcx, 4
+	cmp rdx, rcx
 	jne .L4
-	mov r10, qword [rbp - 8]
-	mov r11, qword [rbp - 16]
-	mov rax, r10
+	mov rdx, qword [rbp - 8]
+	mov rcx, qword [rbp - 16]
+	mov rax, rdx
 	cqo
-	idiv r11
-	mov r10, rax
+	idiv rcx
+	mov rdx, rax
 	jmp .L0
 .L4:
 .L0:
-	mov rax, r10
+	mov rax, rdx
 	add rsp, 24
 	pop rbp
 	ret
-
-section .data
-add-result: dq 0
-sub-result: dq 0
-mul-result: dq 0
-div-result: dq 0
