@@ -688,12 +688,15 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 	if (isPrimitive(var_->value) || cast::toUninitialized(var_->value)) {
 		setType(*var_, var_->value);
 
-		mSymbolTracker.bind(varName, {
-			                    .name = varName,
-			                    .value = var,
-			                    .sType = var_->sType,
-			                    .isConstant = isConstant
-		                    });
+		mSymbolTracker.bind(
+			varName,
+			{
+				.name = varName,
+				.value = var,
+				.sType = var_->sType,
+				.isConstant = isConstant
+			});
+
 		return var_->value;
 	}
 
@@ -708,12 +711,15 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 		var_->value = sym.value;
 		var_->vType = cast::toVar(sym.value)->vType;
 
-		mSymbolTracker.bind(varName, {
-			                    .name = varName,
-			                    .value = var,
-			                    .sType = var_->sType,
-			                    .isConstant = isConstant
-		                    });
+		mSymbolTracker.bind(
+			varName,
+			{
+				.name = varName,
+				.value = var,
+				.sType = var_->sType,
+				.isConstant = isConstant
+			});
+
 		return var_->value;
 	}
 
@@ -721,12 +727,14 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 	ExprPtr value_ = exprResolve(var_->value);
 	var_->vType = cast::toInt(value_) ? VarType::int_ : VarType::double_;
 
-	mSymbolTracker.bind(varName, {
-		                    .name = varName,
-		                    .value = var,
-		                    .sType = var_->sType,
-		                    .isConstant = isConstant
-	                    });
+	mSymbolTracker.bind(
+		varName,
+		{
+			.name = varName,
+			.value = var,
+			.sType = var_->sType,
+			.isConstant = isConstant
+		});
 	return value_;
 }
 
