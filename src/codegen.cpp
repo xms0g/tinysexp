@@ -1,6 +1,5 @@
 #include "codegen.hpp"
 #include <format>
-#include "runtimeFuncs.hpp"
 
 #define emitHex(n) std::format("0x{:X}", n)
 #define emitLabel(label) mGeneratedCode += std::format("{}:\n", label)
@@ -63,6 +62,7 @@ CodeGen::CodeGen()
 
 std::string CodeGen::emit(const ExprPtr& ast) {
 	mGeneratedCode =
+			"extern _lrt_print_int\n"
 			"section .text\n"
 #if defined(__APPLE__) || defined(__MACH__)
 			"\tglobal _main\n"
@@ -73,7 +73,8 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 #else
 	throw std::runtime_error("Unsupported Operating System");
 #endif
-
+	push("rbp")
+	mov("rbp", "rsp");
 
 	auto next = ast;
 	while (next != nullptr) {
@@ -83,6 +84,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 	}
 
 	emitInstr2op("xor", "rax", "rax");
+	pop("rbp")
 	ret();
 
 	// Function definitions
@@ -90,9 +92,6 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 		(this->*func)(defun);
 	}
 
-	for (const auto& [name, content]: mRuntimeFunctions) {
-		mGeneratedCode += content;
-	}
 	// Sections
 	for (const auto& [section, data]: mSections) {
 		mGeneratedCode += section;
@@ -377,16 +376,12 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 }
 
 void CodeGen::emitPrint(const PrintExpr& print) {
-	ExprPtr name = std::make_shared<StringExpr>("print_int");
+	ExprPtr name = std::make_shared<StringExpr>("_lrt_print_int");
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
 
 	const FuncCallExpr printFunc(funcName, {print.arg});
 	emitFuncCall(printFunc);
-
-	if (!mRuntimeFunctions.contains("print_int")) {
-		mRuntimeFunctions["print_int"] = PRINT_FUNC;
-	}
 }
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {

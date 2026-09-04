@@ -8,7 +8,8 @@ void StackAllocator::dealloc(const uint32_t size) {
 	mStackOffset -= size;
 }
 
-int32_t StackAllocator::pushStackFrame(const std::string_view funcName, const std::string_view varName, const SymbolType stype) {
+int32_t StackAllocator::pushStackFrame(const std::string_view funcName, const std::string_view varName,
+                                       const SymbolType stype) {
 	StackFrame* sf = nullptr;
 
 	if (const auto it = mStack.find(funcName); it != mStack.end()) {
@@ -32,8 +33,9 @@ int32_t StackAllocator::pushStackFrame(const std::string_view funcName, const st
 }
 
 uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& args) const {
-	int32_t sseCount = 0;
-	int32_t stackParamCount = 0;
+	int32_t sseRegCount{0};
+	int32_t intRegCount{0};
+	int32_t stackParamCount{0};
 
 	for (const auto& arg: args) {
 		const auto param = cast::toVar(arg);
@@ -41,23 +43,25 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 		if (!param)
 			continue;
 
-		sseCount += param->vType == VarType::double_;
-	}
-
-	if (args.size() > 6) {
-		if (args.size() == sseCount) {
-			stackParamCount = static_cast<int32_t>(args.size()) - 8;
-		} else {
-			stackParamCount = static_cast<int32_t>(args.size()) - 6 - sseCount;
+		if (param->vType == VarType::double_) {
+			if (sseRegCount < 8)
+				++sseRegCount;
+			else
+				++stackParamCount;
+		} else if (param->vType == VarType::int_) {
+			if (intRegCount < 6)
+				++intRegCount;
+			else
+				++stackParamCount;
 		}
 	}
 
-	uint32_t alignedSize = mStackOffset + (stackParamCount > 0 ? stackParamCount * 8 : 0);
+	uint32_t alignedSize = stackParamCount * 8;
 
 	if (alignedSize % 16 != 0)
 		alignedSize += 8;
 
-	return alignedSize - mStackOffset;
+	return alignedSize;
 }
 
 int StackAllocator::updateStackFrame(StackFrame* sf, const std::string_view varName, const SymbolType stype) {

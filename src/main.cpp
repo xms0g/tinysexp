@@ -37,7 +37,8 @@ static void compile(const std::string_view fn, const std::string_view src, const
     	asmFile.close();
 
     	std::system(std::format("nasm -f macho64 {} -o {}.o", outFnStr, outFnStr).c_str());
-    	std::system(std::format("clang {}.o -o {}_exec", outFnStr, outFn).c_str());
+    	std::system(std::format("clang -c lrt.c -o lrt.o").c_str());
+    	std::system(std::format("clang {}.o lrt.o -o {}_exec", outFnStr, outFn).c_str());
     } catch (IllegalCharError& e) {
         std::cerr << ERROR_COLOR << e.what();
     } catch (InvalidSyntaxError& e) {
