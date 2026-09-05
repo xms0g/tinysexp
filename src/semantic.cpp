@@ -293,21 +293,22 @@ void SemanticAnalyzer::printResolve(const ExprPtr& print) {
 	const auto print_ = cast::toPrint(print);
 
 	if (cast::toInt(print_->arg)) {
-		ExprPtr name = std::make_shared<StringExpr>("print_int_var");
+		ExprPtr name = std::make_shared<StringExpr>("");
 		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
 
 		const auto arg = cast::toVar(print_->arg);
 		arg->vType = VarType::int_;
 		arg->sType = SymbolType::param;
 	} else if (cast::toDouble(print_->arg)) {
-		ExprPtr name = std::make_shared<StringExpr>("print_double_var");
+		ExprPtr name = std::make_shared<StringExpr>("");
 		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
 
 		const auto arg = cast::toVar(print_->arg);
 		arg->vType = VarType::double_;
 		arg->sType = SymbolType::param;
 	} else if (cast::toString(print_->arg)) {
-		ExprPtr name = std::make_shared<StringExpr>("print_string_var");
+		static uint32_t strIdx{0};
+		ExprPtr name = std::make_shared<StringExpr>(".str." + std::to_string(strIdx++));
 		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
 
 		const auto arg = cast::toVar(print_->arg);

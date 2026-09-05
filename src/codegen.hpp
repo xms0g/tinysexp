@@ -142,7 +142,7 @@ private:
     RegisterSize getMemSize(const ExprPtr& var);
 
 	template <typename T>
-    void pushParamToRegister(RegisterID rid, VarType type, const T& value);
+    void pushParamToRegister(RegisterID rid, VarType vtype, const T& value);
 
     void pushParamOntoStack(std::string_view funcName, const VarExpr& param, int32_t& stackIdx);
 

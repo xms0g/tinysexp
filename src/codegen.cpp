@@ -29,7 +29,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 		next = next->child;
 	}
 
-	emitInstr2op("xor", "rax", "rax");
+	emitInstr2op("xor", "eax", "eax");
 	pop("rbp")
 	ret();
 
@@ -395,26 +395,55 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			} else {
 				const std::string_view paramName = cast::toString(param->name)->data;
 
-				if (param->vType == VarType::int_) {
-					if (param->sType == SymbolType::param) {
-						pushParamToRegister(mParamRegisters[scratchIdx++], param->vType, cast::toInt(param->value)->n);
-					} else {
-						pushParamToRegister(mParamRegisters[scratchIdx++], param->vType,
-						                    getAddr(paramName, param->vType, param->sType,
-						                            RegisterSize::reg64).c_str());
+				switch (param->vType) {
+					case VarType::int_: {
+						if (param->sType == SymbolType::param) {
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								cast::toInt(param->value)->n);
+						} else {
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								getAddr(paramName, param->vType, param->sType, RegisterSize::reg64).c_str());
+						}
+						break;
 					}
-				} else if (param->vType == VarType::double_) {
-					if (param->sType == SymbolType::param) {
-						pushParamToRegister(mParamRegistersSSE[sseIdx++], param->vType,
-						                    cast::toDouble(param->value)->n);
-					} else {
-						pushParamToRegister(mParamRegistersSSE[sseIdx++], param->vType,
-						                    getAddr(paramName, param->vType, param->sType,
-						                            RegisterSize::reg64).c_str());
+					case VarType::double_: {
+						if (param->sType == SymbolType::param) {
+							pushParamToRegister(
+								mParamRegistersSSE[sseIdx++],
+								param->vType,
+								cast::toDouble(param->value)->n);
+						} else {
+							pushParamToRegister(
+								mParamRegistersSSE[sseIdx++],
+								param->vType,
+								getAddr(paramName, param->vType, param->sType, RegisterSize::reg64).c_str());
+						}
+						break;
 					}
-				} else if (param->vType == VarType::string) {
-					pushParamToRegister(mParamRegisters[scratchIdx++], param->vType,
-					                    getAddr(paramName, param->vType, param->sType, RegisterSize::reg64).c_str());
+					case VarType::string: {
+						if (param->sType == SymbolType::param) {
+							emitSection(param);
+
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								getAddr(paramName, param->vType, SymbolType::global, RegisterSize::reg64).c_str());
+						} else {
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								getAddr(paramName, param->vType, param->sType, RegisterSize::reg64).c_str());
+						}
+						break;
+					}
+					case VarType::nil:
+					case VarType::t:
+					case VarType::unknown:
+						break;
 				}
 			}
 		} else if (const auto binop = cast::toBinop(arg)) {
