@@ -1,7 +1,7 @@
 #pragma once
 
 template<typename T>
-void CodeGen::pushParamToRegister(const RegisterID rid, const VarType vtype, const T& value) {
+void CodeGen::pushParamToRegister(const RegisterID rid, const VarType vtype, const InitType itype, const T& value) {
 	const Register* reg = mRegisterAllocator.regFromID(rid);
 	auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
 
@@ -22,7 +22,16 @@ void CodeGen::pushParamToRegister(const RegisterID rid, const VarType vtype, con
 			movsd(regStr, value);
 		} else {
 			if (vtype == VarType::string) {
-				lea(regStr, value);
+				switch (itype) {
+					case InitType::constant:
+						lea(regStr, value);
+						break;
+					case InitType::runtime:
+						mov(regStr, value);
+						break;
+					case InitType::unknown:
+						break;
+				}
 			} else {
 				mov(regStr, value);
 			}

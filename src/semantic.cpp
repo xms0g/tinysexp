@@ -314,8 +314,14 @@ void SemanticAnalyzer::printResolve(const ExprPtr& print) {
 		const auto arg = cast::toVar(print_->arg);
 		arg->vType = VarType::string;
 		arg->sType = SymbolType::param;
+		arg->iType = InitType::constant;
 	} else {
 		ExprPtr expr = exprResolve(print_->arg);
+
+		if (const auto arg = cast::toVar(print_->arg)) {
+			arg->iType = InitType::runtime;
+		}
+
 		print_->returnType = std::move(expr);
 	}
 }

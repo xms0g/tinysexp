@@ -19,6 +19,12 @@ enum class VarType {
 	t
 };
 
+enum class InitType {
+	unknown,
+	constant,
+	runtime
+};
+
 struct IExpr {
 	std::shared_ptr<IExpr> child;
 
@@ -105,27 +111,31 @@ struct LetExpr final : IExpr {
 	}
 };
 
-struct SetqExpr final : IExpr {
+struct PairExpr {
 	ExprPtr pair;
 
-	explicit SetqExpr(ExprPtr pair_)
+	PairExpr() = default;
+
+	explicit PairExpr(ExprPtr pair_)
 		: pair(std::move(pair_)) {
 	}
 };
 
-struct DefvarExpr final : IExpr {
-	ExprPtr pair;
-
-	explicit DefvarExpr(ExprPtr pair_)
-		: pair(std::move(pair_)) {
+struct SetqExpr final : PairExpr, IExpr {
+	explicit SetqExpr(ExprPtr pair)
+		: PairExpr(std::move(pair)) {
 	}
 };
 
-struct DefconstExpr final : IExpr {
-	ExprPtr pair;
+struct DefvarExpr final : PairExpr, IExpr {
+	explicit DefvarExpr(ExprPtr pair)
+		: PairExpr(std::move(pair)) {
+	}
+};
 
-	explicit DefconstExpr(ExprPtr pair_)
-		: pair(std::move(pair_)) {
+struct DefconstExpr final : PairExpr, IExpr {
+	explicit DefconstExpr(ExprPtr pair)
+		: PairExpr(std::move(pair)) {
 	}
 };
 
@@ -202,6 +212,7 @@ struct VarExpr final : IExpr {
 	ExprPtr value;
 	SymbolType sType;
 	VarType vType{};
+	InitType iType{};
 
 	VarExpr(ExprPtr name_, ExprPtr value_, const SymbolType type = SymbolType::unknown)
 		: name(std::move(name_)),

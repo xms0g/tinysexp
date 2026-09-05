@@ -20,6 +20,7 @@
 #define movsd(d, s) emitInstr2op("movsd", d, s)
 #define movzx(d, s) emitInstr2op("movzx", d, s)
 #define strDirective(s) std::format("db \"{}\", 10, 0", s)
+#define alignDirective(a) std::format("align {}", a)
 #define memDirective(d, n) std::format("{} {}", d, n)
 
 #define stackAlloc(size) \
@@ -142,7 +143,7 @@ private:
     RegisterSize getMemSize(const ExprPtr& var);
 
 	template <typename T>
-    void pushParamToRegister(RegisterID rid, VarType vtype, const T& value);
+    void pushParamToRegister(RegisterID rid, VarType vtype, InitType itype, const T& value);
 
     void pushParamOntoStack(std::string_view funcName, const VarExpr& param, int32_t& stackIdx);
 
