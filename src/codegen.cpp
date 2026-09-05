@@ -310,10 +310,13 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 			continue;
 		}
 
-		mov(getAddr(paramName, param->vType, param->sType, RegisterSize::reg64),
-		    mRegisterAllocator.nameFromID(param->vType == VarType::int_
-			    ? mParamRegisters[scratchIdx++]
-			    : mParamRegistersSSE[sseIdx++], RegisterSize::reg64));
+		if (param->vType == VarType::double_) {
+			movsd(getAddr(paramName, param->vType, param->sType, RegisterSize::reg64),
+			      mRegisterAllocator.nameFromID(mParamRegistersSSE[sseIdx++], RegisterSize::reg64));
+		} else {
+			mov(getAddr(paramName, param->vType, param->sType, RegisterSize::reg64),
+			    mRegisterAllocator.nameFromID(mParamRegisters[scratchIdx++], RegisterSize::reg64));
+		}
 	}
 
 	Register* reg = nullptr;
