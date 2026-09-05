@@ -321,18 +321,22 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 }
 
 void CodeGen::emitPrint(const PrintExpr& print) {
-	ExprPtr funcName;
+	ExprPtr name;
 
 	if (const auto var = cast::toVar(print.arg); var && var->vType == VarType::int_) {
-		ExprPtr name = std::make_shared<StringExpr>("_lrt_print_int");
-		ExprPtr value = std::make_shared<Uninitialized>();
-		funcName = std::make_shared<VarExpr>(name, value);
+		name = std::make_shared<StringExpr>("_lrt_print_int");
 	} else if (var && var->vType == VarType::double_) {
-		ExprPtr name = std::make_shared<StringExpr>("_lrt_print_double");
-		ExprPtr value = std::make_shared<Uninitialized>();
-		funcName = std::make_shared<VarExpr>(name, value);
+		name = std::make_shared<StringExpr>("_lrt_print_double");
+	} else if (const auto func = cast::toFuncCall(print.arg)) {
+		if (cast::toInt(func->returnType)) {
+			name = std::make_shared<StringExpr>("_lrt_print_int");
+		} else if (cast::toDouble(func->returnType)) {
+			name = std::make_shared<StringExpr>("_lrt_print_double");
+		}
 	}
 
+	ExprPtr value = std::make_shared<Uninitialized>();
+	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
 	const FuncCallExpr printFunc(funcName, {print.arg});
 	emitFuncCall(printFunc);
 }
@@ -378,13 +382,13 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 				const std::string_view paramName = cast::toString(param->name)->data;
 
 				if (param->vType == VarType::int_) {
-					if (param->sType == SymbolType::unknown) {
+					if (param->sType == SymbolType::param) {
 						pushParamToRegister(mParamRegisters[scratchIdx++], cast::toInt(param->value)->n);
 					} else {
 						pushParamToRegister(mParamRegisters[scratchIdx++], getAddr(paramName, param->sType, RegisterSize::reg64).c_str());
 					}
 				} else if (param->vType == VarType::double_) {
-					if (param->sType == SymbolType::unknown) {
+					if (param->sType == SymbolType::param) {
 						pushParamToRegister(mParamRegistersSSE[sseIdx++], cast::toDouble(param->value)->n);
 					} else {
 						pushParamToRegister(mParamRegistersSSE[sseIdx++], getAddr(paramName, param->sType, RegisterSize::reg64).c_str());
@@ -394,13 +398,13 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 		} else if (const auto binop = cast::toBinop(arg)) {
 			reg = emitBinop(*binop);
 			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 			regFree(reg)
 		} else if (const auto fc = cast::toFuncCall(arg)) {
 			reg = emitFuncCall(*fc);
 
 			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64));
+			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 			regFree(reg)
 		}
 	}
