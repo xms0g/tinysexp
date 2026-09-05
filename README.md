@@ -38,7 +38,7 @@ OPTIONS:
 (defun add (a b)
   (+ a b))
 
-(add 1 2)
+(print (add 1 2))
 ```
 **Output**
 ```asm
