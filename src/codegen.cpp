@@ -338,7 +338,8 @@ void CodeGen::emitPrint(const PrintExpr& print) {
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
 	const FuncCallExpr printFunc(funcName, {print.arg});
-	emitFuncCall(printFunc);
+	Register* reg = emitFuncCall(printFunc);
+	regFree(reg)
 }
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
