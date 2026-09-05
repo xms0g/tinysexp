@@ -14,11 +14,12 @@
 #define ret() mGeneratedCode += "\tret\n"
 #define cqo() mGeneratedCode += "\tcqo\n"
 #define syscall() mGeneratedCode += "\tsyscall\n"
+#define lea(d, s) emitInstr2op("lea", d, s)
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movq(d, s) emitInstr2op("movq", d, s)
 #define movsd(d, s) emitInstr2op("movsd", d, s)
 #define movzx(d, s) emitInstr2op("movzx", d, s)
-#define strDirective(s) std::format("db \"{}\", 10", s)
+#define strDirective(s) std::format("db \"{}\", 10, 0", s)
 #define memDirective(d, n) std::format("{} {}", d, n)
 
 #define stackAlloc(size) \
@@ -134,14 +135,14 @@ private:
 
     Register* emitLoadRegFromMem(const VarExpr& var, RegisterSize size);
 
-    void emitStoreMemFromReg(std::string_view varName, SymbolType stype, const Register* reg, RegisterSize size);
+    void emitStoreMemFromReg(std::string_view varName, VarType vtype, SymbolType stype, const Register* reg, RegisterSize size);
 
-    std::string getAddr(std::string_view varName, SymbolType stype, RegisterSize size);
+    std::string getAddr(std::string_view varName, VarType vtype, SymbolType stype, RegisterSize size);
 
     RegisterSize getMemSize(const ExprPtr& var);
 
 	template <typename T>
-    void pushParamToRegister(RegisterID rid, const T& value);
+    void pushParamToRegister(RegisterID rid, VarType type, const T& value);
 
     void pushParamOntoStack(std::string_view funcName, const VarExpr& param, int32_t& stackIdx);
 
