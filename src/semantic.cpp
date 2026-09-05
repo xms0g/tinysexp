@@ -295,22 +295,31 @@ void SemanticAnalyzer::printResolve(const ExprPtr& print) {
 	if (cast::toInt(print_->arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("print_int_var");
 		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
-		cast::toVar(print_->arg)->vType = VarType::int_;
+
+		const auto arg = cast::toVar(print_->arg);
+		arg->vType = VarType::int_;
+		arg->sType = SymbolType::param;
 	} else if (cast::toDouble(print_->arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("print_double_var");
 		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
-		cast::toVar(print_->arg)->vType = VarType::double_;
+
+		const auto arg = cast::toVar(print_->arg);
+		arg->vType = VarType::double_;
+		arg->sType = SymbolType::param;
 	} else if (cast::toString(print_->arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("print_string_var");
 		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
-		cast::toVar(print_->arg)->vType = VarType::string;
+
+		const auto arg = cast::toVar(print_->arg);
+		arg->vType = VarType::string;
+		arg->sType = SymbolType::param;
 	} else {
 		ExprPtr expr = exprResolve(print_->arg);
 		print_->returnType = std::move(expr);
 	}
 }
 
-ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) {
+ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isParam) {
 	const auto var = cast::toVar(funcCall.name);
 	const std::string_view funcName = cast::toString(var->name)->data;
 
@@ -333,11 +342,13 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
 
 	// Match the param names to values
 	if (!funcCall.args.empty()) {
-		const auto fcarg = funcCall.args[0];
-		const auto fcargVar = cast::toVar(fcarg);
+		const auto fcArg = funcCall.args[0];
+		const auto fcArgVar = cast::toVar(fcArg);
 
-		if ((fcargVar && cast::toUninitialized(fcargVar->value)) || isPrimitive(fcarg) || cast::toBinop(fcarg) ||
-		    cast::toFuncCall(fcarg)) {
+		if ((fcArgVar && cast::toUninitialized(fcArgVar->value)) ||
+			isPrimitive(fcArg) ||
+			cast::toBinop(fcArg) ||
+			cast::toFuncCall(fcArg)) {
 			for (size_t i = 0; i < func->args.size(); ++i) {
 				const auto fArg = cast::toVar(func->args[i]);
 
@@ -397,25 +408,27 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, bool isParam) 
 			} while (innerVar);
 		}
 	}
-	// Make the arg type local because we'll keep them onto stack inside the function
-	int32_t scratchIdx{0};
-	int32_t sseIdx{0};
-	auto makeLocal = [&](VarExpr& arg) {
-		// The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
-		if (arg.vType == VarType::int_ && scratchIdx < 6) {
-			arg.sType = SymbolType::local;
-			scratchIdx++;
-		} else if (arg.vType == VarType::double_ && sseIdx < 8) {
-			arg.sType = SymbolType::local;
-			sseIdx++;
-		}
-	};
 
 	if (mTfCtx.isStarted) {
+		// Make the arg type local because we'll keep them onto stack inside the function
+		int32_t scratchIdx{0};
+		int32_t sseIdx{0};
+		auto makeLocal = [&](VarExpr& arg) {
+			// The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
+			if (arg.vType == VarType::int_ && scratchIdx < 6) {
+				arg.sType = SymbolType::local;
+				scratchIdx++;
+			} else if (arg.vType == VarType::double_ && sseIdx < 8) {
+				arg.sType = SymbolType::local;
+				sseIdx++;
+			}
+		};
+
 		for (size_t i = 0; i < funcCall.args.size(); ++i) {
-			auto arg = cast::toVar(funcCall.args[i]);
+			auto arg = cast::toVar(func->args[i]);
+			arg->value = cast::toVar(funcCall.args[i])->value;
+			setType(*arg, arg->value);
 			makeLocal(*arg);
-			func->args[i] = funcCall.args[i];
 		}
 		// Find the proper type of variables and the return type of the function
 		if (const auto currentScope = mSymbolTracker.scopeName(); currentScope != funcName) {
