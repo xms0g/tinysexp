@@ -35,10 +35,8 @@ OPTIONS:
 ## Example
 **Input**
 ```lisp
-(defun add (a b)
-  (+ a b))
-
-(add 1 2)
+(defun add (a b) (+ a b))
+(print (add 1 2))
 ```
 **Output**
 ```asm
