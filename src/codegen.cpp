@@ -336,8 +336,13 @@ void CodeGen::emitPrint(const PrintExpr& print) {
 		} else if (cast::toDouble(func->returnType)) {
 			name = std::make_shared<StringExpr>("_lrt_print_double");
 		}
+	} else if (const auto binop = cast::toBinop(print.arg)) {
+		if (cast::toDouble(binop->lhs) || cast::toDouble(binop->rhs)) {
+			name = std::make_shared<StringExpr>("_lrt_print_double");
+		} else {
+			name = std::make_shared<StringExpr>("_lrt_print_int");
+		}
 	}
-	//TODO:: if print arg is binop
 
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
@@ -372,7 +377,8 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 					                    ? mParamRegisters[scratchIdx++]
 					                    : mParamRegistersSSE[sseIdx++],
 				                    innerVar->vType,
-				                    getAddr(innerVarName,innerVar->vType, innerVar->sType, RegisterSize::reg64).c_str());
+				                    getAddr(innerVarName, innerVar->vType, innerVar->sType,
+				                            RegisterSize::reg64).c_str());
 			} else if (const auto binop = cast::toBinop(param->value)) {
 				reg = emitBinop(*binop);
 				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
@@ -394,7 +400,8 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 						pushParamToRegister(mParamRegisters[scratchIdx++], param->vType, cast::toInt(param->value)->n);
 					} else {
 						pushParamToRegister(mParamRegisters[scratchIdx++], param->vType,
-						                    getAddr(paramName,param->vType, param->sType, RegisterSize::reg64).c_str());
+						                    getAddr(paramName, param->vType, param->sType,
+						                            RegisterSize::reg64).c_str());
 					}
 				} else if (param->vType == VarType::double_) {
 					if (param->sType == SymbolType::param) {
@@ -402,7 +409,8 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 						                    cast::toDouble(param->value)->n);
 					} else {
 						pushParamToRegister(mParamRegistersSSE[sseIdx++], param->vType,
-						                    getAddr(paramName,param->vType, param->sType, RegisterSize::reg64).c_str());
+						                    getAddr(paramName, param->vType, param->sType,
+						                            RegisterSize::reg64).c_str());
 					}
 				} else if (param->vType == VarType::string) {
 					pushParamToRegister(mParamRegisters[scratchIdx++], param->vType,
