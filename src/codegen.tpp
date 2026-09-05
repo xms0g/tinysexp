@@ -2,8 +2,7 @@
 
 template<typename T>
 void CodeGen::pushParamToRegister(const RegisterID rid, const VarType vtype, const InitType itype, const T& value) {
-	const Register* reg = mRegisterAllocator.regFromID(rid);
-	auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
+	auto regStr = mRegisterAllocator.nameFromID(rid, RegisterSize::reg64);
 
 	if constexpr (std::is_same_v<T, int>) {
 		mov(regStr, value);

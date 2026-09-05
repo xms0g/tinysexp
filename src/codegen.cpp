@@ -399,18 +399,18 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 				                    innerVar->iType,
 				                    getAddr(innerVarName, innerVar->vType, innerVar->sType,
 				                            RegisterSize::reg64).c_str());
-			} else if (const auto binop = cast::toBinop(param->value)) {
+			} else if (const auto binop = cast::toBinop(param->value); binop && param->sType == SymbolType::param) {
 				reg = emitBinop(*binop);
 				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-				                    VarType::unknown,
+				                    reg->isSSE() ? VarType::double_ : VarType::int_,
 				                    InitType::unknown,
 				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 				regFree(reg)
-			} else if (const auto fc = cast::toFuncCall(param->value)) {
+			} else if (const auto fc = cast::toFuncCall(param->value); fc && param->sType == SymbolType::param) {
 				reg = emitFuncCall(*fc);
 
 				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-				                    VarType::unknown,
+				                    reg->isSSE() ? VarType::double_ : VarType::int_,
 				                    InitType::unknown,
 				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 				regFree(reg)
@@ -477,7 +477,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 		} else if (const auto binop = cast::toBinop(arg)) {
 			reg = emitBinop(*binop);
 			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-			                    VarType::unknown,
+			                    reg->isSSE() ? VarType::double_ : VarType::int_,
 			                    InitType::unknown,
 			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 			regFree(reg)
@@ -485,7 +485,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 			reg = emitFuncCall(*fc);
 
 			pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-			                    VarType::unknown,
+			                    reg->isSSE() ? VarType::double_ : VarType::int_,
 			                    InitType::unknown,
 			                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 			regFree(reg)
