@@ -42,22 +42,24 @@ OPTIONS:
 ```
 **Output**
 ```asm
-[bits 64]
+extern _lrt_print_int
+extern _lrt_print_double
+extern _lrt_print_str
 section .text
-    global _start
-_start:
+    global _main
+_main:
     push rbp
     mov rbp, rsp
-    sub rsp, 8
     mov rdi, 1
     mov rsi, 2
     call add
     mov r10, rax
-    add rsp, 8
+    mov rdi, r10
+    call _lrt_print_int
+    mov r10, rax
+    xor rax, rax
     pop rbp
-    mov rax, 0x2000001
-    xor rdi, rdi
-    syscall
+    ret
 
 add:
     push rbp
