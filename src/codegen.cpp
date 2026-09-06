@@ -1086,8 +1086,7 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const RegisterSize siz
 				      getAddr(varName, var.vType, var.sType, size));
 			} else if (cast::toString(var.value)) {
 				reg = regAlloc();
-				emitInstr2op("lea", mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
-				             getAddr(varName, var.vType, var.sType, size));
+				lea(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var.vType, var.sType, size));
 			} else if (cast::toNIL(var.value) || cast::toT(var.value)) {
 				reg = regAlloc();
 				movzx(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
