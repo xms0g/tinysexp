@@ -1,13 +1,19 @@
+extern _lrt_print_int
+extern _lrt_print_double
+extern _lrt_print_str
 section .text
 	global _main
 _main:
+	push rbp
+	mov rbp, rsp
 	mov rdi, 10
 	call average
 	mov r10, rax
 	mov rdi, r10
-	call print_int
+	call _lrt_print_int
 	mov r10, rax
-	xor rax, rax
+	xor eax, eax
+	pop rbp
 	ret
 
 average:
@@ -20,63 +26,30 @@ average:
 	sub rsp, 8
 	mov qword [rbp - 24], 0
 .L0:
-	mov r11, qword [rbp - 24]
-	mov rdi, qword [rbp - 8]
-	cmp r11, rdi
+	mov r10, qword [rbp - 24]
+	mov r11, qword [rbp - 8]
+	cmp r10, r11
 	jge .L1
-	mov r11, qword [rbp - 16]
-	mov rdi, qword [rbp - 24]
-	add r11, rdi
-	mov qword [rbp - 16], r11
+	mov r10, qword [rbp - 16]
 	mov r11, qword [rbp - 24]
-	add r11, 1
-	mov qword [rbp - 24], r11
+	add r10, r11
+	mov qword [rbp - 16], r10
+	mov r10, qword [rbp - 24]
+	add r10, 1
+	mov qword [rbp - 24], r10
 	jmp .L0
 .L1:
 	add rsp, 8
-	mov r11, qword [rbp - 16]
-	mov rdi, qword [rbp - 8]
-	mov rax, r11
+	mov r10, qword [rbp - 16]
+	mov r11, qword [rbp - 8]
+	mov rdi, 1
+	sub r11, rdi
+	mov rax, r10
 	cqo
-	idiv rdi
-	mov r11, rax
+	idiv r11
+	mov r10, rax
 	add rsp, 8
-	mov rax, r11
+	mov rax, r10
 	add rsp, 8
 	pop rbp
-	ret
-
-print_int:
-	push rbp
-	mov rbp, rsp
-	sub rsp, 64
-	mov rax, rdi
-	mov [rbp - 64], rdi
-	lea rsi, [rbp - 1]
-	mov byte [rsi], 10
-	mov rcx, 1
-	test rax, rax
-	jne .convert
-	dec rsi
-	mov byte [rsi], '0'
-	inc rcx
-	jmp .write
-.convert:
-	mov r8, 10
-.loop:
-	xor rdx, rdx
-	div r8
-	add dl, '0'
-	dec rsi
-	mov [rsi], dl
-	inc rcx
-	test rax, rax
-	jne .loop
-.write:
-	mov rax, 0x2000004
-	mov rdi, 1
-	mov rdx, rcx
-	syscall
-	mov rax, [rbp - 64]
-	leave
 	ret
