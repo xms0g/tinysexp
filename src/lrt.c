@@ -6,7 +6,7 @@ typedef uint64_t lisp_int;
 typedef double lisp_double;
 typedef const char* lisp_str;
 
-lisp_int lrt_print_int(lisp_int value) {
+lisp_int lrt_print_int(const lisp_int value) {
 	printf("%" PRIu64 "\n", (unsigned long long) value);
 	return value;
 }
