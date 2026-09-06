@@ -1,6 +1,6 @@
 ![banner](banner.jpg)
 # tinysexp
-`tinysexp` is a minimalist Lisp compiler that targets the x86-64 architecture. It takes Lisp source code written in a simple s-expression syntax and compiles it down to NASM-compatible x86 assembly code.
+`tinysexp` is a minimalist Lisp compiler that targets the x86-64 architecture. It takes Lisp source code written in a simple s-expression syntax and compiles it down to NASM-compatible x86 assembly code following the System V ABI.
 
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20MacOS-blue)
 ![License](https://img.shields.io/badge/license-GPL--3-green)
