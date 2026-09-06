@@ -19,6 +19,8 @@ A subset of Lisp, including:
 `defun`
 ### Variables
 `let`,`setq`,`defvar`,`defconstant`
+### Built-in Functions
+`print`
 
 ## Usage
 ```
