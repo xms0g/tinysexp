@@ -10,7 +10,7 @@ _main:
 	call _lrt_print_str
 	mov r10, rax
 	xor eax, eax
-	pop rbp
+	leave
 	ret
 
 section .rodata

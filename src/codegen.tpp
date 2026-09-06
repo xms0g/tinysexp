@@ -15,7 +15,7 @@ void CodeGen::pushParamToRegister(const RegisterID rid, const VarType vtype, con
 
 		mov(regScrStr, emitHex(hex));
 		movq(regStr, regScrStr);
-		regFree(regScr)
+		regFree(regScr);
 	} else if constexpr (std::is_same_v<T, const char*>) {
 		if (vtype == VarType::double_) {
 			movsd(regStr, value);

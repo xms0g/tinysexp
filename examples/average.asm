@@ -13,7 +13,7 @@ _main:
 	call _lrt_print_int
 	mov r10, rax
 	xor eax, eax
-	pop rbp
+	leave
 	ret
 
 average:
@@ -51,5 +51,5 @@ average:
 	add rsp, 8
 	mov rax, r10
 	add rsp, 8
-	pop rbp
+	leave
 	ret

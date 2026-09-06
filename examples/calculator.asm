@@ -37,7 +37,7 @@ _main:
 	call _lrt_print_int
 	mov rsi, rax
 	xor rax, rax
-	pop rbp
+	leave
 	ret
 
 calculator:
@@ -89,5 +89,5 @@ calculator:
 .L0:
 	mov rax, rdx
 	add rsp, 24
-	pop rbp
+	leave
 	ret

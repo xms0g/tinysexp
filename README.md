@@ -60,7 +60,7 @@ _main:
     call _lrt_print_int
     mov r10, rax
     xor rax, rax
-    pop rbp
+    leave
     ret
 
 add:
@@ -74,7 +74,7 @@ add:
     add r10, r11
     mov rax, r10
     add rsp, 16
-    pop rbp
+    leave
     ret
 ```
 ## License
