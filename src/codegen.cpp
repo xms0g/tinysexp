@@ -1148,11 +1148,11 @@ RegisterSize CodeGen::getMemSize(const ExprPtr& var) {
 	auto var_ = cast::toVar(var);
 
 	do {
-		if (cast::toNIL(var_->value) || cast::toT(var_->value)) {
+		if (var_->vType == VarType::nil || var_->vType == VarType::t) {
 			return RegisterSize::reg8l;
 		}
 
-		if (cast::toInt(var_->value) || cast::toDouble(var_->value)) {
+		if (var_->vType == VarType::int_ || var_->vType == VarType::double_) {
 			return RegisterSize::reg64;
 		}
 

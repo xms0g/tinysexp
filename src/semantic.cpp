@@ -376,8 +376,8 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 			auto value = binopResolve(*binop);
 			setType(*argVar, value);
 		} else if (auto fc = cast::toFuncCall(argVar->value)) {
-			auto value = funcCallResolve(*fc, true);
-			setType(*argVar, value);
+			auto rt = funcCallResolve(*fc, true);
+			setType(*argVar, rt);
 		} else if (auto innerVar = cast::toVar(argVar->value)) {
 			bool found{false};
 
@@ -433,8 +433,9 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 
 		for (size_t i = 0; i < funcCall.args.size(); ++i) {
 			auto arg = cast::toVar(func->args[i]);
-			arg->value = cast::toVar(funcCall.args[i])->value;
-			setType(*arg, arg->value);
+			const auto fcArg = cast::toVar(funcCall.args[i]);
+			arg->value = fcArg->value;
+			arg->vType = fcArg->vType;
 			makeLocal(*arg);
 		}
 		// Find the proper type of variables and the return type of the function
