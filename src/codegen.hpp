@@ -118,7 +118,7 @@ private:
 
 	Register* emitCmpZero(const ExprPtr& node);
 
-	Register* handleAssignment(const ExprPtr& var, RegisterSize size);
+	Register* emitAssignment(const ExprPtr& var, RegisterSize size);
 
 	Register* handleVariable(const VarExpr& var, RegisterSize size);
 

@@ -156,7 +156,7 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	mov(iterVarAddr, 0);
 	// Loop label
 	emitLabel(loopLabel);
-	emitTest(test, std::string(), doneLabel);
+	emitTest(test, "", doneLabel);
 	// Emit statements
 	Register* reg = nullptr;
 	for (const auto& statement: dotimes.statements) {
@@ -231,9 +231,13 @@ Register* CodeGen::emitLet(const LetExpr& let) {
 
 	for (const auto& binding: let.bindings) {
 		const RegisterSize memSize = getMemSize(binding);
-		const auto var = cast::toVar(binding);
-		const std::string_view varName = cast::toString(var->name)->data;
-		getAddr(varName, var->vType, var->sType, memSize);
+
+		if (const auto var = cast::toVar(binding); cast::toUninitialized(var->value)) {
+			const std::string_view varName = cast::toString(var->name)->data;
+			getAddr(varName, var->vType, var->sType, memSize);
+		} else {
+			emitAssignment(binding, memSize);
+		}
 	}
 
 	Register* reg = nullptr;
@@ -249,7 +253,7 @@ Register* CodeGen::emitLet(const LetExpr& let) {
 
 Register* CodeGen::emitSetq(const SetqExpr& setq) {
 	const RegisterSize memSize = getMemSize(setq.pair);
-	return handleAssignment(setq.pair, memSize);
+	return emitAssignment(setq.pair, memSize);
 }
 
 void CodeGen::emitDefvar(const DefvarExpr& defvar) {
@@ -447,9 +451,9 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 				reg = emitRead(*read);
 
 				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
-									reg->isSSE() ? VarType::double_ : VarType::int_,
-									InitType::unknown,
-									mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
+				                    reg->isSSE() ? VarType::double_ : VarType::int_,
+				                    InitType::unknown,
+				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 				regFree(reg);
 			} else {
 				const std::string_view paramName = cast::toString(param->name)->data;
@@ -737,7 +741,7 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant) {
 			               .data = memDirective(mDataSizeUninitialized[std::to_underlying(RegisterSize::reg64)], 1)
 		               });
 
-		handleAssignment(var, RegisterSize::reg64);
+		emitAssignment(var, RegisterSize::reg64);
 	} else if (cast::toUninitialized(var_->value)) {
 		updateSections("\nsection .bss\n",
 		               {
@@ -778,7 +782,7 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant) {
 			               .name = cast::toString(var_->name)->data,
 			               .data = memDirective(mDataSizeInitialized[std::to_underlying(memSize)], 0)
 		               });
-		handleAssignment(var, memSize);
+		emitAssignment(var, memSize);
 	} else if (const auto str = cast::toString(var_->value)) {
 		updateSections("\nsection .rodata\n",
 		               {
@@ -1049,7 +1053,7 @@ Register* CodeGen::emitCmpZero(const ExprPtr& node) {
 	return emitExpr(node, zero, {.op = "cmp", .opSSE = "ucomisd"});
 }
 
-Register* CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
+Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size) {
 	const auto var_ = cast::toVar(var);
 	const std::string_view varName = cast::toString(var_->name)->data;
 
