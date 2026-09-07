@@ -23,9 +23,7 @@ public:
     [[nodiscard]]
 	size_t level() const;
 
-    void bind(std::string_view name, const Symbol& symbol);
-
-    void update(std::string_view name, Symbol symbol);
+    void bind(std::string_view name, Symbol symbol);
 
     Symbol lookup(std::string_view name);
 

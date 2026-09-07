@@ -26,39 +26,20 @@ size_t ScopeTracker::level() const {
 	return mSymbolTable.size();
 }
 
-void ScopeTracker::bind(const std::string_view name, const Symbol& symbol) {
-	if (lookup(name).value) {
-		update(name, symbol);
+void ScopeTracker::bind(const std::string_view name, Symbol symbol) {
+	if (auto foundSymbol = lookup(name); foundSymbol.value) {
+		if (!cast::toDefun(foundSymbol.value)) {
+			const auto var = cast::toVar(foundSymbol.value);
+			var->vType = cast::toVar(symbol.value)->vType;
+		} else {
+			foundSymbol = std::move(symbol);
+		}
 	} else {
 		auto currentScope = mSymbolTable.top();
 		mSymbolTable.pop();
 
 		currentScope.emplace(name, symbol);
 		mSymbolTable.push(currentScope);
-	}
-}
-
-void ScopeTracker::update(const std::string_view name, Symbol symbol) {
-	std::stack<ScopeType> scopes;
-
-	while (!mSymbolTable.empty()) {
-		ScopeType scope = mSymbolTable.top();
-		mSymbolTable.pop();
-
-		if (auto it = scope.find(name); it != scope.end()) {
-			it->second = std::move(symbol);
-			scopes.push(scope);
-			break;
-		}
-		// If the symbol is not found, push the scope back to the stack
-		// and continue searching in the next scope
-		scopes.push(scope);
-	}
-
-	// reconstruct the scopes
-	while (!scopes.empty()) {
-		mSymbolTable.push(scopes.top());
-		scopes.pop();
 	}
 }
 
@@ -273,13 +254,25 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 	const auto var = cast::toVar(func->name);
 	const std::string funcName = cast::toString(var->name)->data;
 
-	mSymbolTracker.bind(funcName, {.name = funcName, .value = defun, .sType = SymbolType::global});
+	mSymbolTracker.bind(
+		funcName,
+		{
+			.name = funcName,
+			.value = defun,
+			.sType = SymbolType::global
+		});
 
 	mSymbolTracker.enter(funcName);
 	for (const auto& arg: func->args) {
 		const auto argVar = cast::toVar(arg);
 		const std::string argName = cast::toString(argVar->name)->data;
-		mSymbolTracker.bind(argName, {.name = argName, .value = arg, .sType = argVar->sType});
+		mSymbolTracker.bind(
+			argName,
+			{
+				.name = argName,
+				.value = arg,
+				.sType = argVar->sType
+			});
 	}
 
 	ExprPtr result;
@@ -357,16 +350,16 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		const auto fcArgVar = cast::toVar(fcArg);
 
 		if ((fcArgVar && cast::toUninitialized(fcArgVar->value)) ||
-			isPrimitive(fcArg) ||
-			cast::toBinop(fcArg) ||
-			cast::toFuncCall(fcArg)) {
+		    isPrimitive(fcArg) ||
+		    cast::toBinop(fcArg) ||
+		    cast::toFuncCall(fcArg)) {
 			for (size_t i = 0; i < func->args.size(); ++i) {
 				const auto fArg = cast::toVar(func->args[i]);
 
 				ExprPtr name = fArg->name;
 				ExprPtr value = funcCall.args[i];
 
-				funcCall.args[i] = std::make_shared<VarExpr>(name, value, fArg->sType);
+				funcCall.args[i] = std::make_shared<VarExpr>(name, value, SymbolType::param);
 			}
 		}
 	}
