@@ -12,6 +12,9 @@ _main:
 	lea rdi, [rel str.0]
 	call _lrt_print_str
 	mov r10, rax
+	call _lrt_read_int
+	mov r10, rax
+	mov rdi, r10
 	call AreaOfCircle
 	mov r10, rax
 	xor eax, eax
@@ -21,10 +24,9 @@ _main:
 AreaOfCircle:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 16
-	call _lrt_read_int
-	mov r10, rax
-	mov qword [rbp - 8], r10
+	sub rsp, 8
+	mov qword [rbp - 8], rdi
+	sub rsp, 8
 	mov r10, qword [rbp - 8]
 	mov r11, qword [rbp - 8]
 	imul r10, r11
@@ -37,7 +39,8 @@ AreaOfCircle:
 	movsd xmm0, qword [rbp - 16]
 	call _lrt_print_double
 	movsd xmm1, xmm0
-	add rsp, 16
+	add rsp, 8
+	add rsp, 8
 	leave
 	ret
 
