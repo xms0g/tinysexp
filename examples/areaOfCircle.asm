@@ -16,7 +16,10 @@ _main:
 	mov r10, rax
 	mov rdi, r10
 	call AreaOfCircle
-	mov r10, rax
+	movsd xmm1, xmm0
+	movsd xmm0, xmm1
+	call _lrt_print_double
+	movsd xmm1, xmm0
 	xor eax, eax
 	leave
 	ret
@@ -36,10 +39,8 @@ AreaOfCircle:
 	cvtsi2sd xmm2, r10
 	mulsd xmm1, xmm2
 	movsd qword [rbp - 16], xmm1
-	movsd xmm0, qword [rbp - 16]
-	call _lrt_print_double
-	movsd xmm1, xmm0
 	add rsp, 8
+	movsd xmm0, xmm1
 	add rsp, 8
 	leave
 	ret

@@ -67,7 +67,7 @@ private:
 
 	Register* emitLet(const LetExpr& let);
 
-	void emitSetq(const SetqExpr& setq);
+	Register* emitSetq(const SetqExpr& setq);
 
 	void emitDefvar(const DefvarExpr& defvar);
 
@@ -118,9 +118,9 @@ private:
 
 	Register* emitCmpZero(const ExprPtr& node);
 
-	void handleAssignment(const ExprPtr& var, RegisterSize size);
+	Register* handleAssignment(const ExprPtr& var, RegisterSize size);
 
-	void handleVariable(const VarExpr& var, RegisterSize size);
+	Register* handleVariable(const VarExpr& var, RegisterSize size);
 
 	Register* emitLoadRegFromMem(const VarExpr& var, RegisterSize size);
 

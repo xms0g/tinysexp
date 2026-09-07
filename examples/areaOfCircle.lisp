@@ -3,8 +3,7 @@
 (defun AreaOfCircle(radius)
     (let (area)
         (setq radius (* radius radius))
-        (setq area (* pi radius))
-        (print area)))
+        (setq area (* pi radius))))
 
 (print "Enter radius:")
-(AreaOfCircle (read-integer))
+(print (AreaOfCircle (read-integer)))

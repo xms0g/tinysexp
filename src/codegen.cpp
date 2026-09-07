@@ -67,8 +67,9 @@ Register* CodeGen::emitAST(const ExprPtr& ast) {
 		return emitLet(*let);
 	}
 	if (const auto setq = cast::toSetq(ast)) {
-		emitSetq(*setq);
-	} else if (const auto defvar = cast::toDefvar(ast)) {
+		return emitSetq(*setq);
+	}
+	if (const auto defvar = cast::toDefvar(ast)) {
 		emitDefvar(*defvar);
 	} else if (const auto defconst = cast::toDefconstant(ast)) {
 		emitDefconst(*defconst);
@@ -219,21 +220,23 @@ Register* CodeGen::emitLoop(const LoopExpr& loop) {
 }
 
 Register* CodeGen::emitLet(const LetExpr& let) {
-	Register* reg = nullptr;
 	uint32_t requiredStackMem = 0;
 
-	for (const auto& var: let.bindings) {
-		const int size = mMemorySizeInBytes[std::to_underlying(getMemSize(var))];
+	for (const auto& binding: let.bindings) {
+		const int size = mMemorySizeInBytes[std::to_underlying(getMemSize(binding))];
 		requiredStackMem += size;
 	}
 
 	stackAlloc(requiredStackMem);
 
-	for (const auto& var: let.bindings) {
-		const RegisterSize memSize = getMemSize(var);
-		handleAssignment(var, memSize);
+	for (const auto& binding: let.bindings) {
+		const RegisterSize memSize = getMemSize(binding);
+		const auto var = cast::toVar(binding);
+		const std::string_view varName = cast::toString(var->name)->data;
+		getAddr(varName, var->vType, var->sType, memSize);
 	}
 
+	Register* reg = nullptr;
 	for (const auto& sexpr: let.body) {
 		reg = emitAST(sexpr);
 		regFree(reg);
@@ -244,9 +247,9 @@ Register* CodeGen::emitLet(const LetExpr& let) {
 	return reg;
 }
 
-void CodeGen::emitSetq(const SetqExpr& setq) {
+Register* CodeGen::emitSetq(const SetqExpr& setq) {
 	const RegisterSize memSize = getMemSize(setq.pair);
-	handleAssignment(setq.pair, memSize);
+	return handleAssignment(setq.pair, memSize);
 }
 
 void CodeGen::emitDefvar(const DefvarExpr& defvar) {
@@ -1046,13 +1049,18 @@ Register* CodeGen::emitCmpZero(const ExprPtr& node) {
 	return emitExpr(node, zero, {.op = "cmp", .opSSE = "ucomisd"});
 }
 
-void CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
+Register* CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
 	const auto var_ = cast::toVar(var);
 	const std::string_view varName = cast::toString(var_->name)->data;
 
 	if (const auto int_ = cast::toInt(var_->value)) {
+		Register* reg = regAlloc();
+		auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
 		mov(getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64), int_->n);
-	} else if (const auto double_ = cast::toDouble(var_->value)) {
+		mov(regStr, int_->n);
+		return reg;
+	}
+	if (const auto double_ = cast::toDouble(var_->value)) {
 		Register* reg = regAlloc();
 		auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
 
@@ -1060,16 +1068,26 @@ void CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
 
 		mov(regStr, emitHex(hex));
 		mov(getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64), regStr);
-		regFree(reg);
-	} else if (cast::toVar(var_->value)) {
-		handleVariable(*var_, size);
-	} else if (cast::toNIL(var_->value)) {
+		return reg;
+	}
+	if (cast::toVar(var_->value)) {
+		return handleVariable(*var_, size);
+	}
+	if (cast::toNIL(var_->value)) {
+		Register* reg = regAlloc();
+		auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
 		mov(getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64), 0);
-	} else if (cast::toT(var_->value)) {
+		mov(regStr, 0);
+		return reg;
+	}
+	if (cast::toT(var_->value)) {
+		Register* reg = regAlloc();
+		auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
 		mov(getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64), 1);
-	} else if (cast::toUninitialized(var_->value) && var_->sType == SymbolType::local) {
-		getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64);
-	} else if (const auto str = cast::toString(var_->value)) {
+		mov(regStr, 1);
+		return reg;
+	}
+	if (const auto str = cast::toString(var_->value)) {
 		std::string label = ".L.";
 		label += varName;
 		std::string labelAddr = getAddr(label, var_->vType, var_->sType, size);
@@ -1082,22 +1100,24 @@ void CodeGen::handleAssignment(const ExprPtr& var, const RegisterSize size) {
 
 		lea(regStr, labelAddr);
 		mov(varAddr, regStr);
-		regFree(reg);
-	} else {
-		Register* reg = emitSet(var_->value);
-		emitStoreMemFromReg(varName, var_->vType, var_->sType, reg, RegisterSize::reg64);
-		regFree(reg);
+		return reg;
 	}
+
+	Register* reg = emitSet(var_->value);
+	emitStoreMemFromReg(varName, var_->vType, var_->sType, reg, RegisterSize::reg64);
+	return reg;
 }
 
-void CodeGen::handleVariable(const VarExpr& var, const RegisterSize size) {
+Register* CodeGen::handleVariable(const VarExpr& var, const RegisterSize size) {
 	const std::string_view varName = cast::toString(var.name)->data;
 	const auto value = cast::toVar(var.value);
 
 	if (Register* reg = emitLoadRegFromMem(*value, size)) {
 		emitStoreMemFromReg(varName, var.vType, var.sType, reg, size);
-		regFree(reg);
+		return reg;
 	}
+
+	return nullptr;
 }
 
 Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const RegisterSize size) {

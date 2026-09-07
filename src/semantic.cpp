@@ -280,6 +280,18 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 	}
 	mSymbolTracker.exit(true);
 
+	if (const auto resVar = cast::toVar(result)) {
+		return resVar->value;
+	}
+	if (const auto resFunc = cast::toFuncCall(result)) {
+		return resFunc->returnType;
+	}
+	if (const auto resPrint = cast::toPrint(result)) {
+		return resPrint->returnType;
+	}
+	if (const auto resRead = cast::toRead(result)) {
+		return resRead->returnType;
+	}
 	return result;
 }
 
