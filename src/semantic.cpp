@@ -27,12 +27,12 @@ size_t ScopeTracker::level() const {
 }
 
 void ScopeTracker::bind(const std::string_view name, Symbol symbol) {
-	if (auto foundSymbol = lookup(name); foundSymbol.value) {
-		if (!cast::toDefun(foundSymbol.value)) {
-			const auto var = cast::toVar(foundSymbol.value);
+	if (Symbol* foundSymbol = lookup(name)) {
+		if (!cast::toDefun(foundSymbol->value)) {
+			const auto var = cast::toVar(foundSymbol->value);
 			var->vType = cast::toVar(symbol.value)->vType;
 		} else {
-			foundSymbol = std::move(symbol);
+			*foundSymbol = std::move(symbol);
 		}
 	} else {
 		auto currentScope = mSymbolTable.top();
@@ -43,8 +43,8 @@ void ScopeTracker::bind(const std::string_view name, Symbol symbol) {
 	}
 }
 
-Symbol ScopeTracker::lookup(const std::string_view name) {
-	Symbol sym{};
+Symbol* ScopeTracker::lookup(const std::string_view name) {
+	Symbol* sym{nullptr};
 	std::stack<ScopeType> scopes;
 
 	while (!mSymbolTable.empty()) {
@@ -53,7 +53,7 @@ Symbol ScopeTracker::lookup(const std::string_view name) {
 		scopes.push(scope);
 
 		if (const auto it = scope.find(name); it != scope.end()) {
-			sym = it->second;
+			sym = &it->second;
 			break;
 		}
 	}
@@ -66,14 +66,14 @@ Symbol ScopeTracker::lookup(const std::string_view name) {
 	return sym;
 }
 
-Symbol ScopeTracker::lookupCurrent(const std::string_view name) {
+const Symbol* ScopeTracker::lookupCurrent(const std::string_view name) {
 	ScopeType currentScope = mSymbolTable.top();
 
 	if (const auto it = currentScope.find(name); it != currentScope.end()) {
-		return it->second;
+		return &it->second;
 	}
 
-	return {};
+	return nullptr;
 }
 
 SemanticAnalyzer::SemanticAnalyzer(const std::string_view fn)
@@ -183,18 +183,17 @@ ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {
 
 ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
 	mSymbolTracker.enter("");
-	for (const auto& var: let.bindings) {
-		const auto var_ = cast::toVar(var);
-		const std::string_view varName = cast::toString(var_->name)->data;
+	for (const auto& binding: let.bindings) {
+		const auto var = cast::toVar(binding);
 
 		// Check out the var in the current scope, if it's already defined, raise error
-		if (const Symbol sym = mSymbolTracker.lookupCurrent(varName); sym.value) {
+		if (const std::string_view varName = cast::toString(var->name)->data; mSymbolTracker.lookupCurrent(varName)) {
 			throw SemanticError(mFileName, ERROR(MULTIPLE_DECL_ERROR, varName), 0);
 		}
 
 		// Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
 		// If it's expr, resolve it.
-		valueResolve(var_);
+		valueResolve(var);
 	}
 
 	ExprPtr result;
@@ -214,13 +213,13 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 	const std::string_view varName = cast::toString(var->name)->data;
 
 	// Check out the var.If it's not defined, raise error.
-	const Symbol sym = mSymbolTracker.lookup(varName);
+	const Symbol* sym = mSymbolTracker.lookup(varName);
 
-	if (!sym.value) {
+	if (!sym) {
 		throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
 	}
 	// Resolve the var scope.
-	var->sType = sym.sType;
+	var->sType = sym->sType;
 	// Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
 	// If it's int or double, update sym->value and bind again.
 	// If it's expr, resolve it.
@@ -284,7 +283,7 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 	return result;
 }
 
-void SemanticAnalyzer::printResolve(PrintExpr& print) {
+ExprPtr SemanticAnalyzer::printResolve(PrintExpr& print) {
 	if (cast::toInt(print.arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("");
 		print.arg = std::make_shared<VarExpr>(name, print.arg);
@@ -317,6 +316,8 @@ void SemanticAnalyzer::printResolve(PrintExpr& print) {
 
 		print.returnType = std::move(expr);
 	}
+
+	return print.returnType;
 }
 
 ExprPtr SemanticAnalyzer::readResolve(const ReadExpr& read) {
@@ -332,13 +333,13 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		mTfCtx.entryPoint = funcName;
 	}
 
-	Symbol sym = mSymbolTracker.lookup(funcName);
+	const Symbol* sym = mSymbolTracker.lookup(funcName);
 
-	if (!sym.value || !cast::toDefun(sym.value)) {
+	if (!sym || !cast::toDefun(sym->value)) {
 		throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
 	}
 
-	const auto func = cast::toDefun(sym.value);
+	const auto func = cast::toDefun(sym->value);
 
 	if (funcCall.args.size() != func->args.size()) {
 		throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
@@ -352,7 +353,8 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		if ((fcArgVar && cast::toUninitialized(fcArgVar->value)) ||
 		    isPrimitive(fcArg) ||
 		    cast::toBinop(fcArg) ||
-		    cast::toFuncCall(fcArg)) {
+		    cast::toFuncCall(fcArg) ||
+		    cast::toRead(fcArg)) {
 			for (size_t i = 0; i < func->args.size(); ++i) {
 				const auto fArg = cast::toVar(func->args[i]);
 
@@ -375,6 +377,9 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		} else if (auto fc = cast::toFuncCall(argVar->value)) {
 			auto rt = funcCallResolve(*fc, true);
 			setType(*argVar, rt);
+		} else if (const auto read = cast::toRead(argVar->value)) {
+			auto rt = readResolve(*read);
+			setType(*argVar, rt);
 		} else if (auto innerVar = cast::toVar(argVar->value)) {
 			bool found{false};
 
@@ -383,8 +388,8 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 
 				sym = mSymbolTracker.lookup(innerVarName);
 
-				if (sym.value) {
-					const auto sym_value = cast::toVar(sym.value);
+				if (sym) {
+					const auto sym_value = cast::toVar(sym->value);
 					innerVar->value = sym_value->value;
 					innerVar->sType = sym_value->sType;
 					// Loop sym value until finding a primitive. Update var.
@@ -452,10 +457,9 @@ void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
 		return;
 
 	const auto arg = cast::toVar(return_.arg);
-	const std::string_view argName = cast::toString(arg->name)->data;
 
 	// Check out the var.If it's not defined, raise error.
-	if (const Symbol sym = mSymbolTracker.lookup(argName); !sym.value) {
+	if (const std::string_view argName = cast::toString(arg->name)->data; mSymbolTracker.lookup(argName)) {
 		throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
 	}
 }
@@ -464,12 +468,12 @@ ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {
 	if (const auto test = cast::toVar(if_.test)) {
 		const std::string_view name = cast::toString(test->name)->data;
 
-		const Symbol sym = mSymbolTracker.lookup(name);
-		if (!sym.value) {
+		const Symbol* sym = mSymbolTracker.lookup(name);
+		if (!sym) {
 			throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
 		}
 
-		if_.test = sym.value;
+		if_.test = sym->value;
 	} else {
 		exprResolve(if_.test);
 	}
@@ -487,12 +491,12 @@ ExprPtr SemanticAnalyzer::whenResolve(WhenExpr& when) {
 	if (const auto test = cast::toVar(when.test)) {
 		const std::string_view name = cast::toString(test->name)->data;
 
-		const Symbol sym = mSymbolTracker.lookup(name);
-		if (!sym.value) {
+		const Symbol* sym = mSymbolTracker.lookup(name);
+		if (!sym) {
 			throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
 		}
 
-		when.test = sym.value;
+		when.test = sym->value;
 	} else {
 		exprResolve(when.test);
 	}
@@ -512,12 +516,12 @@ ExprPtr SemanticAnalyzer::condResolve(CondExpr& cond) {
 		if (const auto test_ = cast::toVar(test)) {
 			const std::string_view name = cast::toString(test_->name)->data;
 
-			const Symbol sym = mSymbolTracker.lookup(name);
-			if (!sym.value) {
+			const Symbol* sym = mSymbolTracker.lookup(name);
+			if (!sym) {
 				throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
 			}
 
-			test = sym.value;
+			test = sym->value;
 		} else {
 			exprResolve(test);
 		}
@@ -534,7 +538,7 @@ void SemanticAnalyzer::checkConstantVar(const ExprPtr& var) {
 	const auto var_ = cast::toVar(var);
 	const std::string_view varName = cast::toString(var_->name)->data;
 
-	if (const Symbol sym = mSymbolTracker.lookup(varName); sym.isConstant) {
+	if (const Symbol* sym = mSymbolTracker.lookup(varName); sym && sym->isConstant) {
 		throw SemanticError(mFileName, ERROR(CONSTANT_VAR_ERROR, varName), 0);
 	}
 }
@@ -622,15 +626,15 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
 	const auto var = cast::toVar(n);
 	const std::string_view name = cast::toString(var->name)->data;
 
-	const Symbol sym = mSymbolTracker.lookup(name);
+	const Symbol* sym = mSymbolTracker.lookup(name);
 
-	if (!sym.value) {
+	if (!sym) {
 		throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, name), 0);
 	}
 
-	var->sType = sym.sType;
+	var->sType = sym->sType;
 
-	auto innerVar = cast::toVar(sym.value);
+	auto innerVar = cast::toVar(sym->value);
 
 	// If we already know the type, return it.
 	if (innerVar->vType != VarType::unknown) {
@@ -720,14 +724,14 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 
 	if (const auto value = cast::toVar(var_->value)) {
 		const std::string_view valueName = cast::toString(value->name)->data;
-		const Symbol sym = mSymbolTracker.lookup(valueName);
+		const Symbol* sym = mSymbolTracker.lookup(valueName);
 
-		if (!sym.value) {
+		if (!sym) {
 			throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, varName), 0);
 		}
 		// Update value
-		var_->value = sym.value;
-		var_->vType = cast::toVar(sym.value)->vType;
+		var_->value = sym->value;
+		var_->vType = cast::toVar(sym->value)->vType;
 
 		mSymbolTracker.bind(
 			varName,

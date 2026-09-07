@@ -440,6 +440,14 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 				                    InitType::unknown,
 				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 				regFree(reg);
+			} else if (const auto read = cast::toRead(param->value)) {
+				reg = emitRead(*read);
+
+				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
+									reg->isSSE() ? VarType::double_ : VarType::int_,
+									InitType::unknown,
+									mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
+				regFree(reg);
 			} else {
 				const std::string_view paramName = cast::toString(param->name)->data;
 

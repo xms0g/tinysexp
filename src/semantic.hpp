@@ -25,9 +25,9 @@ public:
 
     void bind(std::string_view name, Symbol symbol);
 
-    Symbol lookup(std::string_view name);
+	Symbol* lookup(std::string_view name);
 
-    Symbol lookupCurrent(std::string_view name);
+    const Symbol* lookupCurrent(std::string_view name);
 
 private:
 	struct StringHash {
@@ -79,7 +79,7 @@ private:
 
     ExprPtr defunResolve(const ExprPtr& defun);
 
-	void printResolve(PrintExpr& print);
+	ExprPtr printResolve(PrintExpr& print);
 
 	ExprPtr readResolve(const ReadExpr& read);
 
