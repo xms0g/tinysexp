@@ -23,7 +23,7 @@ A subset of Lisp, including:
 ### Variables
 `let`,`setq`,`defvar`,`defconstant`
 ### Built-in Functions
-`print`
+`print`, `read-integer`, `read-double`, `read-string`
 
 ## Usage
 ```
