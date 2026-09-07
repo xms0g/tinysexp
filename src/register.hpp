@@ -24,6 +24,7 @@ enum class RegisterSize: uint32_t {
 };
 
 enum class RegisterType : uint8_t {
+	unknown = 0,
 	sse = 1 << 0,
 	scratch = 1 << 1,
 	preserved = 1 << 2,
@@ -34,8 +35,8 @@ constexpr RegisterType operator|(const RegisterType lhs, const RegisterType rhs)
 	return static_cast<RegisterType>(std::to_underlying(lhs) | std::to_underlying(rhs));
 }
 
-constexpr RegisterType operator&(const RegisterType lhs, const int32_t rhs) {
-	return static_cast<RegisterType>(std::to_underlying(lhs) & rhs);
+constexpr RegisterType operator&(const RegisterType lhs, const RegisterType rhs) {
+	return static_cast<RegisterType>(std::to_underlying(lhs) & std::to_underlying(rhs));
 }
 
 constexpr RegisterType operator>>(const RegisterType lhs, const int32_t rhs) {
