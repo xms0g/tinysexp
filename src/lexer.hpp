@@ -21,8 +21,9 @@ enum class TokenType {
 	let, setq, defvar, defconst,
 	// Function
 	defun,
-	// print
+	// Built-in functions
 	print,
+	readInt, readDouble, readString,
 	// Special function
 	return_,
 	// Others

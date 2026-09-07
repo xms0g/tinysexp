@@ -79,6 +79,11 @@ ExprPtr Parser::parseExpr() {
 		case TokenType::print:
 			expr = parsePrint();
 			break;
+		case TokenType::readInt:
+		case TokenType::readDouble:
+		case TokenType::readString:
+			expr = parseRead();
+			break;
 		case TokenType::if_:
 			expr = parseIf();
 			break;
@@ -268,6 +273,24 @@ ExprPtr Parser::parsePrint() {
 	}
 
 	return std::make_shared<PrintExpr>(expr);
+}
+
+ExprPtr Parser::parseRead() {
+	ExprPtr rt;
+	switch (mCurrentToken.type) {
+		case TokenType::readInt:
+			rt = std::make_shared<IntExpr>(0);
+			break;
+		case TokenType::readDouble:
+			rt = std::make_shared<DoubleExpr>(0.0);
+			break;
+		case TokenType::readString:
+			rt = std::make_shared<StringExpr>("");
+			break;
+	}
+
+	advance();
+	return std::make_shared<ReadExpr>(rt);
 }
 
 ExprPtr Parser::parseFuncCall() {

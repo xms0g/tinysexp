@@ -160,6 +160,14 @@ struct PrintExpr final : IExpr {
 	}
 };
 
+struct ReadExpr final : IExpr {
+	ExprPtr returnType;
+
+	explicit ReadExpr(ExprPtr rt)
+		: returnType(std::move(rt)) {
+	}
+};
+
 struct FuncCallExpr final : IExpr {
 	ExprPtr name;
 	ExprPtr returnType;
@@ -253,6 +261,8 @@ private:
 
 	ExprPtr parsePrint();
 
+	ExprPtr parseRead();
+
 	ExprPtr parseFuncCall();
 
 	ExprPtr parseReturn();
@@ -314,6 +324,10 @@ inline std::shared_ptr<DefunExpr> toDefun(const ExprPtr& expr) {
 
 inline std::shared_ptr<PrintExpr> toPrint(const ExprPtr& expr) {
 	return std::dynamic_pointer_cast<PrintExpr>(expr);
+}
+
+inline std::shared_ptr<ReadExpr> toRead(const ExprPtr& expr) {
+	return std::dynamic_pointer_cast<ReadExpr>(expr);
 }
 
 inline std::shared_ptr<FuncCallExpr> toFuncCall(const ExprPtr& expr) {

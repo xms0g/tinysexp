@@ -77,6 +77,8 @@ private:
 
 	void emitPrint(const PrintExpr& print);
 
+	Register* emitRead(const ReadExpr& read);
+
 	Register* emitFuncCall(const FuncCallExpr& funcCall);
 
 	Register* emitIf(const IfExpr& if_);

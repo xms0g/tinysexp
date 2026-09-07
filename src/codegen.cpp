@@ -9,6 +9,9 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 			"extern _lrt_print_int\n"
 			"extern _lrt_print_double\n"
 			"extern _lrt_print_str\n"
+			"extern _lrt_read_int\n"
+			"extern _lrt_read_double\n"
+			"extern _lrt_read_str\n"
 			"section .text\n"
 #if defined(__APPLE__) || defined(__MACH__)
 			"\tglobal _main\n"
@@ -365,9 +368,32 @@ void CodeGen::emitPrint(const PrintExpr& print) {
 
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
-	const FuncCallExpr printFunc(funcName, {print.arg});
+
+	FuncCallExpr printFunc(funcName, {print.arg});
+	printFunc.returnType = print.returnType;
+
 	Register* reg = emitFuncCall(printFunc);
 	regFree(reg);
+}
+
+Register* CodeGen::emitRead(const ReadExpr& read) {
+	ExprPtr name;
+	if (const auto int_ = cast::toInt(read.returnType)) {
+		name = std::make_shared<StringExpr>("_lrt_read_int");
+	} else if (const auto double_ = cast::toDouble(read.returnType)) {
+		name = std::make_shared<StringExpr>("_lrt_read_double");
+	} else if (const auto str_ = cast::toString(read.returnType)) {
+		name = std::make_shared<StringExpr>("_lrt_read_str");
+	}
+
+	ExprPtr value = std::make_shared<Uninitialized>();
+	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
+
+	FuncCallExpr readFunc(funcName, {});
+	readFunc.returnType = read.returnType;
+
+	Register* reg = emitFuncCall(readFunc);
+	return reg;
 }
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
@@ -948,6 +974,8 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 		}
 	} else if (const auto funcCall = cast::toFuncCall(set)) {
 		return emitFuncCall(*funcCall);
+	} else if (const auto read = cast::toRead(set)) {
+		return emitRead(*read);
 	}
 
 	return setReg;

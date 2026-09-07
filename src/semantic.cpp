@@ -133,7 +133,9 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 	} else if (cast::toDefun(ast)) {
 		return defunResolve(ast);
 	} else if (const auto print = cast::toPrint(ast)) {
-		printResolve(ast);
+		printResolve(*print);
+	} else if (const auto read = cast::toRead(ast)) {
+		return readResolve(*read);
 	} else if (const auto funcCall = cast::toFuncCall(ast)) {
 		return funcCallResolve(*funcCall);
 	} else if (const auto return_ = cast::toReturn(ast)) {
@@ -289,41 +291,43 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 	return result;
 }
 
-void SemanticAnalyzer::printResolve(const ExprPtr& print) {
-	const auto print_ = cast::toPrint(print);
-
-	if (cast::toInt(print_->arg)) {
+void SemanticAnalyzer::printResolve(PrintExpr& print) {
+	if (cast::toInt(print.arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("");
-		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
+		print.arg = std::make_shared<VarExpr>(name, print.arg);
 
-		const auto arg = cast::toVar(print_->arg);
+		const auto arg = cast::toVar(print.arg);
 		arg->vType = VarType::int_;
 		arg->sType = SymbolType::param;
-	} else if (cast::toDouble(print_->arg)) {
+	} else if (cast::toDouble(print.arg)) {
 		ExprPtr name = std::make_shared<StringExpr>("");
-		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
+		print.arg = std::make_shared<VarExpr>(name, print.arg);
 
-		const auto arg = cast::toVar(print_->arg);
+		const auto arg = cast::toVar(print.arg);
 		arg->vType = VarType::double_;
 		arg->sType = SymbolType::param;
-	} else if (cast::toString(print_->arg)) {
+	} else if (cast::toString(print.arg)) {
 		static uint32_t strIdx{0};
-		ExprPtr name = std::make_shared<StringExpr>(".str." + std::to_string(strIdx++));
-		print_->arg = std::make_shared<VarExpr>(name, print_->arg);
+		ExprPtr name = std::make_shared<StringExpr>("str." + std::to_string(strIdx++));
+		print.arg = std::make_shared<VarExpr>(name, print.arg);
 
-		const auto arg = cast::toVar(print_->arg);
+		const auto arg = cast::toVar(print.arg);
 		arg->vType = VarType::string;
 		arg->sType = SymbolType::param;
 		arg->iType = InitType::constant;
 	} else {
-		ExprPtr expr = exprResolve(print_->arg);
+		ExprPtr expr = exprResolve(print.arg);
 
-		if (const auto arg = cast::toVar(print_->arg)) {
+		if (const auto arg = cast::toVar(print.arg)) {
 			arg->iType = InitType::runtime;
 		}
 
-		print_->returnType = std::move(expr);
+		print.returnType = std::move(expr);
 	}
+}
+
+ExprPtr SemanticAnalyzer::readResolve(const ReadExpr& read) {
+	return read.returnType;
 }
 
 ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isParam) {
@@ -746,7 +750,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 
 	ExprPtr name = var_->name;
 	ExprPtr value_ = exprResolve(var_->value);
-	var_->vType = cast::toInt(value_) ? VarType::int_ : VarType::double_;
+	var_->vType = cast::toInt(value_) ? VarType::int_ : cast::toString(value_) ? VarType::string : VarType::double_;
 
 	mSymbolTracker.bind(
 		varName,
