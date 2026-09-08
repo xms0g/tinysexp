@@ -33,7 +33,7 @@ int32_t StackAllocator::pushStackFrame(const std::string_view funcName,
 	return updateStackFrame(sf, varName, stype);
 }
 
-uint32_t StackAllocator::calculateParamStackSize(const std::vector<ExprPtr>& args) const {
+uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args) const {
 	int32_t sseRegCount{0};
 	int32_t intRegCount{0};
 	int32_t stackParamCount{0};
@@ -57,16 +57,7 @@ uint32_t StackAllocator::calculateParamStackSize(const std::vector<ExprPtr>& arg
 		}
 	}
 
-	uint32_t alignedSize = stackParamCount * 8;
-
-	if (alignedSize % 16 != 0)
-		alignedSize += 8;
-
-	return alignedSize;
-}
-
-uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args) const {
-	const uint32_t argSize = calculateParamStackSize(args);
+	const uint32_t argSize = stackParamCount * 8;
 	uint32_t total = mStackOffset + argSize;
 
 	if (total % 16 != 0)
