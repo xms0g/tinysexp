@@ -33,7 +33,7 @@ int32_t StackAllocator::pushStackFrame(const std::string_view funcName,
 	return updateStackFrame(sf, varName, stype);
 }
 
-uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& args) const {
+uint32_t StackAllocator::calculateParamStackSize(const std::vector<ExprPtr>& args) const {
 	int32_t sseRegCount{0};
 	int32_t intRegCount{0};
 	int32_t stackParamCount{0};
@@ -66,7 +66,7 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 }
 
 uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args) const {
-	const uint32_t argSize = calculateRequiredStackSize(args);
+	const uint32_t argSize = calculateParamStackSize(args);
 	uint32_t total = mStackOffset + argSize;
 
 	if (total % 16 != 0)
