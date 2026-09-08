@@ -65,6 +65,16 @@ uint32_t StackAllocator::calculateRequiredStackSize(const std::vector<ExprPtr>& 
 	return alignedSize;
 }
 
+uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args) const {
+	const uint32_t argSize = calculateRequiredStackSize(args);
+	uint32_t total = mStackOffset + argSize;
+
+	if (total % 16 != 0)
+		total += 8;
+
+	return total - mStackOffset;
+}
+
 int StackAllocator::updateStackFrame(StackFrame* sf, const std::string_view varName, const SymbolType stype) {
 	int32_t offset;
 

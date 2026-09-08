@@ -14,6 +14,9 @@ public:
 	[[nodiscard]]
 	uint32_t calculateRequiredStackSize(const std::vector<ExprPtr>& args) const;
 
+	[[nodiscard]]
+	uint32_t calculateCallStackSize(const std::vector<ExprPtr>& args) const;
+
 private:
 	struct StackFrame;
 	int32_t updateStackFrame(StackFrame* sf, std::string_view varName, SymbolType stype);

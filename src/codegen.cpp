@@ -409,7 +409,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 	const std::string_view funcName = cast::toString(func->name)->data;
 
 	// Calculate the proper stack size before function call
-	uint32_t stackAlignedSize = mStackAllocator.calculateRequiredStackSize(funcCall.args);
+	uint32_t stackAlignedSize = mStackAllocator.calculateCallStackSize(funcCall.args);
 	stackAlloc(stackAlignedSize);
 
 	Register* reg;
