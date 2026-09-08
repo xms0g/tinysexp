@@ -57,17 +57,17 @@ public:
 	std::string emit(const ExprPtr& ast);
 
 private:
-	Register* emitAST(const ExprPtr& ast);
+	Register* emitAST(const ExprPtr& ast, bool discardResult);
 
 	Register* emitBinop(const BinOpExpr& binop);
 
 	Register* emitDotimes(const DotimesExpr& dotimes);
 
-	Register* emitLoop(const LoopExpr& loop);
+	Register* emitLoop(const LoopExpr& loop, bool discardResult);
 
-	Register* emitLet(const LetExpr& let);
+	Register* emitLet(const LetExpr& let, bool discardResult);
 
-	Register* emitSetq(const SetqExpr& setq);
+	Register* emitSetq(const SetqExpr& setq, bool discardResult);
 
 	void emitDefvar(const DefvarExpr& defvar);
 
@@ -81,11 +81,11 @@ private:
 
 	Register* emitFuncCall(const FuncCallExpr& funcCall);
 
-	Register* emitIf(const IfExpr& if_);
+	Register* emitIf(const IfExpr& if_, bool discardResult);
 
-	Register* emitWhen(const WhenExpr& when);
+	Register* emitWhen(const WhenExpr& when, bool discardResult);
 
-	Register* emitCond(const CondExpr& cond);
+	Register* emitCond(const CondExpr& cond, bool discardResult);
 
 	Register* emitPrimitive(const ExprPtr& prim);
 
@@ -104,7 +104,7 @@ private:
 
 	Register* emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair opcode);
 
-	void emitSection(const ExprPtr& var, bool isConstant = false);
+	void emitSection(const ExprPtr& var, bool isConstant = false, bool discardResult = true);
 
 	void emitTest(const ExprPtr& test, std::string_view trueLabel, std::string_view elseLabel);
 
@@ -118,7 +118,7 @@ private:
 
 	Register* emitCmpZero(const ExprPtr& node);
 
-	Register* emitAssignment(const ExprPtr& var, RegisterSize size);
+	Register* emitAssignment(const ExprPtr& var, RegisterSize size, bool discardResult);
 
 	Register* handleVariable(const VarExpr& var, RegisterSize size);
 
