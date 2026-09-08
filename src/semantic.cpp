@@ -292,6 +292,7 @@ ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
 	if (const auto resRead = cast::toRead(result)) {
 		return resRead->returnType;
 	}
+
 	return result;
 }
 
@@ -404,8 +405,10 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 					const auto sym_value = cast::toVar(sym->value);
 					innerVar->value = sym_value->value;
 					innerVar->sType = sym_value->sType;
+					innerVar->vType = sym_value->vType;
+					argVar->vType = sym_value->vType;
 					// Loop sym value until finding a primitive. Update var.
-					if (isPrimitive(sym_value->value)) {
+					if (isPrimitive(sym_value->value)) {//TODO: check this out if it's required
 						setType(*innerVar, sym_value->value);
 						setType(*argVar, sym_value->value);
 						break;
@@ -682,11 +685,18 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
 		}
 
 		if (const auto fc = cast::toFuncCall(innerVar->value)) {
-			const auto value = funcCallResolve(*fc);
-			setType(*var, value);
+			const auto rt = funcCallResolve(*fc);
+			setType(*var, rt);
 			var->value = innerVar->value;
 			return returnValue(*var);
 		}
+
+		if (const auto read = cast::toRead(innerVar->value)) {
+			setType(*var, read->returnType);
+			var->value = innerVar->value;
+			return returnValue(*var);
+		}
+
 		// If the value is param
 		if (cast::toUninitialized(innerVar->value)) {
 			var->value = std::make_shared<DoubleExpr>(0.0);
