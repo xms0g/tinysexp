@@ -12,7 +12,7 @@ public:
 	int pushStackFrame(std::string_view funcName, std::string_view varName, SymbolType stype);
 
 	[[nodiscard]]
-	uint32_t calculateCallStackSize(const std::vector<ExprPtr>& args) const;
+	uint32_t calculateCallStackSize(const std::vector<ExprPtr>& args, bool isCfunc = false) const;
 
 private:
 	struct StackFrame;

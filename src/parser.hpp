@@ -171,10 +171,12 @@ struct ReadExpr final : IExpr {
 struct FuncCallExpr final : IExpr {
 	ExprPtr name;
 	ExprPtr returnType;
+	bool isCfunc;
 	std::vector<ExprPtr> args;
 
-	FuncCallExpr(ExprPtr name_, std::vector<ExprPtr> params_)
+	FuncCallExpr(ExprPtr name_, std::vector<ExprPtr> params_, const bool isCfunc_ = false)
 		: name(std::move(name_)),
+		  isCfunc(isCfunc_),
 		  args(std::move(params_)) {
 	}
 };

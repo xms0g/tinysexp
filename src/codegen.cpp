@@ -377,7 +377,7 @@ void CodeGen::emitPrint(const PrintExpr& print) {
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
 
-	FuncCallExpr printFunc(funcName, {print.arg});
+	FuncCallExpr printFunc(funcName, {print.arg}, true);
 	printFunc.returnType = print.returnType;
 
 	Register* reg = emitFuncCall(printFunc);
@@ -397,7 +397,7 @@ Register* CodeGen::emitRead(const ReadExpr& read) {
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
 
-	FuncCallExpr readFunc(funcName, {});
+	FuncCallExpr readFunc(funcName, {}, true);
 	readFunc.returnType = read.returnType;
 
 	Register* reg = emitFuncCall(readFunc);
@@ -409,7 +409,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 	const std::string_view funcName = cast::toString(func->name)->data;
 
 	// Calculate the proper stack size before function call
-	uint32_t stackAlignedSize = mStackAllocator.calculateCallStackSize(funcCall.args);
+	uint32_t stackAlignedSize = mStackAllocator.calculateCallStackSize(funcCall.args, funcCall.isCfunc);
 	stackAlloc(stackAlignedSize);
 
 	Register* reg;
@@ -674,6 +674,10 @@ Register* CodeGen::emitNode(const ExprPtr& node) {
 
 	if (const auto funcCall = cast::toFuncCall(node)) {
 		return emitFuncCall(*funcCall);
+	}
+
+	if (const auto read = cast::toRead(node)) {
+		return emitRead(*read);
 	}
 
 	return emitNumb(node);
