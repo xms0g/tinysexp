@@ -11,6 +11,7 @@ set(SOURCES
         src/lexer.cpp src/lexer.hpp
         src/parser.cpp src/parser.hpp
         src/semantic.cpp src/semantic.hpp
+        src/scope.cpp src/scope.hpp
         src/stack.cpp  src/stack.hpp
         src/register.cpp  src/register.hpp
         src/codegen.cpp src/codegen.hpp
