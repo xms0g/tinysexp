@@ -135,7 +135,7 @@ Register* CodeGen::emitBinop(const BinOpExpr& binop) {
 }
 
 Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
-	const auto iterVar = cast::toVar(dotimes.iterationCount);
+	const auto iterVar = cast::toVar(dotimes.countForm);
 	const std::string_view iterVarName = cast::toString(iterVar->name)->data;
 	// Labels
 	const std::string loopLabel = createLabel();
@@ -176,6 +176,7 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 
 	stackDealloc(mMemorySizeInBytes[std::to_underlying(RegisterSize::reg64)]);
 
+	//TODO: return resultForm or nil
 	return reg;
 }
 
