@@ -12,7 +12,7 @@ public:
 	int pushStackFrame(std::string_view funcName, std::string_view varName, SymbolType stype);
 
 	[[nodiscard]]
-	uint32_t calculateCallStackSize(const std::vector<ExprPtr>& args, bool isCfunc = false) const;
+	uint32_t calculateCallStackSize(const std::vector<ExprPtr>& args) const;
 
 private:
 	struct StackFrame;
@@ -42,5 +42,5 @@ private:
 	};
 
 	std::unordered_map<std::string, StackFrame, StringHash, StringEqual> mStack{};
-	uint32_t mStackOffset{0};
+	uint32_t mStackOffset{8};
 };

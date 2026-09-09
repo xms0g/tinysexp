@@ -33,7 +33,7 @@ int32_t StackAllocator::pushStackFrame(const std::string_view funcName,
 	return updateStackFrame(sf, varName, stype);
 }
 
-uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args, const bool isCfunc) const {
+uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args) const {
 	int32_t sseRegCount{0};
 	int32_t intRegCount{0};
 	int32_t stackParamCount{0};
@@ -58,14 +58,12 @@ uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args
 	}
 
 	const uint32_t argSize = stackParamCount * 8;
-	// If isCfunc, we need to add 8 bytes to the stack size
-	const uint32_t cFunc = isCfunc * 8;
-	uint32_t total = mStackOffset + argSize + cFunc;
+	uint32_t total = mStackOffset + argSize;
 
 	if (total % 16 != 0)
 		total += 8;
 
-	return total - mStackOffset - cFunc;
+	return total - mStackOffset;
 }
 
 int StackAllocator::updateStackFrame(StackFrame* sf, const std::string_view varName, const SymbolType stype) {
