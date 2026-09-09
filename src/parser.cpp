@@ -139,7 +139,7 @@ ExprPtr Parser::parseDotimes() {
 	advance();
 
 	consume(TokenType::lparen, ERROR(EXPECTED_ELEMS_NUMBER_ERROR, "DOTIMES"));
-	ExprPtr var = parseAtom();
+	ExprPtr countForm = parseAtom();
 
 	if (mCurrentToken.type == TokenType::lparen) {
 		value = parseExpr();
@@ -147,15 +147,21 @@ ExprPtr Parser::parseDotimes() {
 		value = parseAtom();
 	}
 
-	cast::toVar(var)->value = std::move(value);
-	cast::toVar(var)->sType = SymbolType::local;
+	ExprPtr resultForm;
+	if (mCurrentToken.type == TokenType::var) {
+		resultForm = parseAtom();
+	}
+
+	const auto var = cast::toVar(countForm);
+	var->value = std::move(value);
+	var->sType = SymbolType::local;
 	consume(TokenType::rparen, MISSING_PAREN_ERROR);
 
 	while (mCurrentToken.type == TokenType::lparen) {
 		statements.push_back(parseExpr());
 	}
 
-	return std::make_shared<DotimesExpr>(var, statements);
+	return std::make_shared<DotimesExpr>(countForm, resultForm, statements);
 }
 
 ExprPtr Parser::parseLoop() {

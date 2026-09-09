@@ -153,22 +153,26 @@ ExprPtr SemanticAnalyzer::binopResolve(BinOpExpr& binop) {
 	return lhs;
 }
 
-ExprPtr SemanticAnalyzer::dotimesResolve(const DotimesExpr& dotimes) {
+ExprPtr SemanticAnalyzer::dotimesResolve(DotimesExpr& dotimes) {
 	mSymbolTracker.enter("");
-	checkConstantVar(dotimes.iterationCount);
+	checkConstantVar(dotimes.countForm);
 
-	const auto var = cast::toVar(dotimes.iterationCount);
+	const auto var = cast::toVar(dotimes.countForm);
 	// Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
 	// If it's expr, resolve it.
 	valueResolve(var);
 
-	ExprPtr result;
 	for (const auto& statement: dotimes.statements) {
-		result = exprResolve(statement);
+		exprResolve(statement);
 	}
 	mSymbolTracker.exit();
 
-	return result;
+	if (dotimes.resultForm) {
+		varResolve(dotimes.resultForm, TokenType::var);
+		return dotimes.resultForm;
+	}
+
+	return std::make_shared<NILExpr>();
 }
 
 ExprPtr SemanticAnalyzer::loopResolve(const LoopExpr& loop) {

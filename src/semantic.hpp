@@ -65,7 +65,7 @@ private:
 
     ExprPtr binopResolve(BinOpExpr& binop);
 
-    ExprPtr dotimesResolve(const DotimesExpr& dotimes);
+    ExprPtr dotimesResolve(DotimesExpr& dotimes);
 
     ExprPtr loopResolve(const LoopExpr& loop);
 

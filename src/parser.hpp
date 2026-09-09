@@ -84,11 +84,13 @@ struct BinOpExpr final : IExpr {
 };
 
 struct DotimesExpr final : IExpr {
-	ExprPtr iterationCount;
+	ExprPtr countForm;
+	ExprPtr resultForm;
 	std::vector<ExprPtr> statements;
 
-	DotimesExpr(ExprPtr iterationCount_, std::vector<ExprPtr> statements_)
-		: iterationCount(std::move(iterationCount_)),
+	DotimesExpr(ExprPtr cf, ExprPtr rf, std::vector<ExprPtr> statements_)
+		: countForm(std::move(cf)),
+		  resultForm(std::move(rf)),
 		  statements(std::move(statements_)) {
 	}
 };
