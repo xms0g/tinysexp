@@ -85,8 +85,10 @@ Register* CodeGen::emitAST(const ExprPtr& ast, const bool discardResult) {
 		return emitWhen(*when, discardResult);
 	} else if (const auto cond = cast::toCond(ast)) {
 		return emitCond(*cond, discardResult);
-	} else if (cast::toInt(ast) || cast::toDouble(ast) || cast::toVar(ast)) {
+	} else if (cast::toInt(ast) || cast::toDouble(ast)) {
 		return emitPrimitive(ast);
+	} else if (const auto var = cast::toVar(ast)) {
+		return emitLoadRegFromMem(*var, RegisterSize::reg64);
 	}
 
 	return nullptr;
@@ -174,10 +176,25 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	emitJump("jmp", loopLabel);
 	emitLabel(doneLabel);
 
+	regFree(reg);
 	stackDealloc(mMemorySizeInBytes[std::to_underlying(RegisterSize::reg64)]);
 
-	//TODO: return resultForm or nil
-	return reg;
+	if (!dotimes.resultForm) {
+		return emitInt(*std::make_shared<IntExpr>(0));
+	}
+
+	if (cast::toInt(dotimes.resultForm) ||
+		cast::toDouble(dotimes.resultForm) ||
+		cast::toNIL(dotimes.resultForm) ||
+		cast::toT(dotimes.resultForm)) {
+		return emitPrimitive(dotimes.resultForm);
+	}
+
+	if (const auto var = cast::toVar(dotimes.resultForm)) {
+		return emitLoadRegFromMem(*var, RegisterSize::reg64);
+	}
+
+	return nullptr;
 }
 
 Register* CodeGen::emitLoop(const LoopExpr& loop, const bool discardResult) {
@@ -241,7 +258,7 @@ Register* CodeGen::emitLet(const LetExpr& let, const bool discardResult) {
 
 	Register* reg = nullptr;
 	for (const auto& sexpr: let.body) {
-		const bool isLast = &sexpr == &let.body.back();
+		const bool isLast = sexpr == let.body.back();
 		reg = emitAST(sexpr, discardResult && !isLast);
 
 		if (!isLast)
@@ -332,7 +349,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 
 	Register* reg = nullptr;
 	for (const auto& form: defun.forms) {
-		const bool isLast = &form == &defun.forms.back();
+		const bool isLast = form == defun.forms.back();
 
 		reg = emitAST(form, isLast);
 
@@ -553,25 +570,25 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 Register* CodeGen::emitIf(const IfExpr& if_, const bool discardResult) {
 	const std::string trueLabel = createLabel();
 	const std::string elseLabel = createLabel();
+	const std::string done = createLabel();
 	// Emit test
 	emitTest(if_.test, trueLabel, elseLabel);
 	// Emit then
 	Register* reg = nullptr;
 	reg = emitAST(if_.then, discardResult);
 	// Emit else
-	if (!cast::toUninitialized(if_.else_)) {
-		std::string done = createLabel();
-		emitJump("jmp", done);
-		emitLabel(elseLabel);
+	emitJump("jmp", done);
+	emitLabel(elseLabel);
+	regFree(reg);
 
-		regFree(reg);
+	if (!cast::toUninitialized(if_.else_)) {
 		reg = emitAST(if_.else_, discardResult);
-		emitLabel(done);
 	} else {
-		emitLabel(elseLabel);
+		reg = emitInt(*std::make_shared<IntExpr>(0));
 	}
 
-	regFree(reg);
+	emitLabel(done);
+
 	return reg;
 }
 
@@ -620,14 +637,12 @@ Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
 		return emitDouble(*double_);
 	}
 
-	if (const auto var = cast::toVar(prim)) {
-		const std::string_view varName = cast::toString(var->name)->data;
+	if (const auto nil = cast::toNIL(prim)) {
+		return emitInt(*std::make_shared<IntExpr>(0));
+	}
 
-		Register* reg = regAlloc();
-		mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
-		    getAddr(varName, var->vType, var->sType, RegisterSize::reg64));
-
-		return reg;
+	if (const auto t = cast::toT(prim)) {
+		return emitInt(*std::make_shared<IntExpr>(1));
 	}
 
 	return nullptr;
@@ -1068,8 +1083,7 @@ Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size, c
 
 		if (!discardResult) {
 			Register* reg = regAlloc();
-			auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
-			mov(regStr, int_->n);
+			mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64));
 			return reg;
 		}
 
@@ -1099,8 +1113,7 @@ Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size, c
 
 		if (!discardResult) {
 			Register* reg = regAlloc();
-			auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
-			mov(regStr, 0);
+			mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), 0);
 			return reg;
 		}
 
