@@ -595,7 +595,7 @@ Register* CodeGen::emitIf(const IfExpr& if_, const bool discardResult) {
 Register* CodeGen::emitWhen(const WhenExpr& when, const bool discardResult) {
 	const std::string doneLabel = createLabel();
 	// Emit test
-	emitTest(when.test, std::string(), doneLabel);
+	emitTest(when.test, "", doneLabel);
 	// Emit then
 	Register* reg = nullptr;
 	for (const auto& form: when.then) {
@@ -613,7 +613,7 @@ Register* CodeGen::emitCond(const CondExpr& cond, const bool discardResult) {
 	Register* reg = nullptr;
 	for (const auto& [test, forms]: cond.variants) {
 		const std::string elseLabel = createLabel();
-		emitTest(test, std::string(), elseLabel);
+		emitTest(test, "", elseLabel);
 
 		for (const auto& form: forms) {
 			reg = emitAST(form, discardResult);
