@@ -5,7 +5,14 @@
         ((= op 3) (* n1 n2))
         ((= op 4) (/ n1 n2))))
 
-(print (calculator 1 2 1))
-(print (calculator 3 2 2))
-(print (calculator 3 2 3))
-(print (calculator 6 3 4))
+(defvar a)
+(defvar b)
+(defvar op)
+
+(print "Enter the first number:")
+(setq a (read-integer))
+(print "Enter the second number:")
+(setq b (read-integer))
+(print "Enter the op:")
+(setq op (read-integer))
+(print (calculator a b op))

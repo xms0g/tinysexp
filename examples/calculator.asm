@@ -1,42 +1,41 @@
 extern _lrt_print_int
+extern _lrt_print_double
+extern _lrt_print_str
+extern _lrt_read_int
+extern _lrt_read_double
+extern _lrt_read_str
 section .text
 	global _main
 _main:
 	push rbp
 	mov rbp, rsp
-	mov rdi, 1
-	mov rsi, 2
-	mov rdx, 1
+	lea rdi, [rel str.0]
+	call _lrt_print_str
+	mov r10, rax
+	call _lrt_read_int
+	mov r10, rax
+	mov qword [rel a], r10
+	lea rdi, [rel str.1]
+	call _lrt_print_str
+	mov r10, rax
+	call _lrt_read_int
+	mov r10, rax
+	mov qword [rel b], r10
+	lea rdi, [rel str.2]
+	call _lrt_print_str
+	mov r10, rax
+	call _lrt_read_int
+	mov r10, rax
+	mov qword [rel op], r10
+	mov rdi, qword [rel a]
+	mov rsi, qword [rel b]
+	mov rdx, qword [rel op]
 	call calculator
 	mov r10, rax
 	mov rdi, r10
 	call _lrt_print_int
 	mov r10, rax
-	mov rdi, 3
-	mov rsi, 2
-	mov rdx, 2
-	call calculator
-	mov r11, rax
-	mov rdi, r11
-	call _lrt_print_int
-	mov r11, rax
-	mov rdi, 3
-	mov rsi, 2
-	mov rdx, 3
-	call calculator
-	mov rdi, rax
-	mov rdi, rdi
-	call _lrt_print_int
-	mov rdi, rax
-	mov rdi, 6
-	mov rsi, 3
-	mov rdx, 4
-	call calculator
-	mov rsi, rax
-	mov rdi, rsi
-	call _lrt_print_int
-	mov rsi, rax
-	xor rax, rax
+	xor eax, eax
 	leave
 	ret
 
@@ -47,47 +46,57 @@ calculator:
 	mov qword [rbp - 8], rdi
 	mov qword [rbp - 16], rsi
 	mov qword [rbp - 24], rdx
-	mov rdx, qword [rbp - 24]
-	mov rcx, 1
-	cmp rdx, rcx
+	mov r10, qword [rel op]
+	mov r11, 1
+	cmp r10, r11
 	jne .L1
-	mov rdx, qword [rbp - 8]
-	mov rcx, qword [rbp - 16]
-	add rdx, rcx
+	mov r10, qword [rbp - 8]
+	mov r11, qword [rbp - 16]
+	add r10, r11
 	jmp .L0
 .L1:
-	mov rdx, qword [rbp - 24]
-	mov rcx, 2
-	cmp rdx, rcx
+	mov r10, qword [rel op]
+	mov r11, 2
+	cmp r10, r11
 	jne .L2
-	mov rdx, qword [rbp - 8]
-	mov rcx, qword [rbp - 16]
-	sub rdx, rcx
+	mov r10, qword [rbp - 8]
+	mov r11, qword [rbp - 16]
+	sub r10, r11
 	jmp .L0
 .L2:
-	mov rdx, qword [rbp - 24]
-	mov rcx, 3
-	cmp rdx, rcx
+	mov r10, qword [rel op]
+	mov r11, 3
+	cmp r10, r11
 	jne .L3
-	mov rdx, qword [rbp - 8]
-	mov rcx, qword [rbp - 16]
-	imul rdx, rcx
+	mov r10, qword [rbp - 8]
+	mov r11, qword [rbp - 16]
+	imul r10, r11
 	jmp .L0
 .L3:
-	mov rdx, qword [rbp - 24]
-	mov rcx, 4
-	cmp rdx, rcx
+	mov r10, qword [rel op]
+	mov r11, 4
+	cmp r10, r11
 	jne .L4
-	mov rdx, qword [rbp - 8]
-	mov rcx, qword [rbp - 16]
-	mov rax, rdx
+	mov r10, qword [rbp - 8]
+	mov r11, qword [rbp - 16]
+	mov rax, r10
 	cqo
-	idiv rcx
-	mov rdx, rax
+	idiv r11
+	mov r10, rax
 	jmp .L0
 .L4:
 .L0:
-	mov rax, rdx
+	mov rax, r10
 	add rsp, 24
 	leave
 	ret
+
+section .rodata
+str.0: db "Enter the first number:", 10, 0
+str.1: db "Enter the second number:", 10, 0
+str.2: db "Enter the op:", 10, 0
+
+section .bss
+a: resq 1
+b: resq 1
+op: resq 1

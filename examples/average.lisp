@@ -4,4 +4,5 @@
             (setq sum (+ sum i)))
        (/ sum (- n 1))))
 
-(print (average 10))
+(print "Enter the number:")
+(print (average (read-integer)))
