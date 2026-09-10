@@ -306,7 +306,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	push("rbp");
 	mov("rbp", "rsp");
 
-	uint32_t stackSize{0};
+	uint32_t requiredStackSize{0};
 	int32_t scratchIdx{0};
 	int32_t sseIdx{0};
 	for (auto& arg: defun.args) {
@@ -324,11 +324,11 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 		}
 
 		const auto size = mMemorySizeInBytes[std::to_underlying(getMemSize(arg))];
-		stackSize += size;
+		requiredStackSize += size;
 		mStackAllocator.pushStackFrame(mCurrentScope, paramName, param->sType, size);
 	}
 
-	stackAlloc(stackSize);
+	stackAlloc(requiredStackSize);
 
 	scratchIdx = 0, sseIdx = 0;
 	for (const auto& arg: defun.args) {
@@ -366,7 +366,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	}
 
 	regFree(reg);
-	stackDealloc(stackSize);
+	stackDealloc(requiredStackSize);
 	leave();
 	ret();
 }
@@ -435,12 +435,11 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 	Register* reg;
 	int32_t scratchIdx{0};
 	int32_t sseIdx{0};
-	int32_t stackIdx{0};
 	for (const auto& arg: funcCall.args) {
 		if (const auto param = cast::toVar(arg)) {
 			// If scratch param size > 5 or sse param size > 7, push the params onto stack
 			if ((scratchIdx > 5 && param->vType == VarType::int_) || (sseIdx > 7 && param->vType == VarType::double_)) {
-				pushParamOntoStack(funcName, *param, stackIdx);
+				pushParamOntoStack(funcName, arg);
 				continue;
 			}
 			// Push parameter to the appropriate register
@@ -1217,11 +1216,7 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const RegisterSize siz
 	const std::string_view varName = cast::toString(var.name)->data;
 
 	switch (var.sType) {
-		case SymbolType::param: {
-			reg = regAlloc();
-			mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var.vType, var.sType, size));
-			break;
-		}
+		case SymbolType::param:
 		case SymbolType::local:
 		case SymbolType::global: {
 			if (var.vType == VarType::int_) {
@@ -1323,17 +1318,22 @@ RegisterSize CodeGen::getMemSize(const ExprPtr& var) {
 	return RegisterSize::zero;
 }
 
-void CodeGen::pushParamOntoStack(const std::string_view funcName, const VarExpr& param, int32_t& stackIdx) {
-	const std::string paramName = cast::toString(param.name)->data;
-	const auto size = mMemorySizeInBytes[std::to_underlying(getMemSize(param.value))];
+void CodeGen::pushParamOntoStack(const std::string_view funcName, const ExprPtr& param) {
+	const auto param_ = cast::toVar(param);
+	const std::string paramName = cast::toString(param_->name)->data;
 
-	mStackAllocator.pushStackFrame(funcName, paramName, SymbolType::param, size);
+	const auto memSize = mMemorySize[std::to_underlying(getMemSize(param))];
+	const auto memSizeInt = mMemorySizeInBytes[std::to_underlying(getMemSize(param))];
 
-	const std::string addr = stackIdx ? std::format("qword [rsp + {}]", stackIdx) : "qword [rsp]";
+	const int32_t offset = mStackAllocator.pushStackFrame(funcName, paramName, SymbolType::param, memSizeInt);
 
-	if (const auto int_ = cast::toInt(param.value)) {
+	const std::string addr = offset - 16 // Because parameters are above 16 byte from rbp
+		                         ? std::format("{} [rsp + {}]", memSize, offset - 16)
+		                         : std::format("{} [rsp]", memSize);
+
+	if (const auto int_ = cast::toInt(param_->value)) {
 		mov(addr, int_->n);
-	} else if (const auto double_ = cast::toDouble(param.value)) {
+	} else if (const auto double_ = cast::toDouble(param_->value)) {
 		Register* regScr = regAlloc();
 		auto regScrStr = mRegisterAllocator.nameFromReg(regScr, RegisterSize::reg64);
 
@@ -1344,8 +1344,6 @@ void CodeGen::pushParamOntoStack(const std::string_view funcName, const VarExpr&
 
 		regFree(regScr);
 	}
-
-	stackIdx += 8;
 }
 
 std::string CodeGen::createLabel() {

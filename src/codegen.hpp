@@ -137,7 +137,7 @@ private:
 	template<typename T>
 	void pushParamToRegister(RegisterID rid, VarType vtype, InitType itype, const T& value);
 
-	void pushParamOntoStack(std::string_view funcName, const VarExpr& param, int32_t& stackIdx);
+	void pushParamOntoStack(std::string_view funcName, const ExprPtr& param);
 
 	std::string createLabel();
 
