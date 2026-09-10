@@ -1,5 +1,7 @@
 #include "stack.hpp"
 
+#include "register.hpp"
+
 void StackAllocator::alloc(const uint32_t size) {
 	mStackOffset += size;
 }
@@ -10,7 +12,8 @@ void StackAllocator::dealloc(const uint32_t size) {
 
 int32_t StackAllocator::pushStackFrame(const std::string_view funcName,
                                        const std::string_view varName,
-                                       const SymbolType stype) {
+                                       const SymbolType stype,
+                                       const int32_t size) {
 	StackFrame* sf = nullptr;
 
 	if (const auto it = mStack.find(funcName); it != mStack.end()) {
@@ -24,13 +27,13 @@ int32_t StackAllocator::pushStackFrame(const std::string_view funcName,
 	if (!sf) {
 		StackFrame stackFrame;
 
-		const int32_t offset = updateStackFrame(&stackFrame, varName, stype);
+		const int32_t offset = updateStackFrame(&stackFrame, varName, stype, size);
 		mStack.emplace(funcName, stackFrame);
 
 		return offset;
 	}
 
-	return updateStackFrame(sf, varName, stype);
+	return updateStackFrame(sf, varName, stype, size);
 }
 
 uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args) const {
@@ -66,15 +69,15 @@ uint32_t StackAllocator::calculateCallStackSize(const std::vector<ExprPtr>& args
 	return total - mStackOffset;
 }
 
-int StackAllocator::updateStackFrame(StackFrame* sf, const std::string_view varName, const SymbolType stype) {
+int StackAllocator::updateStackFrame(StackFrame* sf, const std::string_view varName, const SymbolType stype, const int32_t size) {
 	int32_t offset;
 
 	if (stype == SymbolType::local) {
+		sf->currentVarOffset += size;
 		offset = sf->currentVarOffset;
-		sf->currentVarOffset += 8;
 	} else {
+		sf->currentParamOffset += size;
 		offset = sf->currentParamOffset;
-		sf->currentParamOffset += 8;
 	}
 
 	sf->offsets.emplace(varName, offset);

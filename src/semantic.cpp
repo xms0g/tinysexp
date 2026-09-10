@@ -366,12 +366,12 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		int32_t sseIdx{0};
 		auto makeLocal = [&](VarExpr& arg) {
 			// The params beyond 6 for scratch and beyond 7 for SSE are already onto stack
-			if (arg.vType == VarType::int_ && scratchIdx < 6) {
+			if ((arg.vType == VarType::int_ || arg.vType == VarType::nil || arg.vType == VarType::t) && scratchIdx < 6) {
 				arg.sType = SymbolType::local;
-				scratchIdx++;
+				++scratchIdx;
 			} else if (arg.vType == VarType::double_ && sseIdx < 8) {
 				arg.sType = SymbolType::local;
-				sseIdx++;
+				++sseIdx;
 			}
 		};
 

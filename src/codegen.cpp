@@ -184,9 +184,9 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 	}
 
 	if (cast::toInt(dotimes.resultForm) ||
-		cast::toDouble(dotimes.resultForm) ||
-		cast::toNIL(dotimes.resultForm) ||
-		cast::toT(dotimes.resultForm)) {
+	    cast::toDouble(dotimes.resultForm) ||
+	    cast::toNIL(dotimes.resultForm) ||
+	    cast::toT(dotimes.resultForm)) {
 		return emitPrimitive(dotimes.resultForm);
 	}
 
@@ -323,8 +323,9 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 			sseIdx++;
 		}
 
-		stackSize += mMemorySizeInBytes[std::to_underlying(getMemSize(arg))];
-		mStackAllocator.pushStackFrame(mCurrentScope, paramName, param->sType);
+		const auto size = mMemorySizeInBytes[std::to_underlying(getMemSize(arg))];
+		stackSize += size;
+		mStackAllocator.pushStackFrame(mCurrentScope, paramName, param->sType, size);
 	}
 
 	stackAlloc(stackSize);
@@ -338,12 +339,13 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 			continue;
 		}
 
+		const auto size = getMemSize(arg);
 		if (param->vType == VarType::double_) {
-			movsd(getAddr(paramName, param->vType, param->sType, RegisterSize::reg64),
-			      mRegisterAllocator.nameFromID(mParamRegistersSSE[sseIdx++], RegisterSize::reg64));
+			movsd(getAddr(paramName, param->vType, param->sType, size),
+			      mRegisterAllocator.nameFromID(mParamRegistersSSE[sseIdx++], size));
 		} else {
-			mov(getAddr(paramName, param->vType, param->sType, RegisterSize::reg64),
-			    mRegisterAllocator.nameFromID(mParamRegisters[scratchIdx++], RegisterSize::reg64));
+			mov(getAddr(paramName, param->vType, param->sType, size),
+			    mRegisterAllocator.nameFromID(mParamRegisters[scratchIdx++], size));
 		}
 	}
 
@@ -528,8 +530,38 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 						}
 						break;
 					}
-					case VarType::nil:
-					case VarType::t:
+					case VarType::nil: {
+						if (param->sType == SymbolType::param) {
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								param->iType,
+								0);
+						} else {
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								param->iType,
+								getAddr(paramName, param->vType, param->sType, RegisterSize::reg64).c_str());
+						}
+						break;
+					}
+					case VarType::t: {
+						if (param->sType == SymbolType::param) {
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								param->iType,
+								1);
+						} else {
+							pushParamToRegister(
+								mParamRegisters[scratchIdx++],
+								param->vType,
+								param->iType,
+								getAddr(paramName, param->vType, param->sType, RegisterSize::reg64).c_str());
+						}
+						break;
+					}
 					case VarType::unknown:
 						break;
 				}
@@ -584,7 +616,10 @@ Register* CodeGen::emitIf(const IfExpr& if_, const bool discardResult) {
 	if (!cast::toUninitialized(if_.else_)) {
 		reg = emitAST(if_.else_, discardResult);
 	} else {
-		reg = emitInt(*std::make_shared<IntExpr>(0));
+		if (reg->isSSE())
+			reg = emitDouble(*std::make_shared<DoubleExpr>(0.0));
+		else
+			reg = emitInt(*std::make_shared<IntExpr>(0));
 	}
 
 	emitLabel(done);
@@ -680,7 +715,7 @@ Register* CodeGen::emitNumb(const ExprPtr& n) {
 	}
 
 	const auto var = cast::toVar(n);
-	return emitLoadRegFromMem(*var, RegisterSize::reg64);
+	return emitLoadRegFromMem(*var, getMemSize(n));
 }
 
 Register* CodeGen::emitNode(const ExprPtr& node) {
@@ -1083,7 +1118,8 @@ Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size, c
 
 		if (!discardResult) {
 			Register* reg = regAlloc();
-			mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64));
+			mov(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
+			    getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64));
 			return reg;
 		}
 
@@ -1198,7 +1234,8 @@ Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const RegisterSize siz
 				      getAddr(varName, var.vType, var.sType, size));
 			} else if (cast::toString(var.value)) {
 				reg = regAlloc();
-				lea(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), getAddr(varName, var.vType, var.sType, size));
+				lea(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
+				    getAddr(varName, var.vType, var.sType, size));
 			} else if (cast::toNIL(var.value) || cast::toT(var.value)) {
 				reg = regAlloc();
 				movzx(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64),
@@ -1241,16 +1278,28 @@ std::string CodeGen::getAddr(const std::string_view varName,
 		case SymbolType::local: {
 			if (vtype == VarType::string) {
 				return std::format("[rbp - {}]",
-				                   mStackAllocator.pushStackFrame(mCurrentScope, varName, stype));
+				                   mStackAllocator.pushStackFrame(
+					                   mCurrentScope,
+					                   varName,
+					                   stype,
+					                   mMemorySizeInBytes[std::to_underlying(size)]));
 			}
 			return std::format("{} [rbp - {}]",
 			                   mMemorySize[std::to_underlying(size)],
-			                   mStackAllocator.pushStackFrame(mCurrentScope, varName, stype));
+			                   mStackAllocator.pushStackFrame(
+				                   mCurrentScope,
+				                   varName,
+				                   stype,
+				                   mMemorySizeInBytes[std::to_underlying(size)]));
 		}
 		case SymbolType::param:
 			return std::format("{} [rbp + {}]",
 			                   mMemorySize[std::to_underlying(size)],
-			                   mStackAllocator.pushStackFrame(mCurrentScope, varName, stype));
+			                   mStackAllocator.pushStackFrame(
+				                   mCurrentScope,
+				                   varName,
+				                   stype,
+				                   mMemorySizeInBytes[std::to_underlying(size)]));
 		default:
 			throw std::runtime_error("Unknown SymbolType.");
 	}
@@ -1276,8 +1325,9 @@ RegisterSize CodeGen::getMemSize(const ExprPtr& var) {
 
 void CodeGen::pushParamOntoStack(const std::string_view funcName, const VarExpr& param, int32_t& stackIdx) {
 	const std::string paramName = cast::toString(param.name)->data;
+	const auto size = mMemorySizeInBytes[std::to_underlying(getMemSize(param.value))];
 
-	mStackAllocator.pushStackFrame(funcName, paramName, SymbolType::param);
+	mStackAllocator.pushStackFrame(funcName, paramName, SymbolType::param, size);
 
 	const std::string addr = stackIdx ? std::format("qword [rsp + {}]", stackIdx) : "qword [rsp]";
 
