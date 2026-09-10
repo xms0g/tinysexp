@@ -52,12 +52,10 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 		return whenResolve(*when);
 	} else if (const auto cond = cast::toCond(ast)) {
 		return condResolve(*cond);
-	} else if (cast::toInt(ast) || cast::toDouble(ast) || cast::toVar(ast)) {
-		if (cast::toVar(ast)) {
-			return varResolve(const_cast<ExprPtr&>(ast), TokenType::var);
-		}
-
+	} else if (isPrimitive(ast)) {
 		return ast;
+	} else if (cast::toVar(ast)) {
+		return varResolve(const_cast<ExprPtr&>(ast), TokenType::var);
 	}
 
 	return nullptr;
