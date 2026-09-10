@@ -39,7 +39,7 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 	} else if (cast::toDefun(ast)) {
 		return defunResolve(ast);
 	} else if (const auto print = cast::toPrint(ast)) {
-		printResolve(*print);
+		return printResolve(*print);
 	} else if (const auto read = cast::toRead(ast)) {
 		return readResolve(*read);
 	} else if (const auto funcCall = cast::toFuncCall(ast)) {
