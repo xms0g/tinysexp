@@ -46,7 +46,7 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 		mGeneratedCode += section;
 
 		for (const auto& [name, size]: data) {
-			mGeneratedCode += std::format("{}: {}\n", name, size);
+			mGeneratedCode += std::format("{}: \n\t{}\n", name, size);
 		}
 	}
 
