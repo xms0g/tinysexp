@@ -75,7 +75,7 @@ private:
 
 	void emitDefun(const DefunExpr& defun);
 
-	void emitPrint(const PrintExpr& print);
+	Register* emitPrint(const PrintExpr& print);
 
 	Register* emitRead(const ReadExpr& read);
 

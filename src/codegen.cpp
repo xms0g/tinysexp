@@ -76,7 +76,7 @@ Register* CodeGen::emitAST(const ExprPtr& ast, const bool discardResult) {
 	} else if (const auto defun = cast::toDefun(ast)) {
 		mFunctions.emplace_back(&CodeGen::emitDefun, *defun);
 	} else if (const auto print = cast::toPrint(ast)) {
-		emitPrint(*print);
+		return emitPrint(*print);
 	} else if (const auto funcCall = cast::toFuncCall(ast)) {
 		return emitFuncCall(*funcCall);
 	} else if (const auto if_ = cast::toIf(ast)) {
@@ -371,7 +371,7 @@ void CodeGen::emitDefun(const DefunExpr& defun) {
 	ret();
 }
 
-void CodeGen::emitPrint(const PrintExpr& print) {
+Register* CodeGen::emitPrint(const PrintExpr& print) {
 	ExprPtr name;
 
 	if (const auto var = cast::toVar(print.arg); var && var->vType == VarType::int_) {
@@ -400,8 +400,7 @@ void CodeGen::emitPrint(const PrintExpr& print) {
 	FuncCallExpr printFunc(funcName, {print.arg});
 	printFunc.returnType = print.returnType;
 
-	Register* reg = emitFuncCall(printFunc);
-	regFree(reg);
+	return emitFuncCall(printFunc);
 }
 
 Register* CodeGen::emitRead(const ReadExpr& read) {
@@ -420,8 +419,7 @@ Register* CodeGen::emitRead(const ReadExpr& read) {
 	FuncCallExpr readFunc(funcName, {});
 	readFunc.returnType = read.returnType;
 
-	Register* reg = emitFuncCall(readFunc);
-	return reg;
+	return emitFuncCall(readFunc);
 }
 
 Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
