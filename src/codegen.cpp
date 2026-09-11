@@ -381,7 +381,7 @@ void CodeGen::emitPrint(const PrintExpr& print) {
 	} else if (var && var->vType == VarType::string) {
 		name = std::make_shared<StringExpr>("_lrt_print_str");
 	} else if (const auto func = cast::toFuncCall(print.arg)) {
-		if (cast::toInt(func->returnType)) {
+		if (cast::toInt(func->returnType) || cast::toNIL(func->returnType) || cast::toT(func->returnType)) {
 			name = std::make_shared<StringExpr>("_lrt_print_int");
 		} else if (cast::toDouble(func->returnType)) {
 			name = std::make_shared<StringExpr>("_lrt_print_double");
