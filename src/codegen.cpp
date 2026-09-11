@@ -465,7 +465,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 				                    InitType::unknown,
 				                    mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64).data());
 				regFree(reg);
-			} else if (const auto read = cast::toRead(param->value)) {
+			} else if (const auto read = cast::toRead(param->value); read && param->sType == SymbolType::param) {
 				reg = emitRead(*read);
 
 				pushParamToRegister(reg->isSSE() ? mParamRegistersSSE[sseIdx++] : mParamRegisters[scratchIdx++],
