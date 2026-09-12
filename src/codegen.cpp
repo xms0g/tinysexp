@@ -70,25 +70,34 @@ Register* CodeGen::emitAST(const ExprPtr& ast, const bool discardResult) {
 		return emitSetq(*setq, discardResult);
 	}
 	if (const auto defvar = cast::toDefvar(ast)) {
-		emitDefvar(*defvar);
-	} else if (const auto defconst = cast::toDefconstant(ast)) {
-		emitDefconst(*defconst);
-	} else if (const auto defun = cast::toDefun(ast)) {
-		mFunctions.emplace_back(&CodeGen::emitDefun, *defun);
-	} else if (const auto print = cast::toPrint(ast)) {
+		return emitDefvar(*defvar);
+	}
+	if (const auto defconst = cast::toDefconstant(ast)) {
+		return emitDefconst(*defconst);
+	}
+	if (const auto print = cast::toPrint(ast)) {
 		return emitPrint(*print);
-	} else if (const auto funcCall = cast::toFuncCall(ast)) {
+	}
+	if (const auto funcCall = cast::toFuncCall(ast)) {
 		return emitFuncCall(*funcCall);
-	} else if (const auto if_ = cast::toIf(ast)) {
+	}
+	if (const auto if_ = cast::toIf(ast)) {
 		return emitIf(*if_, discardResult);
-	} else if (const auto when = cast::toWhen(ast)) {
+	}
+	if (const auto when = cast::toWhen(ast)) {
 		return emitWhen(*when, discardResult);
-	} else if (const auto cond = cast::toCond(ast)) {
+	}
+	if (const auto cond = cast::toCond(ast)) {
 		return emitCond(*cond, discardResult);
-	} else if (cast::toInt(ast) || cast::toDouble(ast)) {
+	}
+	if (cast::toInt(ast) || cast::toDouble(ast)) {
 		return emitPrimitive(ast);
-	} else if (const auto var = cast::toVar(ast)) {
+	}
+	if (const auto var = cast::toVar(ast)) {
 		return emitLoadRegFromMem(*var, RegisterSize::reg64);
+	}
+	if (const auto defun = cast::toDefun(ast)) {
+		mFunctions.emplace_back(&CodeGen::emitDefun, *defun);
 	}
 
 	return nullptr;
@@ -273,7 +282,7 @@ Register* CodeGen::emitSetq(const SetqExpr& setq, const bool discardResult) {
 	return emitAssignment(setq.pair, memSize, discardResult);
 }
 
-void CodeGen::emitDefvar(const DefvarExpr& defvar) {
+Register* CodeGen::emitDefvar(const DefvarExpr& defvar) {
 	const auto var = cast::toVar(defvar.pair);
 	const std::string_view varName = cast::toString(var->name)->data;
 
@@ -289,12 +298,12 @@ void CodeGen::emitDefvar(const DefvarExpr& defvar) {
 				.data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg64)], label)
 			});
 	} else {
-		emitSection(defvar.pair);
+		return emitSection(defvar.pair);
 	}
 }
 
-void CodeGen::emitDefconst(const DefconstExpr& defconst) {
-	emitSection(defconst.pair, true);
+Register* CodeGen::emitDefconst(const DefconstExpr& defconst) {
+	return emitSection(defconst.pair, true);
 }
 
 void CodeGen::emitDefun(const DefunExpr& defun) {
@@ -782,14 +791,14 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 	return regLhs;
 }
 
-void CodeGen::emitSection(const ExprPtr& var, const bool isConstant, const bool discardResult) {
+Register* CodeGen::emitSection(const ExprPtr& var, const bool isConstant, const bool discardResult) {
 	if (const auto var_ = cast::toVar(var); cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
 		updateSections("\nsection .bss\n", {
 			               .name = cast::toString(var_->name)->data,
 			               .data = memDirective(mDataSizeUninitialized[std::to_underlying(RegisterSize::reg64)], 1)
 		               });
 
-		emitAssignment(var, RegisterSize::reg64, discardResult);
+		return emitAssignment(var, RegisterSize::reg64, discardResult);
 	} else if (cast::toUninitialized(var_->value)) {
 		updateSections("\nsection .bss\n",
 		               {
@@ -829,7 +838,7 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant, const bool 
 			               .name = cast::toString(var_->name)->data,
 			               .data = memDirective(mDataSizeInitialized[std::to_underlying(memSize)], 0)
 		               });
-		emitAssignment(var, memSize, discardResult);
+		return emitAssignment(var, memSize, discardResult);
 	} else if (const auto str = cast::toString(var_->value)) {
 		updateSections("\nsection .rodata\n",
 		               {
@@ -1135,11 +1144,14 @@ Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size, c
 		if (Register* reg = emitLoadRegFromMem(*value, size)) {
 			emitStoreMemFromReg(varName, var_->vType, var_->sType, reg, size);
 
-			if (!discardResult)
-				return reg;
+			if (discardResult) {
+				regFree(reg);
+				return nullptr;
+			}
+
+			return reg;
 		}
 
-		return nullptr;
 	}
 	if (cast::toNIL(var_->value)) {
 		mov(getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64), 0);

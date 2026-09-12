@@ -26,9 +26,9 @@ private:
 
 	Register* emitSetq(const SetqExpr& setq, bool discardResult);
 
-	void emitDefvar(const DefvarExpr& defvar);
+	Register* emitDefvar(const DefvarExpr& defvar);
 
-	void emitDefconst(const DefconstExpr& defconst);
+	Register* emitDefconst(const DefconstExpr& defconst);
 
 	void emitDefun(const DefunExpr& defun);
 
@@ -61,7 +61,7 @@ private:
 
 	Register* emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair opcode);
 
-	void emitSection(const ExprPtr& var, bool isConstant = false, bool discardResult = true);
+	Register* emitSection(const ExprPtr& var, bool isConstant = false, bool discardResult = true);
 
 	void emitTest(const ExprPtr& test, std::string_view trueLabel, std::string_view elseLabel);
 
