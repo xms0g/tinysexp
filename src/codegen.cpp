@@ -1,5 +1,7 @@
 #include "codegen.hpp"
 
+#define toHex(n) *reinterpret_cast<uint64_t*>(&n)
+
 CodeGen::CodeGen()
 	: mCurrentScope("main") {
 }
@@ -820,12 +822,11 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant, const bool 
 			               .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg64)], int_->n)
 		               });
 	} else if (const auto double_ = cast::toDouble(var_->value)) {
-		uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
 		updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
 		               {
 			               .name = cast::toString(var_->name)->data,
 			               .data = memDirective(mDataSizeInitialized[std::to_underlying(RegisterSize::reg64)],
-			                                    emitHex(hex))
+			                                    emitHex(toHex(double_->n)))
 		               });
 	} else if (cast::toVar(var_->value)) {
 		const RegisterSize memSize = getMemSize(var_);
@@ -1126,9 +1127,7 @@ Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size, c
 		Register* reg = regAlloc();
 		auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
 
-		uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-
-		mov(regStr, emitHex(hex));
+		mov(regStr, emitHex(toHex(double_->n)));
 		mov(getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64), regStr);
 
 		if (discardResult) {
@@ -1331,9 +1330,7 @@ void CodeGen::pushParamOntoStack(const std::string_view funcName, const ExprPtr&
 		Register* regScr = regAlloc();
 		auto regScrStr = mRegisterAllocator.nameFromReg(regScr, RegisterSize::reg64);
 
-		uint64_t hex = *reinterpret_cast<uint64_t*>(&double_->n);
-
-		mov(regScrStr, emitHex(hex));
+		mov(regScrStr, emitHex(toHex(double_->n)));
 		mov(addr, regScrStr);
 
 		regFree(regScr);
