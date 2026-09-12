@@ -406,11 +406,11 @@ Register* CodeGen::emitPrint(const PrintExpr& print) {
 
 Register* CodeGen::emitRead(const ReadExpr& read) {
 	ExprPtr name;
-	if (const auto int_ = cast::toInt(read.returnType)) {
+	if (cast::toInt(read.returnType)) {
 		name = std::make_shared<StringExpr>("_lrt_read_int");
-	} else if (const auto double_ = cast::toDouble(read.returnType)) {
+	} else if (cast::toDouble(read.returnType)) {
 		name = std::make_shared<StringExpr>("_lrt_read_double");
-	} else if (const auto str_ = cast::toString(read.returnType)) {
+	} else if (cast::toString(read.returnType)) {
 		name = std::make_shared<StringExpr>("_lrt_read_str");
 	}
 
