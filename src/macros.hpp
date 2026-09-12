@@ -20,14 +20,14 @@
 
 #define stackAlloc(size) do { if (size > 0) { emitInstr2op("sub", "rsp", size);mStackAllocator.alloc(size);}} while(0)
 #define stackDealloc(size) do { if (size > 0) { emitInstr2op("add", "rsp", size);mStackAllocator.dealloc(size);}} while(0)
-#define push(v) emitInstr1op("push", v);mStackAllocator.alloc(8)
-#define pop(v) emitInstr1op("pop", v);mStackAllocator.dealloc(8)
-#define leave() mGeneratedCode += "\tleave\n"; mStackAllocator.dealloc(8)
+#define push(v) do { emitInstr1op("push", v);mStackAllocator.alloc(8); } while(0)
+#define pop(v) do { emitInstr1op("pop", v);mStackAllocator.dealloc(8); } while(0)
+#define leave() do { mGeneratedCode += "\tleave\n"; mStackAllocator.dealloc(8); } while(0)
 
-#define emitSet8L(op, reg) \
-    emitInstr1op(op, mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l)); \
-    movzx(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l))
-
+#define emitSet8L(op, reg) do { \
+	emitInstr1op(op, mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l)); \
+	movzx(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l));\
+	} while(0)
 #define regAlloc() ([&]() { \
     auto* reg = mRegisterAllocator.alloc(RegisterType::scratch); \
     if (reg && reg->isPreserved()) { \
@@ -44,4 +44,3 @@
         } \
     } \
 	} while(0)
-
