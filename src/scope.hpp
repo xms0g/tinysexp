@@ -47,7 +47,7 @@ private:
 		}
 	};
 
-	using ScopeType = std::unordered_map<std::string, Symbol, StringHash, StringEqual>;
+	using ScopeType = std::unordered_map<std::string, std::shared_ptr<Symbol>, StringHash, StringEqual>;
 	std::stack<ScopeType> mSymbolTable;
 	std::stack<std::string> mScopeNames;
 };

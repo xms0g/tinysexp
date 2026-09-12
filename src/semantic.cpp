@@ -272,13 +272,13 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		mTfCtx.entryPoint = funcName;
 	}
 
-	const Symbol* sym = mSymbolTracker.lookup(funcName);
+	const Symbol* symFunc = mSymbolTracker.lookup(funcName);
 
-	if (!sym || !cast::toDefun(sym->value)) {
+	if (!symFunc || !cast::toDefun(symFunc->value)) {
 		throw SemanticError(mFileName, ERROR(FUNC_UNDEFINED_ERROR, funcName), 0);
 	}
 
-	const auto func = cast::toDefun(sym->value);
+	const auto func = cast::toDefun(symFunc->value);
 
 	if (funcCall.args.size() != func->args.size()) {
 		throw SemanticError(mFileName, ERROR(FUNC_INVALID_NUMBER_OF_ARGS_ERROR, funcName, funcCall.args.size()), 0);
@@ -287,13 +287,13 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 	// Match the param names to values
 	if (!funcCall.args.empty()) {
 		const auto fcArg = funcCall.args[0];
-		const auto fcArgVar = cast::toVar(fcArg);
 
-		if ((fcArgVar && cast::toUninitialized(fcArgVar->value)) ||
-		    isPrimitive(fcArg) ||
-		    cast::toBinop(fcArg) ||
-		    cast::toFuncCall(fcArg) ||
-		    cast::toRead(fcArg)) {
+		if (const auto fcArgVar = cast::toVar(fcArg);
+			(fcArgVar && cast::toUninitialized(fcArgVar->value)) ||
+			isPrimitive(fcArg) ||
+			cast::toBinop(fcArg) ||
+			cast::toFuncCall(fcArg) ||
+			cast::toRead(fcArg)) {
 			for (size_t i = 0; i < func->args.size(); ++i) {
 				const auto fArg = cast::toVar(func->args[i]);
 
@@ -306,56 +306,27 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 	}
 	// Type Resolution Phase
 	for (const auto& arg: funcCall.args) {
-		auto argVar = cast::toVar(arg);
-
-		if (isPrimitive(argVar->value)) {
+		if (const auto argVar = cast::toVar(arg); isPrimitive(argVar->value)) {
 			setType(*argVar, argVar->value);
-		} else if (auto binop = cast::toBinop(argVar->value)) {
+		} else if (const auto binop = cast::toBinop(argVar->value)) {
 			auto value = binopResolve(*binop);
 			setType(*argVar, value);
-		} else if (auto fc = cast::toFuncCall(argVar->value)) {
+		} else if (const auto fc = cast::toFuncCall(argVar->value)) {
 			auto rt = funcCallResolve(*fc, true);
 			setType(*argVar, rt);
 		} else if (const auto read = cast::toRead(argVar->value)) {
 			auto rt = readResolve(*read);
 			setType(*argVar, rt);
-		} else if (auto innerVar = cast::toVar(argVar->value)) {
-			bool found{false};
+		} else if (const auto innerVar = cast::toVar(argVar->value)) {
+			const std::string_view innerVarName = cast::toString(innerVar->name)->data;
 
-			do {
-				const std::string_view innerVarName = cast::toString(innerVar->name)->data;
-
-				sym = mSymbolTracker.lookup(innerVarName);
-
-				if (sym) {
-					const auto sym_value = cast::toVar(sym->value);
-					innerVar->value = sym_value->value;
-					innerVar->sType = sym_value->sType;
-					innerVar->vType = sym_value->vType;
-					argVar->vType = sym_value->vType;
-					// Loop sym value until finding a primitive. Update var.
-					if (isPrimitive(sym_value->value)) {//TODO: check this out if it's required
-						setType(*innerVar, sym_value->value);
-						setType(*argVar, sym_value->value);
-						break;
-					}
-
-					if (auto innerValue = cast::toVar(sym_value->value)) {
-						do {
-							if (isPrimitive(innerValue->value)) {
-								setType(*innerVar, innerValue->value);
-								setType(*argVar, innerValue->value);
-								found = true;
-								break;
-							}
-							innerValue = cast::toVar(innerValue->value);
-						} while (innerValue);
-					}
-				}
-				if (found)
-					break;
-				innerVar = cast::toVar(innerVar->value);
-			} while (innerVar);
+			if (const Symbol* sym = mSymbolTracker.lookup(innerVarName)) {
+				const auto sym_value = cast::toVar(sym->value);
+				innerVar->value = sym_value->value;
+				innerVar->sType = sym_value->sType;
+				innerVar->vType = sym_value->vType;
+				argVar->vType = sym_value->vType;
+			}
 		}
 	}
 
@@ -383,7 +354,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		}
 		// Find the proper type of variables and the return type of the function
 		if (const auto currentScope = mSymbolTracker.scopeName(); currentScope != funcName) {
-			funcCall.returnType = defunResolve(sym->value);
+			funcCall.returnType = defunResolve(symFunc->value);
 
 			if (funcName == mTfCtx.entryPoint)
 				mTfCtx.isStarted = false;

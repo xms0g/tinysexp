@@ -1,7 +1,7 @@
 #include "scope.hpp"
 
 void ScopeTracker::enter(const std::string_view scopeName) {
-	const std::unordered_map<std::string, Symbol, StringHash, StringEqual> scope;
+	const std::unordered_map<std::string, std::shared_ptr<Symbol>, StringHash, StringEqual> scope;
 	mSymbolTable.push(scope);
 
 	if (!scopeName.empty()) {
@@ -30,6 +30,7 @@ void ScopeTracker::bind(const std::string_view name, Symbol symbol) {
 		if (!cast::toDefun(foundSymbol->value)) {
 			const auto var = cast::toVar(foundSymbol->value);
 			var->vType = cast::toVar(symbol.value)->vType;
+			var->value = cast::toVar(symbol.value)->value;
 		} else {
 			*foundSymbol = std::move(symbol);
 		}
@@ -37,7 +38,7 @@ void ScopeTracker::bind(const std::string_view name, Symbol symbol) {
 		auto currentScope = mSymbolTable.top();
 		mSymbolTable.pop();
 
-		currentScope.emplace(name, symbol);
+		currentScope.emplace(name, std::make_shared<Symbol>(std::move(symbol)));
 		mSymbolTable.push(currentScope);
 	}
 }
@@ -52,7 +53,7 @@ Symbol* ScopeTracker::lookup(const std::string_view name) {
 		scopes.push(scope);
 
 		if (const auto it = scope.find(name); it != scope.end()) {
-			sym = &it->second;
+			sym = it->second.get();
 			break;
 		}
 	}
@@ -69,7 +70,7 @@ const Symbol* ScopeTracker::lookupCurrent(const std::string_view name) {
 	ScopeType currentScope = mSymbolTable.top();
 
 	if (const auto it = currentScope.find(name); it != currentScope.end()) {
-		return &it->second;
+		return it->second.get();
 	}
 
 	return nullptr;
