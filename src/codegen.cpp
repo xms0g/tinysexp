@@ -997,10 +997,31 @@ void CodeGen::emitJmpTrueLabel(const Register* reg, const TokenType type, std::s
 }
 
 Register* CodeGen::emitSet(const ExprPtr& set) {
-	Register* setReg = nullptr;
-
 	if (const auto binop = cast::toBinop(set)) {
 		switch (binop->opToken.type) {
+			case TokenType::equal:
+			case TokenType::not_: {
+				emitSetCC("sete");
+			}
+			case TokenType::nequal: {
+				emitSetCC("setne");
+			}
+			case TokenType::greaterThen: {
+				emitSetCC("setg");
+			}
+			case TokenType::lessThen: {
+				emitSetCC("setl");
+			}
+			case TokenType::greaterThenEq: {
+				emitSetCC("setge");
+			}
+			case TokenType::lessThenEq: {
+				emitSetCC("setle");
+			}
+			case TokenType::and_:
+				return emitLogOp(*binop, "and");
+			case TokenType::or_:
+				return emitLogOp(*binop, "or");
 			case TokenType::plus:
 			case TokenType::minus:
 			case TokenType::div:
@@ -1009,37 +1030,7 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 			case TokenType::logior:
 			case TokenType::logxor:
 			case TokenType::lognor:
-				setReg = emitBinop(*binop);
-				break;
-			case TokenType::equal:
-			case TokenType::not_:
-				setReg = emitSetReg(*binop);
-				emitSet8L("sete", setReg);
-				break;
-			case TokenType::nequal:
-				setReg = emitSetReg(*binop);
-				emitSet8L("setne", setReg);
-				break;
-			case TokenType::greaterThen:
-				setReg = emitSetReg(*binop);
-				emitSet8L("setg", setReg);
-				break;
-			case TokenType::lessThen:
-				setReg = emitSetReg(*binop);
-				emitSet8L("setl", setReg);
-				break;
-			case TokenType::greaterThenEq:
-				setReg = emitSetReg(*binop);
-				emitSet8L("setge", setReg);
-				break;
-			case TokenType::lessThenEq:
-				setReg = emitSetReg(*binop);
-				emitSet8L("setle", setReg);
-				break;
-			case TokenType::and_:
-				return emitLogOp(*binop, "and");
-			case TokenType::or_:
-				return emitLogOp(*binop, "or");
+				return emitBinop(*binop);
 			default:
 				break;
 		}
@@ -1048,8 +1039,7 @@ Register* CodeGen::emitSet(const ExprPtr& set) {
 	} else if (const auto read = cast::toRead(set)) {
 		return emitRead(*read);
 	}
-
-	return setReg;
+	return nullptr;
 }
 
 Register* CodeGen::emitLogOp(const BinOpExpr& binop, std::string_view op) {
@@ -1091,17 +1081,6 @@ Register* CodeGen::emitLogOp(const BinOpExpr& binop, std::string_view op) {
 
 	regFree(rhs.reg);
 	return lhs.reg;
-}
-
-Register* CodeGen::emitSetReg(const BinOpExpr& binop) {
-	const auto reg = emitBinop(binop);
-
-	if (reg->isSSE()) {
-		regFree(reg);
-		return regAlloc();
-	}
-
-	return reg;
 }
 
 Register* CodeGen::emitCmpZero(const ExprPtr& node) {

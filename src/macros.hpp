@@ -28,6 +28,15 @@
 	emitInstr1op(op, mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l)); \
 	movzx(mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64), mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l));\
 	} while(0)
+
+#define emitSetCC(op) do { \
+	const auto reg = emitBinop(*binop); \
+	regFree(reg); \
+	const auto newReg = regAlloc(); \
+	emitSet8L(op, newReg); \
+	return newReg; \
+	} while(0)
+
 #define regAlloc() ([&]() { \
     auto* reg = mRegisterAllocator.alloc(RegisterType::scratch); \
     if (reg && reg->isPreserved()) { \

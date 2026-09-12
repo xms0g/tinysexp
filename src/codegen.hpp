@@ -71,8 +71,6 @@ private:
 
 	Register* emitLogOp(const BinOpExpr& binop, std::string_view op);
 
-	Register* emitSetReg(const BinOpExpr& binop);
-
 	Register* emitCmpZero(const ExprPtr& node);
 
 	Register* emitAssignment(const ExprPtr& var, RegisterSize size, bool discardResult);
