@@ -1138,8 +1138,16 @@ Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size, c
 
 		return reg;
 	}
-	if (cast::toVar(var_->value)) {
-		return handleVariable(*var_, size);
+	if (const auto value = cast::toVar(var_->value)) {
+
+		if (Register* reg = emitLoadRegFromMem(*value, size)) {
+			emitStoreMemFromReg(varName, var_->vType, var_->sType, reg, size);
+
+			if (!discardResult)
+				return reg;
+		}
+
+		return nullptr;
 	}
 	if (cast::toNIL(var_->value)) {
 		mov(getAddr(varName, var_->vType, var_->sType, RegisterSize::reg64), 0);
@@ -1195,18 +1203,6 @@ Register* CodeGen::emitAssignment(const ExprPtr& var, const RegisterSize size, c
 	}
 
 	return reg;
-}
-
-Register* CodeGen::handleVariable(const VarExpr& var, const RegisterSize size) {
-	const std::string_view varName = cast::toString(var.name)->data;
-	const auto value = cast::toVar(var.value);
-
-	if (Register* reg = emitLoadRegFromMem(*value, size)) {
-		emitStoreMemFromReg(varName, var.vType, var.sType, reg, size);
-		return reg;
-	}
-
-	return nullptr;
 }
 
 Register* CodeGen::emitLoadRegFromMem(const VarExpr& var, const RegisterSize size) {

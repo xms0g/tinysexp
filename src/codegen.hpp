@@ -120,8 +120,6 @@ private:
 
 	Register* emitAssignment(const ExprPtr& var, RegisterSize size, bool discardResult);
 
-	Register* handleVariable(const VarExpr& var, RegisterSize size);
-
 	Register* emitLoadRegFromMem(const VarExpr& var, RegisterSize size);
 
 	void emitStoreMemFromReg(std::string_view varName,
