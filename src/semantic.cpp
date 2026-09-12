@@ -152,7 +152,7 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 	return valueResolve(setq.pair);
 }
 
-void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
+ExprPtr SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
 	const auto var = cast::toVar(defvar.pair);
 	const std::string_view varName = cast::toString(var->name)->data;
 
@@ -160,10 +160,10 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
 		throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
 	}
 
-	valueResolve(defvar.pair);
+	return valueResolve(defvar.pair);
 }
 
-void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
+ExprPtr SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
 	const auto var = cast::toVar(defconst.pair);
 	const std::string_view varName = cast::toString(var->name)->data;
 
@@ -171,7 +171,7 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
 		throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
 	}
 
-	valueResolve(defconst.pair, true);
+	return valueResolve(defconst.pair, true);
 }
 
 ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {

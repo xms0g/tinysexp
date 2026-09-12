@@ -24,9 +24,9 @@ private:
 
     ExprPtr setqResolve(const SetqExpr& setq);
 
-    void defvarResolve(const DefvarExpr& defvar);
+    ExprPtr defvarResolve(const DefvarExpr& defvar);
 
-    void defconstResolve(const DefconstExpr& defconst);
+    ExprPtr defconstResolve(const DefconstExpr& defconst);
 
     ExprPtr defunResolve(const ExprPtr& defun);
 
