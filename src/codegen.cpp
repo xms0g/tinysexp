@@ -241,8 +241,7 @@ Register* CodeGen::emitLet(const LetExpr& let, const bool discardResult) {
 	uint32_t requiredStackMem = 0;
 
 	for (const auto& binding: let.bindings) {
-		const int size = mMemorySizeInBytes[std::to_underlying(getMemSize(binding))];
-		requiredStackMem += size;
+		requiredStackMem += mMemorySizeInBytes[std::to_underlying(getMemSize(binding))];
 	}
 
 	stackAlloc(requiredStackMem);
