@@ -1,7 +1,5 @@
 #include "codegen.hpp"
 
-#define toHex(n) *reinterpret_cast<uint64_t*>(&n)
-
 CodeGen::CodeGen()
 	: mCurrentScope("main") {
 }
