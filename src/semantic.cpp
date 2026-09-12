@@ -80,10 +80,9 @@ ExprPtr SemanticAnalyzer::dotimesResolve(DotimesExpr& dotimes) {
 	mSymbolTracker.enter("");
 	checkConstantVar(dotimes.countForm);
 
-	const auto var = cast::toVar(dotimes.countForm);
 	// Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
 	// If it's expr, resolve it.
-	valueResolve(var);
+	valueResolve(dotimes.countForm);
 
 	for (const auto& statement: dotimes.statements) {
 		exprResolve(statement);
@@ -120,7 +119,7 @@ ExprPtr SemanticAnalyzer::letResolve(const LetExpr& let) {
 
 		// Check the value.If it's another var, look up all scopes.If it's not defined, raise error.
 		// If it's expr, resolve it.
-		valueResolve(var);
+		valueResolve(binding);
 	}
 
 	ExprPtr result;
@@ -150,7 +149,7 @@ ExprPtr SemanticAnalyzer::setqResolve(const SetqExpr& setq) {
 	// Check out the value of var.If it's another var, look up all scopes.If it's not defined, raise error.
 	// If it's int or double, update sym->value and bind again.
 	// If it's expr, resolve it.
-	return valueResolve(var);
+	return valueResolve(setq.pair);
 }
 
 void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
@@ -161,7 +160,7 @@ void SemanticAnalyzer::defvarResolve(const DefvarExpr& defvar) {
 		throw SemanticError(mFileName, ERROR(GLOBAL_VAR_DECL_ERROR, varName), 0);
 	}
 
-	valueResolve(var);
+	valueResolve(defvar.pair);
 }
 
 void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
@@ -172,7 +171,7 @@ void SemanticAnalyzer::defconstResolve(const DefconstExpr& defconst) {
 		throw SemanticError(mFileName, ERROR(CONSTANT_VAR_DECL_ERROR, varName), 0);
 	}
 
-	valueResolve(var, true);
+	valueResolve(defconst.pair, true);
 }
 
 ExprPtr SemanticAnalyzer::defunResolve(const ExprPtr& defun) {
@@ -376,7 +375,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		};
 
 		for (size_t i = 0; i < funcCall.args.size(); ++i) {
-			auto arg = cast::toVar(func->args[i]);
+			const auto arg = cast::toVar(func->args[i]);
 			const auto fcArg = cast::toVar(funcCall.args[i]);
 			arg->value = fcArg->value;
 			arg->vType = fcArg->vType;
@@ -384,7 +383,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 		}
 		// Find the proper type of variables and the return type of the function
 		if (const auto currentScope = mSymbolTracker.scopeName(); currentScope != funcName) {
-			funcCall.returnType = defunResolve(func);
+			funcCall.returnType = defunResolve(sym->value);
 
 			if (funcName == mTfCtx.entryPoint)
 				mTfCtx.isStarted = false;

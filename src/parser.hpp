@@ -292,91 +292,91 @@ private:
 };
 
 namespace cast {
-inline std::shared_ptr<BinOpExpr> toBinop(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<BinOpExpr>(expr);
+inline auto toBinop(const ExprPtr& expr) {
+	return dynamic_cast<BinOpExpr*>(expr.get());
 }
 
-inline std::shared_ptr<DotimesExpr> toDotimes(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<DotimesExpr>(expr);
+inline auto toDotimes(const ExprPtr& expr) {
+	return dynamic_cast<DotimesExpr*>(expr.get());
 }
 
-inline std::shared_ptr<LoopExpr> toLoop(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<LoopExpr>(expr);
+inline auto toLoop(const ExprPtr& expr) {
+	return dynamic_cast<LoopExpr*>(expr.get());
 }
 
-inline std::shared_ptr<LetExpr> toLet(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<LetExpr>(expr);
+inline auto toLet(const ExprPtr& expr) {
+	return dynamic_cast<LetExpr*>(expr.get());
 }
 
-inline std::shared_ptr<SetqExpr> toSetq(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<SetqExpr>(expr);
+inline auto toSetq(const ExprPtr& expr) {
+	return dynamic_cast<SetqExpr*>(expr.get());
 }
 
-inline std::shared_ptr<DefvarExpr> toDefvar(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<DefvarExpr>(expr);
+inline auto toDefvar(const ExprPtr& expr) {
+	return dynamic_cast<DefvarExpr*>(expr.get());
 }
 
-inline std::shared_ptr<DefconstExpr> toDefconstant(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<DefconstExpr>(expr);
+inline auto toDefconstant(const ExprPtr& expr) {
+	return dynamic_cast<DefconstExpr*>(expr.get());
 }
 
-inline std::shared_ptr<DefunExpr> toDefun(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<DefunExpr>(expr);
+inline auto toDefun(const ExprPtr& expr) {
+	return dynamic_cast<DefunExpr*>(expr.get());
 }
 
-inline std::shared_ptr<PrintExpr> toPrint(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<PrintExpr>(expr);
+inline auto toPrint(const ExprPtr& expr) {
+	return dynamic_cast<PrintExpr*>(expr.get());
 }
 
-inline std::shared_ptr<ReadExpr> toRead(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<ReadExpr>(expr);
+inline auto toRead(const ExprPtr& expr) {
+	return dynamic_cast<ReadExpr*>(expr.get());
 }
 
-inline std::shared_ptr<FuncCallExpr> toFuncCall(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<FuncCallExpr>(expr);
+inline auto toFuncCall(const ExprPtr& expr) {
+	return dynamic_cast<FuncCallExpr*>(expr.get());
 }
 
-inline std::shared_ptr<ReturnExpr> toReturn(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<ReturnExpr>(expr);
+inline auto toReturn(const ExprPtr& expr) {
+	return dynamic_cast<ReturnExpr*>(expr.get());
 }
 
-inline std::shared_ptr<IfExpr> toIf(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<IfExpr>(expr);
+inline auto toIf(const ExprPtr& expr) {
+	return dynamic_cast<IfExpr*>(expr.get());
 }
 
-inline std::shared_ptr<WhenExpr> toWhen(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<WhenExpr>(expr);
+inline auto toWhen(const ExprPtr& expr) {
+	return dynamic_cast<WhenExpr*>(expr.get());
 }
 
-inline std::shared_ptr<CondExpr> toCond(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<CondExpr>(expr);
+inline auto toCond(const ExprPtr& expr) {
+	return dynamic_cast<CondExpr*>(expr.get());
 }
 
-inline std::shared_ptr<VarExpr> toVar(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<VarExpr>(expr);
+inline auto toVar(const ExprPtr& expr) {
+	return dynamic_cast<VarExpr*>(expr.get());
 }
 
-inline std::shared_ptr<StringExpr> toString(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<StringExpr>(expr);
+inline auto toString(const ExprPtr& expr) {
+	return dynamic_cast<StringExpr*>(expr.get());
 }
 
-inline std::shared_ptr<IntExpr> toInt(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<IntExpr>(expr);
+inline auto toInt(const ExprPtr& expr) {
+	return dynamic_cast<IntExpr*>(expr.get());
 }
 
-inline std::shared_ptr<DoubleExpr> toDouble(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<DoubleExpr>(expr);
+inline auto toDouble(const ExprPtr& expr) {
+	return dynamic_cast<DoubleExpr*>(expr.get());
 }
 
-inline std::shared_ptr<TExpr> toT(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<TExpr>(expr);
+inline auto toT(const ExprPtr& expr) {
+	return dynamic_cast<TExpr*>(expr.get());
 }
 
-inline std::shared_ptr<NILExpr> toNIL(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<NILExpr>(expr);
+inline auto toNIL(const ExprPtr& expr) {
+	return dynamic_cast<NILExpr*>(expr.get());
 }
 
-inline std::shared_ptr<Uninitialized> toUninitialized(const ExprPtr& expr) {
-	return std::dynamic_pointer_cast<Uninitialized>(expr);
+inline auto toUninitialized(const ExprPtr& expr) {
+	return dynamic_cast<Uninitialized*>(expr.get());
 }
 }

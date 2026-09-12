@@ -512,7 +512,7 @@ Register* CodeGen::emitFuncCall(const FuncCallExpr& funcCall) {
 					}
 					case VarType::string: {
 						if (param->sType == SymbolType::param) {
-							emitSection(param);
+							emitSection(arg);
 
 							pushParamToRegister(
 								mParamRegisters[scratchIdx++],
@@ -785,9 +785,7 @@ Register* CodeGen::emitExpr(const ExprPtr& lhs, const ExprPtr& rhs, OpcodePair o
 }
 
 void CodeGen::emitSection(const ExprPtr& var, const bool isConstant, const bool discardResult) {
-	const auto var_ = cast::toVar(var);
-
-	if (cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
+	if (const auto var_ = cast::toVar(var); cast::toBinop(var_->value) || cast::toFuncCall(var_->value)) {
 		updateSections("\nsection .bss\n", {
 			               .name = cast::toString(var_->name)->data,
 			               .data = memDirective(mDataSizeUninitialized[std::to_underlying(RegisterSize::reg64)], 1)
@@ -826,7 +824,7 @@ void CodeGen::emitSection(const ExprPtr& var, const bool isConstant, const bool 
 			                                    emitHex(toHex(double_->n)))
 		               });
 	} else if (cast::toVar(var_->value)) {
-		const RegisterSize memSize = getMemSize(var_);
+		const RegisterSize memSize = getMemSize(var);
 
 		updateSections(isConstant ? "\nsection .rodata\n" : "\nsection .data\n",
 		               {
