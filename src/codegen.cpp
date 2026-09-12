@@ -688,15 +688,13 @@ Register* CodeGen::emitInt(const IntExpr& int_) {
 	return reg;
 }
 
-Register* CodeGen::emitDouble(const DoubleExpr& double_) {
+Register* CodeGen::emitDouble(DoubleExpr& double_) {
 	Register* reg = regAlloc();
 	auto regStr = mRegisterAllocator.nameFromReg(reg, RegisterSize::reg64);
 
 	Register* regSSE = mRegisterAllocator.alloc(RegisterType::sse);
 
-	uint64_t hex = *reinterpret_cast<const uint64_t*>(&double_.n);
-
-	mov(regStr, emitHex(hex));
+	mov(regStr, emitHex(toHex(double_.n)));
 	movq(mRegisterAllocator.nameFromReg(regSSE, RegisterSize::reg64), regStr);
 
 	regFree(reg);

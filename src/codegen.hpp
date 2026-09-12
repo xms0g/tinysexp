@@ -91,7 +91,7 @@ private:
 
 	Register* emitInt(const IntExpr& int_);
 
-	Register* emitDouble(const DoubleExpr& double_);
+	Register* emitDouble(DoubleExpr& double_);
 
 	Register* emitNumb(const ExprPtr& n);
 
