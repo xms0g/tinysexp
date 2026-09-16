@@ -78,19 +78,19 @@ Register* CodeGen::emitAST(const ExprPtr& ast, const bool discardResult) {
 	if (const auto print = cast::toPrint(ast)) {
 		return emitPrint(*print);
 	}
+	if (const auto read = cast::toRead(ast)) {
+		return emitRead(*read);
+	}
 	if (const auto funcCall = cast::toFuncCall(ast)) {
 		return emitFuncCall(*funcCall);
 	}
 	if (const auto if_ = cast::toIf(ast)) {
 		return emitIf(*if_, discardResult);
 	}
-	if (const auto when = cast::toWhen(ast)) {
-		return emitWhen(*when, discardResult);
-	}
 	if (const auto cond = cast::toCond(ast)) {
 		return emitCond(*cond, discardResult);
 	}
-	if (cast::toInt(ast) || cast::toDouble(ast)) {
+	if (isPrimitive(ast)) {
 		return emitPrimitive(ast);
 	}
 	if (const auto var = cast::toVar(ast)) {
@@ -214,31 +214,25 @@ Register* CodeGen::emitLoop(const LoopExpr& loop, const bool discardResult) {
 
 	emitLabel(loopLabel);
 
-	bool hasReturn{false};
+	bool hasWhen{false};
 	for (auto& sexpr: loop.sexprs) {
-		const auto when = cast::toWhen(sexpr);
-		if (!when) {
+		const bool isLast = sexpr == loop.sexprs.back();
+
+		if (const auto when = cast::toWhen(sexpr)) {
+			hasWhen = true;
+			reg = emitWhen(*when, loopLabel, doneLabel, discardResult);
+		} else {
 			reg = emitAST(sexpr, discardResult);
+		}
+
+		if (!isLast) {
 			regFree(reg);
-			continue;
 		}
-
-		for (auto& form: when->then) {
-			if (const auto return_ = cast::toReturn(form); !return_) {
-				reg = emitAST(form, discardResult);
-				regFree(reg);
-				continue;
-			}
-
-			emitTest(when->test, "", loopLabel);
-			emitJump("jmp", doneLabel);
-			hasReturn = true;
-			break;
-		}
-
-		if (!hasReturn)
-			emitJump("jmp", loopLabel);
 	}
+
+	if (!hasWhen)
+		emitJump("jmp", loopLabel);
+
 	emitLabel(doneLabel);
 
 	return reg;
@@ -632,17 +626,28 @@ Register* CodeGen::emitIf(const IfExpr& if_, const bool discardResult) {
 	return reg;
 }
 
-Register* CodeGen::emitWhen(const WhenExpr& when, const bool discardResult) {
-	const std::string doneLabel = createLabel();
+Register* CodeGen::emitWhen(const WhenExpr& when, const std::string_view loop, std::string_view done, const bool discardResult) {
 	// Emit test
-	emitTest(when.test, "", doneLabel);
+	emitTest(when.test, "", loop);
 	// Emit then
+	bool hasReturn{false};
 	Register* reg = nullptr;
 	for (const auto& form: when.then) {
+		if (const auto return_ = cast::toReturn(form)) {
+			reg = emitAST(return_->arg, discardResult);
+			hasReturn = true;
+			emitJump("jmp", done);
+			break;
+		}
+		const bool isLast = form == when.then.back();
 		reg = emitAST(form, discardResult);
-		regFree(reg);
+
+		if (!isLast)
+			regFree(reg);
 	}
-	emitLabel(doneLabel);
+
+	if (!hasReturn)
+		emitJump("jmp", loop);
 
 	return reg;
 }
@@ -677,11 +682,11 @@ Register* CodeGen::emitPrimitive(const ExprPtr& prim) {
 		return emitDouble(*double_);
 	}
 
-	if (const auto nil = cast::toNIL(prim)) {
+	if (cast::toNIL(prim)) {
 		return emitInt(*std::make_shared<IntExpr>(0));
 	}
 
-	if (const auto t = cast::toT(prim)) {
+	if (cast::toT(prim)) {
 		return emitInt(*std::make_shared<IntExpr>(1));
 	}
 
@@ -903,7 +908,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::str
 				break;
 			case TokenType::and_: {
 				auto andComp = [&](const ExprPtr& node) {
-					if (isPrimitive(node)) {
+					if (isPrimitive(node) || cast::toVar(node)) {
 						Register* regLhs = emitCmpZero(node);
 						emitJump("je", elseLabel);
 						regFree(regLhs);
@@ -917,7 +922,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::str
 				break;
 			}
 			case TokenType::or_: {
-				if (isPrimitive(binop->lhs)) {
+				if (isPrimitive(binop->lhs) || cast::toVar(binop->lhs)) {
 					Register* regLhs = emitCmpZero(binop->lhs);
 					emitJump("jne", trueLabel);
 					regFree(regLhs);
@@ -929,7 +934,7 @@ void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::str
 					emitTest(binop->lhs, trueLabel, elseLabel);
 				}
 
-				if (isPrimitive(binop->rhs)) {
+				if (isPrimitive(binop->rhs) || cast::toVar(binop->rhs)) {
 					Register* regRhs = emitCmpZero(binop->rhs);
 					emitJump("je", elseLabel);
 					regFree(regRhs);
@@ -1336,6 +1341,5 @@ bool CodeGen::isPrimitive(const ExprPtr& var) {
 	       cast::toDouble(var) ||
 	       cast::toNIL(var) ||
 	       cast::toT(var) ||
-	       cast::toString(var) ||
-	       cast::toVar(var);
+	       cast::toString(var);
 }

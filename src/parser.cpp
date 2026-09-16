@@ -326,7 +326,7 @@ ExprPtr Parser::parseFuncCall() {
 ExprPtr Parser::parseReturn() {
 	advance();
 
-	ExprPtr arg = parseAtom();
+	ExprPtr arg = parseExpr();
 
 	return std::make_shared<ReturnExpr>(arg);
 }

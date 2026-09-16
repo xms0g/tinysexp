@@ -376,20 +376,7 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 }
 
 ExprPtr SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
-	if (cast::toT(return_.arg))
-		return std::make_shared<IntExpr>(1);
-
-	if (cast::toNIL(return_.arg))
-		return std::make_shared<IntExpr>(0);
-
-	const auto arg = cast::toVar(return_.arg);
-
-	// Check out the var.If it's not defined, raise error.
-	if (const std::string_view argName = cast::toString(arg->name)->data; !mSymbolTracker.lookup(argName)) {
-		throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
-	}
-
-	return valueResolve(return_.arg);
+	return exprResolve(return_.arg);
 }
 
 ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {

@@ -40,7 +40,7 @@ private:
 
 	Register* emitIf(const IfExpr& if_, bool discardResult);
 
-	Register* emitWhen(const WhenExpr& when, bool discardResult);
+	Register* emitWhen(const WhenExpr& when, std::string_view loop, std::string_view done, bool discardResult);
 
 	Register* emitCond(const CondExpr& cond, bool discardResult);
 
