@@ -846,6 +846,8 @@ Register* CodeGen::emitSection(const ExprPtr& var, const bool isConstant, const 
 			               .data = strDirective(str->data)
 		               });
 	}
+
+	return nullptr;
 }
 
 void CodeGen::emitTest(const ExprPtr& test, std::string_view trueLabel, std::string_view elseLabel) {
