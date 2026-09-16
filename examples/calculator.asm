@@ -92,11 +92,17 @@ calculator:
 	ret
 
 section .rodata
-str.0: db "Enter the first number:", 10, 0
-str.1: db "Enter the second number:", 10, 0
-str.2: db "Enter the op:", 10, 0
+str.0:
+	db "Enter the first number:", 10, 0
+str.1:
+	db "Enter the second number:", 10, 0
+str.2:
+	db "Enter the op:", 10, 0
 
 section .bss
-a: resq 1
-b: resq 1
-op: resq 1
+a:
+	resq 1
+b:
+	resq 1
+op:
+	resq 1

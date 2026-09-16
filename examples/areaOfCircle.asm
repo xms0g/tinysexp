@@ -46,7 +46,9 @@ AreaOfCircle:
 	ret
 
 section .rodata
-str.0: db "Enter radius:", 10, 0
+str.0:
+	db "Enter radius:", 10, 0
 
 section .data
-pi: dq 0x400921FF20000000
+pi:
+	dq 0x400921FF20000000

@@ -64,4 +64,5 @@ average:
 	ret
 
 section .rodata
-str.0: db "Enter the number:", 10, 0
+str.0:
+	db "Enter the number:", 10, 0
