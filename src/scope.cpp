@@ -30,7 +30,6 @@ void ScopeTracker::bind(const std::string_view name, Symbol symbol) {
 		if (!cast::toDefun(foundSymbol->value)) {
 			const auto var = cast::toVar(foundSymbol->value);
 			var->vType = cast::toVar(symbol.value)->vType;
-			var->value = cast::toVar(symbol.value)->value;
 		} else {
 			*foundSymbol = std::move(symbol);
 		}

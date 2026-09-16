@@ -36,7 +36,7 @@ private:
 
     ExprPtr funcCallResolve(FuncCallExpr& funcCall, bool isParam = false);
 
-    void returnResolve(const ReturnExpr& return_);
+    ExprPtr returnResolve(const ReturnExpr& return_);
 
     ExprPtr ifResolve(IfExpr& if_);
 

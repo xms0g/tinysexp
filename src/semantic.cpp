@@ -33,28 +33,39 @@ ExprPtr SemanticAnalyzer::exprResolve(const ExprPtr& ast) {
 		return setqResolve(*setq);
 	}
 	if (const auto defvar = cast::toDefvar(ast)) {
-		defvarResolve(*defvar);
-	} else if (const auto defconst = cast::toDefconstant(ast)) {
-		defconstResolve(*defconst);
-	} else if (cast::toDefun(ast)) {
+		return defvarResolve(*defvar);
+	}
+	if (const auto defconst = cast::toDefconstant(ast)) {
+		return defconstResolve(*defconst);
+	}
+	if (cast::toDefun(ast)) {
 		return defunResolve(ast);
-	} else if (const auto print = cast::toPrint(ast)) {
+	}
+	if (const auto print = cast::toPrint(ast)) {
 		return printResolve(*print);
-	} else if (const auto read = cast::toRead(ast)) {
+	}
+	if (const auto read = cast::toRead(ast)) {
 		return readResolve(*read);
-	} else if (const auto funcCall = cast::toFuncCall(ast)) {
+	}
+	if (const auto funcCall = cast::toFuncCall(ast)) {
 		return funcCallResolve(*funcCall);
-	} else if (const auto return_ = cast::toReturn(ast)) {
-		returnResolve(*return_);
-	} else if (const auto if_ = cast::toIf(ast)) {
+	}
+	if (const auto return_ = cast::toReturn(ast)) {
+		return returnResolve(*return_);
+	}
+	if (const auto if_ = cast::toIf(ast)) {
 		return ifResolve(*if_);
-	} else if (const auto when = cast::toWhen(ast)) {
+	}
+	if (const auto when = cast::toWhen(ast)) {
 		return whenResolve(*when);
-	} else if (const auto cond = cast::toCond(ast)) {
+	}
+	if (const auto cond = cast::toCond(ast)) {
 		return condResolve(*cond);
-	} else if (isPrimitive(ast)) {
+	}
+	if (isPrimitive(ast)) {
 		return ast;
-	} else if (cast::toVar(ast)) {
+	}
+	if (cast::toVar(ast)) {
 		return varResolve(const_cast<ExprPtr&>(ast), TokenType::var);
 	}
 
@@ -364,16 +375,21 @@ ExprPtr SemanticAnalyzer::funcCallResolve(FuncCallExpr& funcCall, const bool isP
 	return funcCall.returnType;
 }
 
-void SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
-	if (cast::toT(return_.arg) || cast::toNIL(return_.arg))
-		return;
+ExprPtr SemanticAnalyzer::returnResolve(const ReturnExpr& return_) {
+	if (cast::toT(return_.arg))
+		return std::make_shared<IntExpr>(1);
+
+	if (cast::toNIL(return_.arg))
+		return std::make_shared<IntExpr>(0);
 
 	const auto arg = cast::toVar(return_.arg);
 
 	// Check out the var.If it's not defined, raise error.
-	if (const std::string_view argName = cast::toString(arg->name)->data; mSymbolTracker.lookup(argName)) {
+	if (const std::string_view argName = cast::toString(arg->name)->data; !mSymbolTracker.lookup(argName)) {
 		throw SemanticError(mFileName, ERROR(UNBOUND_VAR_ERROR, argName), 0);
 	}
+
+	return valueResolve(return_.arg);
 }
 
 ExprPtr SemanticAnalyzer::ifResolve(IfExpr& if_) {
@@ -563,12 +579,7 @@ ExprPtr SemanticAnalyzer::varResolve(ExprPtr& n, const TokenType ttype) {
 				checkBitwiseOp(innerVar->value, ttype);
 			}
 
-			ExprPtr value_;
-			if (innerVar->vType == VarType::int_) {
-				value_ = std::make_shared<IntExpr>(0);
-			} else if (innerVar->vType == VarType::double_) {
-				value_ = std::make_shared<DoubleExpr>(0.0);
-			}
+			ExprPtr value_ = returnValue(*innerVar);
 			var->value = value_;
 			var->vType = innerVar->vType;
 			return value_;
@@ -626,7 +637,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 	const auto var_ = cast::toVar(var);
 	const std::string varName = cast::toString(var_->name)->data;
 
-	if (isPrimitive(var_->value) || cast::toUninitialized(var_->value)) {
+	if (isPrimitive(var_->value)) {
 		setType(*var_, var_->value);
 
 		mSymbolTracker.bind(
@@ -639,6 +650,26 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 			});
 
 		return var_->value;
+	}
+
+	if (cast::toUninitialized(var_->value)) {
+		if (const Symbol* sym = mSymbolTracker.lookup(varName)) {
+			var_->value = cast::toVar(sym->value)->value;
+			var_->vType = cast::toVar(sym->value)->vType;
+			var_->sType = cast::toVar(sym->value)->sType;
+
+			mSymbolTracker.bind(
+			varName,
+			{
+				.name = varName,
+				.value = var,
+				.sType = var_->sType,
+				.isConstant = isConstant
+			});
+
+			return returnValue(*var_);
+		}
+
 	}
 
 	if (const auto value = cast::toVar(var_->value)) {
@@ -661,10 +692,9 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 				.isConstant = isConstant
 			});
 
-		return var_->value;
+		return returnValue(*var_);
 	}
 
-	ExprPtr name = var_->name;
 	ExprPtr value_ = exprResolve(var_->value);
 	var_->vType = cast::toInt(value_) ? VarType::int_ : cast::toString(value_) ? VarType::string : VarType::double_;
 
@@ -676,6 +706,7 @@ ExprPtr SemanticAnalyzer::valueResolve(const ExprPtr& var, const bool isConstant
 			.sType = var_->sType,
 			.isConstant = isConstant
 		});
+
 	return value_;
 }
 
