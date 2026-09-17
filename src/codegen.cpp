@@ -192,18 +192,7 @@ Register* CodeGen::emitDotimes(const DotimesExpr& dotimes) {
 		return emitInt(*std::make_shared<IntExpr>(0));
 	}
 
-	if (cast::toInt(dotimes.resultForm) ||
-	    cast::toDouble(dotimes.resultForm) ||
-	    cast::toNIL(dotimes.resultForm) ||
-	    cast::toT(dotimes.resultForm)) {
-		return emitPrimitive(dotimes.resultForm);
-	}
-
-	if (const auto var = cast::toVar(dotimes.resultForm)) {
-		return emitLoadRegFromMem(*var, RegisterSize::reg64);
-	}
-
-	return nullptr;
+	return emitAST(dotimes.resultForm, true);
 }
 
 Register* CodeGen::emitLoop(const LoopExpr& loop, const bool discardResult) {
@@ -294,6 +283,8 @@ Register* CodeGen::emitDefvar(const DefvarExpr& defvar) {
 	} else {
 		return emitSection(defvar.pair);
 	}
+
+	return nullptr;
 }
 
 Register* CodeGen::emitDefconst(const DefconstExpr& defconst) {
