@@ -29,40 +29,41 @@ constexpr auto FUNC_DEF_ERROR = "Function '{}' definition is not allowed here";
 
 #define ERROR(STR, ...) std::format(STR, __VA_ARGS__)
 
-class IError : public std::exception {
+class BaseError : public std::exception {
 public:
-	explicit IError(std::string err, const std::string_view fn, const std::string_view detail, const int32_t ln)
-		: mErrStr(std::move(err)) {
-		mErrStr += detail;
-		mErrStr += "\nFile " + std::string(fn) + ", line " + std::to_string(ln);
-		mErrStr += '\n';
+	explicit BaseError(std::string err, const std::string_view fn, const std::string_view detail, const int32_t ln)
+		: mErr(std::move(err)) {
+		mErr += detail;
+		mErr += "\nFile " + std::string(fn) + ", line " + std::to_string(ln);
+		mErr += '\n';
 	}
 
-	[[nodiscard]] const char* what() const noexcept override {
-		return mErrStr.c_str();
+	[[nodiscard]]
+	const char* what() const noexcept override {
+		return mErr.c_str();
 	}
 
 private:
-	std::string mErrStr;
+	std::string mErr;
 };
 
-class IllegalCharError final : public IError {
+class IllegalCharError final : public BaseError {
 public:
-	IllegalCharError(std::string_view fn, std::string_view detail, const int32_t ln)
-		: IError("Illegal Character: ", fn, detail, ln) {
+	IllegalCharError(const std::string_view fn, const std::string_view detail, const int32_t ln)
+		: BaseError("Illegal Character: ", fn, detail, ln) {
 	}
 };
 
-class InvalidSyntaxError final : public IError {
+class InvalidSyntaxError final : public BaseError {
 public:
-	explicit InvalidSyntaxError(const std::string_view fn, std::string_view detail, const int32_t ln)
-		: IError("Invalid Syntax: ", fn, detail, ln) {
+	explicit InvalidSyntaxError(const std::string_view fn, const std::string_view detail, const int32_t ln)
+		: BaseError("Invalid Syntax: ", fn, detail, ln) {
 	}
 };
 
-class SemanticError final : public IError {
+class SemanticError final : public BaseError {
 public:
-	explicit SemanticError(const std::string_view fn, std::string_view detail, const int32_t ln)
-		: IError("Error: ", fn, detail, ln) {
+	explicit SemanticError(const std::string_view fn, const std::string_view detail, const int32_t ln)
+		: BaseError("Error: ", fn, detail, ln) {
 	}
 };
