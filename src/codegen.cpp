@@ -5,14 +5,8 @@ CodeGen::CodeGen()
 }
 
 std::string CodeGen::emit(const ExprPtr& ast) {
-	mGeneratedCode =
-			"extern _lrt_print_int\n"
-			"extern _lrt_print_double\n"
-			"extern _lrt_print_str\n"
-			"extern _lrt_read_int\n"
-			"extern _lrt_read_double\n"
-			"extern _lrt_read_str\n"
-			"section .text\n"
+	mBody =
+		"section .text\n"
 #if defined(__APPLE__) || defined(__MACH__)
 			"\tglobal _main\n"
 			"_main:\n";
@@ -43,14 +37,20 @@ std::string CodeGen::emit(const ExprPtr& ast) {
 
 	// Sections
 	for (const auto& [section, data]: mSections) {
-		mGeneratedCode += section;
+		mBody += section;
 
 		for (const auto& [name, size]: data) {
-			mGeneratedCode += std::format("{}: \n\t{}\n", name, size);
+			mBody += std::format("{}: \n\t{}\n", name, size);
 		}
 	}
 
-	return mGeneratedCode;
+	std::string prolog;
+	for (const auto& func: mRTFuncs) {
+		prolog += std::format("extern {}\n", func);
+	}
+
+	prolog += mBody;
+	return prolog;
 }
 
 Register* CodeGen::emitAST(const ExprPtr& ast, const bool discardResult) {
@@ -387,6 +387,9 @@ Register* CodeGen::emitPrint(const PrintExpr& print) {
 		}
 	}
 
+
+	mRTFuncs.emplace(cast::toString(name)->data);
+
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);
 
@@ -398,6 +401,7 @@ Register* CodeGen::emitPrint(const PrintExpr& print) {
 
 Register* CodeGen::emitRead(const ReadExpr& read) {
 	ExprPtr name;
+
 	if (cast::toInt(read.returnType)) {
 		name = std::make_shared<StringExpr>("_lrt_read_int");
 	} else if (cast::toDouble(read.returnType)) {
@@ -405,6 +409,8 @@ Register* CodeGen::emitRead(const ReadExpr& read) {
 	} else if (cast::toString(read.returnType)) {
 		name = std::make_shared<StringExpr>("_lrt_read_str");
 	}
+
+	mRTFuncs.emplace(cast::toString(name)->data);
 
 	ExprPtr value = std::make_shared<Uninitialized>();
 	const ExprPtr funcName = std::make_shared<VarExpr>(name, value);

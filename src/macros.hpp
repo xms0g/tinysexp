@@ -2,13 +2,13 @@
 
 #define toHex(n) *reinterpret_cast<uint64_t*>(&n)
 #define emitHex(n) std::format("0x{:X}", n)
-#define emitLabel(label) mGeneratedCode += std::format("{}:\n", label)
-#define emitInstr1op(op, d) mGeneratedCode += std::format("\t{} {}\n", op, d)
-#define emitInstr2op(op, d, s) mGeneratedCode += std::format("\t{} {}, {}\n", op, d, s)
+#define emitLabel(label) mBody += std::format("{}:\n", label)
+#define emitInstr1op(op, d) mBody += std::format("\t{} {}\n", op, d)
+#define emitInstr2op(op, d, s) mBody += std::format("\t{} {}, {}\n", op, d, s)
 #define emitJump(jmp, label) emitInstr1op(jmp, label)
-#define ret() mGeneratedCode += "\tret\n"
-#define cqo() mGeneratedCode += "\tcqo\n"
-#define syscall() mGeneratedCode += "\tsyscall\n"
+#define ret() mBody += "\tret\n"
+#define cqo() mBody += "\tcqo\n"
+#define syscall() mBody += "\tsyscall\n"
 #define lea(d, s) emitInstr2op("lea", d, s)
 #define mov(d, s) emitInstr2op("mov", d, s)
 #define movq(d, s) emitInstr2op("movq", d, s)
@@ -22,7 +22,7 @@
 #define stackDealloc(size) do { if (size > 0) { emitInstr2op("add", "rsp", size);mStackAllocator.dealloc(size);}} while(0)
 #define push(v) do { emitInstr1op("push", v);mStackAllocator.alloc(8); } while(0)
 #define pop(v) do { emitInstr1op("pop", v);mStackAllocator.dealloc(8); } while(0)
-#define leave() do { mGeneratedCode += "\tleave\n"; mStackAllocator.dealloc(8); } while(0)
+#define leave() do { mBody += "\tleave\n"; mStackAllocator.dealloc(8); } while(0)
 
 #define emitSet8L(op, reg) do { \
 	emitInstr1op(op, mRegisterAllocator.nameFromReg(reg, RegisterSize::reg8l)); \

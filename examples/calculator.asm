@@ -1,9 +1,6 @@
 extern _lrt_print_int
-extern _lrt_print_double
-extern _lrt_print_str
 extern _lrt_read_int
-extern _lrt_read_double
-extern _lrt_read_str
+extern _lrt_print_str
 section .text
 	global _main
 _main:

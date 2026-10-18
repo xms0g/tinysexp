@@ -2,6 +2,7 @@
 #include <string>
 #include <unordered_map>
 #include <format>
+#include <unordered_set>
 #include "parser.hpp"
 #include "stack.hpp"
 #include "register.hpp"
@@ -103,7 +104,7 @@ private:
 
 	static bool isPrimitive(const ExprPtr& var);
 
-	std::string mGeneratedCode;
+	std::string mBody;
 	// Label
 	int32_t mCurrentLabelCount{0};
 	// Scope
@@ -114,6 +115,8 @@ private:
 	StackAllocator mStackAllocator;
 	// Sections
 	std::unordered_map<std::string, std::vector<Section> > mSections;
+	// Runtime functions
+	std::unordered_set<std::string> mRTFuncs;
 
 	// Functions
 	struct Function {
