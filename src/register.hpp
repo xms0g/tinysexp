@@ -68,9 +68,11 @@ public:
 
 	void free(Register* reg);
 
-	std::string_view nameFromReg(const Register* reg, RegisterSize size);
+	[[nodiscard]]
+	std::string_view nameFromReg(const Register* reg, RegisterSize size) const;
 
-	std::string_view nameFromID(RegisterID id, RegisterSize size);
+	[[nodiscard]]
+	std::string_view nameFromID(RegisterID id, RegisterSize size) const;
 
 	Register* regFromID(RegisterID id);
 

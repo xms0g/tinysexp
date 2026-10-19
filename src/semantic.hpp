@@ -32,7 +32,7 @@ private:
 
 	ExprPtr printResolve(PrintExpr& print);
 
-	ExprPtr readResolve(const ReadExpr& read);
+	static ExprPtr readResolve(const ReadExpr& read);
 
     ExprPtr funcCallResolve(FuncCallExpr& funcCall, bool isParam = false);
 
@@ -51,9 +51,9 @@ private:
     void checkBitwiseOp(const ExprPtr& n, TokenType ttype) const;
 
     [[nodiscard]]
-	std::variant<int, double> getValue(const ExprPtr& num) const;
+    static std::variant<int, double> getValue(const ExprPtr& num);
 
-    ExprPtr returnValue(const VarExpr& var);
+    static ExprPtr returnValue(const VarExpr& var);
 
     ExprPtr varResolve(ExprPtr& n, TokenType ttype);
 
@@ -63,7 +63,7 @@ private:
 
     static bool isPrimitive(const ExprPtr& var);
 
-    void setType(VarExpr& var, const ExprPtr& value);
+    static void setType(VarExpr& var, const ExprPtr& value);
 
     ScopeTracker mSymbolTracker;
 

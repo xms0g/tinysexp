@@ -121,7 +121,6 @@ private:
 	// Functions
 	struct Function {
 		void (CodeGen::* func)(const DefunExpr&);
-
 		const DefunExpr& defun;
 	};
 

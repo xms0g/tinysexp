@@ -480,7 +480,7 @@ void SemanticAnalyzer::checkBitwiseOp(const ExprPtr& n, const TokenType ttype) c
 	}
 }
 
-std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) const {
+std::variant<int, double> SemanticAnalyzer::getValue(const ExprPtr& num) {
 	auto getPrimitive = [&](const ExprPtr& n) -> std::variant<int, double> {
 		if (const auto double_ = cast::toDouble(n))
 			return double_->n;

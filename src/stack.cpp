@@ -1,5 +1,4 @@
 #include "stack.hpp"
-
 #include "register.hpp"
 
 void StackAllocator::alloc(const uint32_t size) {

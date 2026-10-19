@@ -5,8 +5,7 @@ CodeGen::CodeGen()
 }
 
 std::string CodeGen::emit(const ExprPtr& ast) {
-	mBody =
-		"section .text\n"
+	mBody = "section .text\n"
 #if defined(__APPLE__) || defined(__MACH__)
 			"\tglobal _main\n"
 			"_main:\n";

@@ -28,11 +28,11 @@ void RegisterAllocator::free(Register* reg) {
     reg->status &= ~1;
 }
 
-std::string_view RegisterAllocator::nameFromReg(const Register* reg, const RegisterSize size) {
+std::string_view RegisterAllocator::nameFromReg(const Register* reg, const RegisterSize size) const {
     return mRegisterNames[std::to_underlying(reg->id)][std::to_underlying(size)];
 }
 
-std::string_view RegisterAllocator::nameFromID(const RegisterID id, const RegisterSize size) {
+std::string_view RegisterAllocator::nameFromID(const RegisterID id, const RegisterSize size) const {
     return mRegisterNames[std::to_underlying(id)][std::to_underlying(size)];
 }
 
