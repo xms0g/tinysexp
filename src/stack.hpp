@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include "parser.hpp"
 #include "register.hpp"
-#include "string_util.hpp"
+#include "stringUtils.hpp"
 
 class StackAllocator {
 public:
@@ -26,6 +26,6 @@ private:
 		std::unordered_map<std::string, int32_t, StringHash, StringEqual> offsets;
 	};
 
-	std::unordered_map<std::string, StackFrame, StringHash, StringEqual> mStack{};
+	StringMap<StackFrame> mStack{};
 	uint32_t mStackOffset{8};
 };

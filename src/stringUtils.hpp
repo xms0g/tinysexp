@@ -16,3 +16,7 @@ struct StringEqual {
 		return lhs == rhs;
 	}
 };
+
+template <typename T>
+using StringMap = std::unordered_map<std::string, T, StringHash, StringEqual>;
+

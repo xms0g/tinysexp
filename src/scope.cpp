@@ -44,10 +44,10 @@ void ScopeTracker::bind(const std::string_view name, Symbol symbol) {
 
 Symbol* ScopeTracker::lookup(const std::string_view name) {
 	Symbol* sym{nullptr};
-	std::stack<ScopeType> scopes;
+	std::stack<StringMap<std::shared_ptr<Symbol>>> scopes;
 
 	while (!mSymbolTable.empty()) {
-		ScopeType scope = mSymbolTable.top();
+		auto scope = mSymbolTable.top();
 		mSymbolTable.pop();
 		scopes.push(scope);
 
@@ -66,7 +66,7 @@ Symbol* ScopeTracker::lookup(const std::string_view name) {
 }
 
 const Symbol* ScopeTracker::lookupCurrent(const std::string_view name) {
-	ScopeType currentScope = mSymbolTable.top();
+	auto currentScope = mSymbolTable.top();
 
 	if (const auto it = currentScope.find(name); it != currentScope.end()) {
 		return it->second.get();

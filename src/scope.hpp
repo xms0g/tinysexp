@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include "parser.hpp"
-#include "string_util.hpp"
+#include "stringUtils.hpp"
 
 struct Symbol {
 	std::string name;
@@ -31,7 +31,6 @@ public:
 	const Symbol* lookupCurrent(std::string_view name);
 
 private:
-	using ScopeType = std::unordered_map<std::string, std::shared_ptr<Symbol>, StringHash, StringEqual>;
-	std::stack<ScopeType> mSymbolTable;
+	std::stack<StringMap<std::shared_ptr<Symbol>>> mSymbolTable;
 	std::stack<std::string> mScopeNames;
 };
